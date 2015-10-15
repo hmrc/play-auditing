@@ -37,7 +37,7 @@ trait HttpAuditing extends DateTimeUtils {
   def auditDisabledForPattern = ("""http://.*\.service""").r
 
   object AuditingHook extends HttpHook {
-    override def executeHook(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit = {
+    override def apply(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit = {
       val request = HttpRequest(url, verb, body, now)
       responseF.map {
         response =>

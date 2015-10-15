@@ -61,7 +61,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
     override lazy val auditConnector: AuditConnector = new MockAuditConnector
 
     def auditRequestWithResponseF(url: String, verb: String, requestBody: Option[_], response: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit =
-      AuditingHook.executeHook(url, verb, requestBody, response)(hc)
+      AuditingHook(url, verb, requestBody, response)(hc)
 
     var now_call_count = 0
     override def now = {
