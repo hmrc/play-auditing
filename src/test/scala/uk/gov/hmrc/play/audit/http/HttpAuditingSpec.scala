@@ -264,6 +264,31 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
     }
   }
 
+
+
+  "Calling an external service with service in its domain name" should {
+    val AuditUri = "http://some.service.gov.uk:80/self-assessment/data"
+    val getVerb = "GET"
+
+    implicit val hc = HeaderCarrier()
+
+    "generate an audit event" in {
+      val httpWithAudit = new HttpWithAuditing
+      val requestBody = None
+      val response = new DummyHttpResponse("the response body", 200)
+      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+
+      httpWithAudit.audit(request, response)
+
+      httpWithAudit.auditConnector.recordedMergedEvent shouldBe defined
+
+      val dataEvent = httpWithAudit.auditConnector.recordedMergedEvent.get
+
+      dataEvent.auditSource shouldBe httpWithAudit.appName
+      dataEvent.auditType shouldBe OutboundCall
+    }
+  }
+
   "Auditing the url /write/audit" should {
     val AuditUri = "/write/audit"
     val getVerb = "GET"
