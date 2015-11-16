@@ -16,14 +16,19 @@
 
 package uk.gov.hmrc.play.audit.filters
 
+import play.api.Routes
+import play.api.libs.iteratee.{Cont, Input, Iteratee, Enumeratee}
 import play.api.mvc.{Result, _}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
-import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
-import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.http.HeaderCarrier
+
+import scala.concurrent.Future
+import scala.util.{Try, Failure, Success}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
@@ -31,85 +36,54 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
   def controllerNeedsAuditing(controllerName: String): Boolean
 
-  import play.api.Routes
-  import play.api.libs.iteratee._
-  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+  protected def needsAuditing(request: RequestHeader): Boolean =
+    (for (controllerName <- request.tags.get(Routes.ROUTE_CONTROLLER))
+      yield controllerNeedsAuditing(controllerName)).getOrElse(true)
 
-  def apply(nextAction: EssentialAction): EssentialAction = new EssentialAction {
-    def apply(request: RequestHeader): Iteratee[Array[Byte], Result] = {
-      audit(request, nextAction)
-    }
+  protected def getBody(result: Result) = {
+    val bytesToString: Enumeratee[Array[Byte], String] = Enumeratee.map[Array[Byte]] { bytes => new String(bytes) }
+    val consume: Iteratee[String, String] = Iteratee.consume[String]()
+    result.body |>>> bytesToString &>> consume
   }
 
-  def buildAuditedHeaders(request: RequestHeader) = HeaderCarrier.fromHeadersAndSession(request.headers)
-
-  def audit(request: RequestHeader, nextAction: EssentialAction) = {
-    implicit val hc = buildAuditedHeaders(request)
-    if (needsAuditing(request)) withAuditedResponse(withAuditedRequest(nextAction, request), request)
-    else nextAction(request)
-  }
-
-  def needsAuditing(request: RequestHeader): Boolean = {
-    (for {
-      controllerName <- request.tags.get(Routes.ROUTE_CONTROLLER)
-    } yield controllerNeedsAuditing(controllerName)).getOrElse(true)
-  }
-
-  def withAuditedRequest(nextAction: EssentialAction, request: RequestHeader)(implicit hc: HeaderCarrier): Iteratee[Array[Byte], Result] = {
-    readRequestBody(nextAction, request) {
-      body => {
-        val event = buildAuditRequestEvent(EventTypes.ServiceReceivedRequest, request, new String(body))
-        auditConnector.sendEvent(event)
-      }
-    }
-  }
-
-  def withAuditedResponse(iteratee: Iteratee[Array[Byte], Result], request: RequestHeader)(implicit hc: HeaderCarrier): Iteratee[Array[Byte], Result] = {
-    iteratee.map {
-      result =>
-        var collectedBody = new Array[Byte](0)
-        val mappedBody = result.body.map {
-          i =>
-            collectedBody = collectedBody ++ i
-            i
-        }.onDoneEnumerating {
-
-          val event = buildAuditResponseEvent(EventTypes.ServiceSentResponse, request, result.header, new String(collectedBody))
-          auditConnector.sendEvent(event)
-        }
-        result.copy(body = mappedBody)
-    }
-  }
-
-  def buildAuditRequestEvent(eventType: EventType, request: RequestHeader, requestBody: String)(implicit hc: HeaderCarrier): DataEvent = {
-    dataEvent(eventType, request.uri, request).withDetail(RequestBody -> requestBody)
-  }
-
-  def buildAuditResponseEvent(eventType: EventType, request: RequestHeader, response: ResponseHeader, responseBody: String)(implicit hc: HeaderCarrier): DataEvent = {
-    dataEvent(eventType, request.uri, request).withDetail(ResponseMessage -> responseBody, StatusCode -> response.status.toString)
-  }
-
-  def readRequestBody(nextA: EssentialAction, request: RequestHeader)(bodyHandler: (Array[Byte]) => Unit): Iteratee[Array[Byte], Result] = {
-
+  protected def onCompleteWithInput(next: Iteratee[Array[Byte], Result])(handler: (Array[Byte], Try[Result]) => Unit): Iteratee[Array[Byte], Result] = {
     def step(body: Array[Byte], nextI: Iteratee[Array[Byte], Result])(input: Input[Array[Byte]]): Iteratee[Array[Byte], Result] = {
       input match {
-
-        case Input.EOF => {
-          bodyHandler(body)
-          Iteratee.flatten(nextI.feed(Input.EOF))
-        }
-
+        case Input.El(e) => Cont[Array[Byte], Result](step(Array.concat(body, e), Iteratee.flatten(nextI.feed(Input.El(e)))))
         case Input.Empty => Cont[Array[Byte], Result](step(body, nextI))
-
-        case Input.El(e) => {
-          val curBody = Array.concat(body, e)
-          Cont[Array[Byte], Result](step(curBody, Iteratee.flatten(nextI.feed(Input.El(e)))))
+        case Input.EOF => {
+          val result = Iteratee.flatten(nextI.feed(Input.EOF))
+          result.run onComplete { r => handler(body, r) }
+          result
         }
       }
     }
 
-    val nextIteratee: Iteratee[Array[Byte], Result] = nextA(request)
+    Cont[Array[Byte], Result](i => step(Array(), next)(i))
+  }
 
-    Cont[Array[Byte], Result](i => step(Array(), nextIteratee)(i))
+  def apply(nextFilter: EssentialAction) = new EssentialAction {
+    def apply(requestHeader: RequestHeader) = {
+      val next = nextFilter(requestHeader)
+      implicit val hc = HeaderCarrier.fromHeadersAndSession(requestHeader.headers)
+
+      def performAudit(input: Array[Byte], maybeResult: Try[Result]): Unit = {
+        maybeResult match {
+          case Success(result) =>
+            getBody(result) map { responseBody =>
+              auditConnector.sendEvent(
+                dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
+                  .withDetail(ResponseMessage -> new String(responseBody), StatusCode -> result.header.status.toString))
+            }
+          case Failure(f) =>
+            auditConnector.sendEvent(
+              dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
+                .withDetail(FailedRequestMessage -> f.getMessage))
+        }
+      }
+
+      if (needsAuditing(requestHeader)) onCompleteWithInput(next)(performAudit)
+      else next
+    }
   }
 }

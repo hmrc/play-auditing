@@ -29,6 +29,7 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.Concurrent
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
 class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventually with ScalaFutures with FilterFlowMock {
@@ -50,53 +51,62 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
     "be obfuscated with the password at the beginning" in {
       filter.stripPasswords(Some("application/x-www-form-urlencoded"), "password=p2ssword%26adkj&csrfToken=123&userId=113244018119", Seq("password")) shouldBe "password=#########&csrfToken=123&userId=113244018119"
     }
+
     "be obfuscated with the password in the end" in {
       filter.stripPasswords(Some("application/x-www-form-urlencoded"), "csrfToken=123&userId=113244018119&password=p2ssword%26adkj", Seq("password")) shouldBe "csrfToken=123&userId=113244018119&password=#########"
     }
+
     "be obfuscated with the password in the middle" in {
       filter.stripPasswords(Some("application/x-www-form-urlencoded"), "csrfToken=123&password=p2ssword%26adkj&userId=113244018119", Seq("password")) shouldBe "csrfToken=123&password=#########&userId=113244018119"
     }
+
     "be obfuscated even if the password is empty" in {
       filter.stripPasswords(Some("application/x-www-form-urlencoded"), "csrfToken=123&password=&userId=113244018119", Seq("password")) shouldBe "csrfToken=123&password=#########&userId=113244018119"
     }
+
     "not be obfuscated if content type is not application/x-www-form-urlencoded" in {
       filter.stripPasswords(Some("text/json"), "{ password=p2ssword%26adkj }", Seq("password")) shouldBe "{ password=p2ssword%26adkj }"
     }
-    "be obfuscated using multiple fields" in {
 
+    "be obfuscated using multiple fields" in {
       val body = """companyNumber=05448736&password=secret&authCode=code"""
       val result = filter.stripPasswords(Some("application/x-www-form-urlencoded"), body, Seq("password", "authCode"))
 
       result shouldBe """companyNumber=05448736&password=#########&authCode=#########"""
-
     }
-
   }
 
   "The Filter" should {
 
-    "generate audit events without passwords" in {
-
+    "generate audit events without passwords" when {
       val body = "csrfToken=acb" +
         "&userId=113244018119" +
         "&password=123456789" +
         "&key1="
 
-      var requestBody = Enumerator(body.getBytes) andThen Enumerator.eof
-
+      val requestBody = Enumerator(body.getBytes) andThen Enumerator.eof
       val request = FakeRequest("POST", "/foo").withHeaders("Content-Type" -> "application/x-www-form-urlencoded")
 
-      val iteratee = requestBody |>>> filter.audit(request, nextAction)
-      Concurrent.await(iteratee)
+      "when the request succeeds" in {
+        await(requestBody |>>> filter.apply(nextAction)(request))
+        behave like expected
+      }
 
-      eventually {
+      "when an action further down the chain throws an exception" in {
+        val iteratee = requestBody |>>> filter.apply(exceptionThrowingAction)(request)
+        a[RuntimeException] should be thrownBy await(iteratee)
+        behave like expected
+      }
+
+      def expected() = eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
-        event.auditType shouldBe "ServiceReceivedRequest"
+        event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("requestBody" -> "csrfToken=acb&userId=113244018119&password=#########&key1=")
       }
     }
 
-    "generate audit events with the device finger print when it is supplied in a request cookie" in {
+    "generate audit events with the device finger print when it is supplied in a request cookie" when {
+
       val encryptedFingerprint = "eyJ1c2VyQWdlbnQiOiJNb3ppbGxhLzUuMCAoTWFjaW50b3NoOyBJbnRlbCBNYWMgT1MgWCAxMF84XzUpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGx" +
         "pa2UgR2Vja28pIENocm9tZS8zMS4wLjE2NTAuNDggU2FmYXJpLzUzNy4zNiIsImxhbmd1YWdlIjoiZW4tVVMiLCJjb2xvckRlcHRoIjoyNCwicmVzb2x1dGlvbiI6IjgwMHgxMj" +
         "gwIiwidGltZXpvbmUiOjAsInNlc3Npb25TdG9yYWdlIjp0cnVlLCJsb2NhbFN0b3JhZ2UiOnRydWUsImluZGV4ZWREQiI6dHJ1ZSwicGxhdGZvcm0iOiJNYWNJbnRlbCIsImRvT" +
@@ -105,12 +115,19 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
 
       val request = FakeRequest("GET", "/foo").withCookies(Cookie(DeviceFingerprint.deviceFingerprintCookieName, encryptedFingerprint))
 
-      val iteratee = filter.audit(request, nextAction)
-      Concurrent.await(iteratee.run)
+      "when the request succeeds" in {
+        await(filter.apply(nextAction)(request).run)
+        behave like expected
+      }
 
-      eventually {
+      "when an action further down the chain throws an exception" in {
+        a[RuntimeException] should be thrownBy await(filter.apply(exceptionThrowingAction)(request).run)
+        behave like expected
+      }
+
+      def expected() = eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
-        event.auditType shouldBe "ServiceReceivedRequest"
+        event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("deviceFingerprint" -> (
           """{"userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.48 Safari/537.36",""" +
             """"language":"en-US","colorDepth":24,"resolution":"800x1280","timezone":0,"sessionStorage":true,"localStorage":true,"indexedDB":true,"platform":"MacIntel",""" +
@@ -119,43 +136,67 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       }
     }
 
-    "generate audit events without the device finger print when it is not supplied in a request cookie" in {
+    "generate audit events without the device finger print when it is not supplied in a request cookie" when {
       val request = FakeRequest("GET", "/foo")
 
-      val iteratee = filter.audit(request, nextAction)
-      Concurrent.await(iteratee.run)
+      "when the request succeeds" in {
+        await(filter.apply(nextAction)(request).run)
+        behave like expected
+      }
 
-      eventually {
+      "when an action further down the chain throws an exception" in {
+        a[RuntimeException] should be thrownBy await(filter.apply(exceptionThrowingAction)(request).run)
+        behave like expected
+      }
+
+      def expected() = eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
-        event.auditType shouldBe "ServiceReceivedRequest"
+        event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("deviceFingerprint" -> "-")
       }
     }
 
-    "generate audit events without the device finger print when the value supplied in the request cookie is invalid" in {
+    "generate audit events without the device finger print when the value supplied in the request cookie is invalid" when {
       val request = FakeRequest("GET", "/foo").withCookies(Cookie(DeviceFingerprint.deviceFingerprintCookieName, "THIS IS SOME JUST THAT SHOULDN'T BE DECRYPTABLE *!@&£$)B__!@£$"))
 
-      val iteratee = filter.audit(request, nextAction)
-      Concurrent.await(iteratee.run)
+      "when the request succeeds" in {
+        await(filter.apply(nextAction)(request).run)
+        behave like expected
+      }
 
-      eventually {
+      "when an action further down the chain throws an exception" in {
+        a[RuntimeException] should be thrownBy await(filter.apply(exceptionThrowingAction)(request).run)
+        behave like expected
+      }
+
+      def expected() = eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
-        event.auditType shouldBe "ServiceReceivedRequest"
+        event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("deviceFingerprint" -> "-")
-
       }
     }
 
-    "use the session to read Authorization, session Id and token" in running(FakeApplication()) {
-      val request = FakeRequest("GET", "/foo").withSession("token" -> "aToken", "authToken" -> "Bearer fNAao9C4kTby8cqa6g75emw1DZIyA5B72nr9oKHHetE=",
-        "sessionId" -> "mySessionId")
+    "use the session to read Authorization, session Id and token" when {
 
-      val iteratee = filter.audit(request, nextAction)
-      Concurrent.await(iteratee.run)
+      "when the request succeeds" in running(FakeApplication()) {
+        val request = FakeRequest("GET", "/foo").withSession("token" -> "aToken", "authToken" -> "Bearer fNAao9C4kTby8cqa6g75emw1DZIyA5B72nr9oKHHetE=",
+          "sessionId" -> "mySessionId")
 
-      eventually {
+        await(filter.apply(nextAction)(request).run)
+        behave like expected
+      }
+
+      "when an action further down the chain throws an exception" in running(FakeApplication()) {
+        val request = FakeRequest("GET", "/foo").withSession("token" -> "aToken", "authToken" -> "Bearer fNAao9C4kTby8cqa6g75emw1DZIyA5B72nr9oKHHetE=",
+          "sessionId" -> "mySessionId")
+
+        a[RuntimeException] should be thrownBy await(filter.apply(exceptionThrowingAction)(request).run)
+        behave like expected
+      }
+
+      def expected() = eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
-        event.auditType shouldBe "ServiceReceivedRequest"
+        event.auditType shouldBe EventTypes.RequestReceived
         event.detail should contain("Authorization" -> "Bearer fNAao9C4kTby8cqa6g75emw1DZIyA5B72nr9oKHHetE=")
         event.detail should contain("token" -> "aToken")
         event.tags should contain("X-Session-ID" -> "mySessionId")
@@ -164,9 +205,16 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
 
     "add the Location header to the details if available" in {
       implicit val hc = new HeaderCarrier()
-      val response = new ResponseHeader(200, Map("Location" -> "some url"))
-      filter.buildAuditResponseEvent(EventTypes.ServiceSentResponse, FakeRequest(), response, "....the response...").detail should contain("Location" -> "some url")
 
+      val next = Action.async { r =>
+        Future.successful(Results.Ok.withHeaders("Location" -> "some url")) }
+
+      await(filter.apply(next)(FakeRequest()).run)
+
+      eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.detail should contain("Location" -> "some url")
+      }
     }
   }
 
@@ -236,18 +284,41 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
   "A frontend response" should {
     "not be included in the audit message if it is HTML" in {
       implicit val hc = new HeaderCarrier()
-      val response = new ResponseHeader(200, Map("Content-Type" -> "text/html"))
-      filter.buildAuditResponseEvent(EventTypes.ServiceSentResponse, FakeRequest(), response, "....the response...").detail should contain("responseMessage" -> "<HTML>...</HTML>")
+      val next = Action.async { r =>
+        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html")) }
+
+      await(filter.apply(next)(FakeRequest()).run)
+
+      eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.detail should contain("responseMessage" -> "<HTML>...</HTML>")
+      }
     }
+
     "not be included in the audit message if it is html with utf-8" in {
       implicit val hc = new HeaderCarrier()
-      val response = new ResponseHeader(200, Map("Content-Type" -> "text/html; charset=utf-8"))
-      filter.buildAuditResponseEvent(EventTypes.ServiceSentResponse, FakeRequest(), response, "....the response...").detail should contain("responseMessage" -> "<HTML>...</HTML>")
+      val next = Action.async { r =>
+        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html; charset=utf-8")) }
+
+      await(filter.apply(next)(FakeRequest()).run)
+
+      eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.detail should contain("responseMessage" -> "<HTML>...</HTML>")
+      }
     }
+
     "be included if the ContentType is not text/html" in {
       implicit val hc = new HeaderCarrier()
-      val response = new ResponseHeader(303, Map("Content-Type" -> "application/json"))
-      filter.buildAuditResponseEvent(EventTypes.ServiceSentResponse, FakeRequest(), response, "....the response...").detail should contain("responseMessage" -> "....the response...")
+      val next = Action.async {
+        r => Future.successful(Results.Status(303)("....the response...").withHeaders("Content-Type" -> "application/json")) }
+
+      await(filter.apply(next)(FakeRequest()).run)
+
+      eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.detail should contain("responseMessage" -> "....the response...")
+      }
     }
   }
 
