@@ -45,8 +45,6 @@ private object AppDependencies {
   val compile = Seq(
     "com.typesafe.play" %% "play" % PlayVersion.current,
     ws,
-    "uk.gov.hmrc" %% "time" % "2.0.0",
-    "uk.gov.hmrc" %% "http-exceptions" % "1.0.0",
     "uk.gov.hmrc" %% "http-verbs" % "3.0.0"
   )
 
@@ -63,8 +61,7 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.4" % scope,
         "org.scalacheck" %% "scalacheck" % "1.12.2" % scope,
         "org.pegdown" % "pegdown" % "1.5.0" % scope,
-        "com.github.tomakehurst" % "wiremock" % "1.52" % scope,
-        "uk.gov.hmrc" %% "http-verbs" % "3.0.0"
+        "com.github.tomakehurst" % "wiremock" % "1.52" % scope
       )
     }.test
   }
