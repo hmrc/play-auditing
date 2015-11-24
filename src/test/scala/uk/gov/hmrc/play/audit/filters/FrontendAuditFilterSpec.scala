@@ -25,7 +25,7 @@ import play.api.test.{FakeApplication, FakeRequest}
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.connector.MockAuditConnector
 import uk.gov.hmrc.play.audit.model.{DataEvent, DeviceFingerprint}
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.http.{HeaderNames, CookieNames, HeaderCarrier}
 import uk.gov.hmrc.play.test.Concurrent
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -216,6 +216,51 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
         event.detail should contain("Location" -> "some url")
       }
     }
+
+    "generate audit events with the device ID when it is supplied in a request cookie" when {
+      val deviceID = "A_DEVICE_ID"
+
+      val request = FakeRequest("GET", "/foo").withCookies(Cookie(CookieNames.deviceID, deviceID))
+
+      "when the request succeeds" in {
+        await(filter.apply(nextAction)(request).run)
+        behave like expected
+      }
+
+      "when an action further down the chain throws an exception" in {
+        a[RuntimeException] should be thrownBy await(filter.apply(exceptionThrowingAction)(request).run)
+        behave like expected
+      }
+
+      def expected() = eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.auditType shouldBe EventTypes.RequestReceived
+        event.detail should contain("deviceID" -> deviceID)
+      }
+    }
+
+    "generate audit events with the device ID from headers if not supplied as a cookie" when {
+      val deviceID = "A_DEVICE_ID"
+
+      val request = FakeRequest("GET", "/foo").withHeaders(HeaderNames.deviceID -> deviceID)
+
+      "when the request succeeds" in {
+        await(filter.apply(nextAction)(request).run)
+        behave like expected
+      }
+
+      "when an action further down the chain throws an exception" in {
+        a[RuntimeException] should be thrownBy await(filter.apply(exceptionThrowingAction)(request).run)
+        behave like expected
+      }
+
+      def expected() = eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.auditType shouldBe EventTypes.RequestReceived
+        event.detail should contain("deviceID" -> deviceID)
+      }
+    }
+
   }
 
   "Get query string for audit" should {

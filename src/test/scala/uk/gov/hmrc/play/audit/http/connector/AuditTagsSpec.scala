@@ -35,10 +35,11 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
   val forwarded = ForwardedFor("ipAdress")
   val sessionId = SessionId("1234567890")
   val requestId = RequestId("0987654321")
+  val deviceId = "testDeviceId"
 
   "Audit TAGS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId))
+      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId))
 
       val tags = hc.toAuditTags("theTransactionName", "/the/request/path")
 
@@ -80,15 +81,16 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
   "Audit DETAILS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId))
+      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId))
 
       val details = hc.toAuditDetails()
 
-      details.size shouldBe 3
+      details.size shouldBe 4
 
       details("ipAddress") shouldBe forwarded.value
       details(authorisation) shouldBe authorization.value
       details(HeaderNames.token) shouldBe token.value
+      details(HeaderNames.deviceID) shouldBe deviceId
     }
 
     "be defaulted" in {
@@ -96,11 +98,12 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val details = hc.toAuditDetails()
 
-      details.size shouldBe 3
+      details.size shouldBe 4
 
       details("ipAddress") shouldBe "-"
       details(authorisation) shouldBe "-"
       details(HeaderNames.token) shouldBe "-"
+      details(HeaderNames.deviceID) shouldBe "-"
     }
 
     "have more details only" in {
@@ -108,7 +111,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val details = hc.toAuditDetails("more-details" -> "the details", "lots-of-details" -> "interesting info")
 
-      details.size shouldBe 5
+      details.size shouldBe 6
 
       details("more-details") shouldBe "the details"
       details("lots-of-details") shouldBe "interesting info"
