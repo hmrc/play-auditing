@@ -17,25 +17,26 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import org.joda.time.{DateTime, DateTimeZone}
+import org.mockito.ArgumentMatcher
+import org.mockito.Matchers._
+import org.mockito.Matchers.{eq => meq}
+import org.mockito.Mockito._
+import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{Matchers, Tag, WordSpecLike}
+import org.scalatest.mock.MockitoSugar
+import org.slf4j.Logger
+import play.api.LoggerLike
 import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.ws.{WSRequestHolder, WSResponse}
 import uk.gov.hmrc.play.audit.EventTypes
-import uk.gov.hmrc.play.audit.http.config.{Consumer, AuditingConfig, BaseUri}
+import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
+import uk.gov.hmrc.play.connectors.RequestBuilder
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.http.logging.LoggingDetails
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
-class AuditConnectorSpec extends WordSpecLike with Matchers with ScalaFutures {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  val eventTypes = new EventTypes {}
-
-  val stubConnector = new StubAuditConnector {}
-
+class ResponseFormatterSpec extends WordSpec with Matchers with ResponseFormatter {
   "checkResponse" should {
     "return None for any response code less than 300" in {
       val body = Json.obj("key" -> "value")
@@ -44,7 +45,7 @@ class AuditConnectorSpec extends WordSpecLike with Matchers with ScalaFutures {
         val response = new HttpResponse {
           override val status = code
         }
-        stubConnector.checkResponse(body, response) shouldBe None
+        checkResponse(body, response) shouldBe None
       }
     }
 
@@ -55,37 +56,66 @@ class AuditConnectorSpec extends WordSpecLike with Matchers with ScalaFutures {
         val response = new HttpResponse {
           override val status = code
         }
-        val result = stubConnector.checkResponse(body, response)
+        val result = checkResponse(body, response)
         result shouldNot be(None)
-        checkAuditFailureMessage(result.get, body, code)
+
+        val message = result.get
+        message should startWith(AuditEventFailureKeys.LoggingAuditFailureResponseKey)
+        message should include(body.toString)
+        message should include(code.toString)
       }
     }
   }
 
-  "handleResult" should {
-    case class Called(logError1: Option[String] = None, logError2: Option[(String, Throwable)] = None)
-
-    class MockAuditConnector extends StubAuditConnector {
-      var called = Called()
-
-      override protected def logError(s: String, t: Throwable): Unit = called = called.copy(logError2 = Some((s, t)))
-
-      override protected def logError(s: String): Unit = called = called.copy(logError1 = Some(s))
+  "makeFailureMessage" should {
+    "make a message containing the body and the right logging key" in {
+      val body: JsObject = Json.obj("key" -> "value")
+      val message: String = makeFailureMessage(body)
+      message should startWith(AuditEventFailureKeys.LoggingAuditRequestFailureKey)
+      message should include(body.toString)
     }
+  }
 
+  private def checkAuditFailureMessage(message: String, body: JsValue, code: Int) {
+    message should startWith(AuditEventFailureKeys.LoggingAuditFailureResponseKey)
+    message should include(body.toString)
+    message should include(code.toString)
+  }
+}
+
+class ResultHandlerSpec extends WordSpec
+                       with ShouldMatchers
+                       with ResultHandler
+                       with MockitoSugar
+                       with ScalaFutures
+                       with LoggerProvider {
+  val mockLogger = mock[Logger]
+  when(mockLogger.isWarnEnabled()).thenReturn(true)
+  override val logger = new LoggerLike {
+    override val logger = mockLogger
+  }
+
+  "handleResult" should {
     "not log any error or for a result status of 200" in {
-      val mockConnector = new MockAuditConnector
       val body = Json.obj("key" -> "value")
 
       val response = new HttpResponse {
         override val status = 200
       }
-      mockConnector.handleResult(Future.successful(response), body)(new HeaderCarrier)
-      mockConnector.called shouldBe Called(None, None)
+
+      handleResult(Future.successful(response), body)(new HeaderCarrier)
+
+      verifyNoMoreInteractions(mockLogger)
+    }
+
+    class IsValidFailureMessage(startsWith: String, contains: String*) extends ArgumentMatcher[String] {
+      override def matches(item: scala.Any): Boolean = {
+        val message = item.asInstanceOf[String]
+        message.startsWith(startsWith) && contains.forall(message.contains)
+      }
     }
 
     "log an error for a result status of 300" in {
-      val mockConnector = new MockAuditConnector
       val body = Json.obj("key" -> "value")
 
       val code = 300
@@ -94,176 +124,134 @@ class AuditConnectorSpec extends WordSpecLike with Matchers with ScalaFutures {
       }
 
       val f = Future.successful(response)
-      mockConnector.handleResult(f, body)(new HeaderCarrier).failed.futureValue
+      handleResult(f, body)(new HeaderCarrier).failed.futureValue
 
-      mockConnector.called.logError2 shouldBe None
-      mockConnector.called.logError1 shouldNot be(None)
+      val isValidFailureMessage = new IsValidFailureMessage(AuditEventFailureKeys.LoggingAuditFailureResponseKey,
+                                                            body.toString(), code.toString)
 
-      checkAuditFailureMessage(mockConnector.called.logError1.get, body, code)
+      verify(mockLogger, times(1)).warn(argThat(isValidFailureMessage))
     }
 
     "log an error for a Future.failed" in {
-      val mockConnector = new MockAuditConnector
       val body = Json.obj("key" -> "value")
 
       val f = Future.failed(new Exception("failed"))
-      mockConnector.handleResult(f, body)(new HeaderCarrier).failed.futureValue
+      handleResult(f, body)(new HeaderCarrier).failed.futureValue
 
-      mockConnector.called.logError1 shouldBe None
-      mockConnector.called.logError2 shouldNot be(None)
 
-      val (message, _) = mockConnector.called.logError2.get
-      checkAuditRequestFailureMessage(message, body)
+      val isValidFailureMessage = new IsValidFailureMessage(AuditEventFailureKeys.LoggingAuditRequestFailureKey,
+                                                            body.toString())
+      verify(mockLogger).warn(argThat(isValidFailureMessage), any())
     }
   }
+}
+
+class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
+  import AuditResult._
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val eventTypes = new EventTypes {}
+
+  val fakeConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
+                                      enabled = true,
+                                      traceRequests = true)
+
+  val mockRequestHolder = mock[WSRequestHolder]
+
+  def mockConnector(config: AuditingConfig) = new AuditorImpl with ConfigProvider with RequestBuilder with LoggerProvider {
+    override def auditingConfig = config
+    override def buildRequest(url: String)(implicit hc: HeaderCarrier) = mockRequestHolder
+    override val logger = mock[LoggerLike]
+  }
+
+  val mockResponse = mock[WSResponse]
 
   "sendLargeMergedEvent" should {
-    case class Called(callDatastream: Option[JsValue] = None, handleResult: Boolean = false)
-
-    class MockAuditConnector(response: Future[HttpResponse]) extends StubAuditConnector {
-      var called = new Called()
-
-      override def auditingConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))), enabled = true, traceRequests = true)
-
-      override protected[connector] def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ld: LoggingDetails) = {
-        called = called.copy(handleResult = true)
-        resultF
-      }
-
-      override protected def callAuditConsumer(url: String, body: JsValue)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-        called = called.copy(callDatastream = Some(body))
-
-        response
-      }
-    }
-
     "call datastream with large merged event" taggedAs Tag("txm80") in {
-      val mockConnector = new MockAuditConnector(Future.failed(new Exception("failed")))
+      when(mockResponse.status).thenReturn(200)
+      val response = Future.successful(mockResponse)
+
       val mergedEvent = MergedDataEvent("Test", "Test", "TestEventId",
-                                        DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)),
-                                        DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)))
-      mockConnector.sendLargeMergedEvent(mergedEvent)
-      mockConnector.called shouldBe Called(Some(Json.toJson(mergedEvent)), true)
+          DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)),
+          DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)))
+
+      val expected = Json.toJson(mergedEvent)
+      when(mockRequestHolder.post[JsValue](meq(expected))(any(), any())).thenReturn(response)
+      when(mockRequestHolder.post[JsValue](any())(any(), any())).thenReturn(response)
+
+      mockConnector(fakeConfig).sendLargeMergedEvent(mergedEvent).futureValue mustBe Success
     }
   }
 
   "sendEvent" should {
-    case class Called(callDatastream: Option[JsValue] = None, handleResult: Boolean = false)
-
-    class MockAuditConnector(response: Future[HttpResponse], enabled: Boolean = true) extends StubAuditConnector {
-      var called = new Called()
-
-      override def auditingConfig: AuditingConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))), enabled = enabled, traceRequests = true)
-
-      override protected[connector] def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ld: LoggingDetails) = {
-        called = called.copy(handleResult = true)
-        super.handleResult(resultF, body)
-      }
-
-      override protected def callAuditConsumer(url: String, body: JsValue)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = {
-        called = called.copy(callDatastream = Some(body))
-
-        response
-      }
-    }
+    val event = DataEvent("source", "type")
+    val expected: JsValue = Json.toJson(event)
 
     "call datastream with the event converted to json" in {
-      val mockConnector = new MockAuditConnector(response = Future.successful(HttpResponse(200)))
-      val event = DataEvent("source", "type")
-      mockConnector.sendEvent(event).futureValue should be (AuditResult.Success)
+      when(mockResponse.status).thenReturn(200)
+      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.successful(mockResponse))
 
-      mockConnector.called shouldBe Called(Some(Json.toJson(event)), true)
+      mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
     }
 
     "return a failed future if the HTTP response status is greater than 299" in {
-      val mockConnector = new MockAuditConnector(response = Future.successful(HttpResponse(300)))
-      val event = DataEvent("source", "type")
+      when(mockResponse.status).thenReturn(300)
+      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.successful(mockResponse))
 
-      val failureResponse = mockConnector.sendEvent(event).failed.futureValue
-      failureResponse should have ('nested (None))
+      val failureResponse = mockConnector(fakeConfig).sendEvent(event).failed.futureValue
+      failureResponse must have ('nested (None))
       checkAuditFailureMessage(failureResponse.getMessage, Json.toJson(event), 300)
-
-      mockConnector.called shouldBe Called(Some(Json.toJson(event)), true)
     }
 
     "return a failed future if there is an exception in the HTTP connection" in {
       val exception = new Exception("failed")
-      val mockConnector = new MockAuditConnector(response = Future.failed(exception))
-      val event = DataEvent("source", "type")
+      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.failed(exception))
 
-      val failureResponse = mockConnector.sendEvent(event).failed.futureValue
-      failureResponse should have ('nested (Some(exception)))
+      val failureResponse = mockConnector(fakeConfig).sendEvent(event).failed.futureValue
+      failureResponse must have ('nested (Some(exception)))
       checkAuditRequestFailureMessage(failureResponse.getMessage, Json.toJson(event))
-
-      mockConnector.called shouldBe Called(Some(Json.toJson(event)), true)
     }
 
     "return disabled if auditing is not enabled" in {
-      val mockConnector = new MockAuditConnector(response = Future.successful(HttpResponse(200)), enabled = false)
-      val event = DataEvent("source", "type")
-      mockConnector.sendEvent(event).futureValue should be (AuditResult.Disabled)
+      val disabledConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
+                                          enabled = false,
+                                          traceRequests = true)
 
-      mockConnector.called shouldBe Called()
+      when(mockResponse.status).thenReturn(200)
+      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.successful(mockResponse))
+      mockConnector(disabledConfig).sendEvent(event).futureValue must be (AuditResult.Disabled)
+
+      verifyNoMoreInteractions(mockRequestHolder)
     }
 
     "serialize the date correctly" in {
       val event: DataEvent = DataEvent("source", "type", generatedAt = new DateTime(0, DateTimeZone.UTC))
       val json: JsValue = Json.toJson(event)
 
-      (json \ "generatedAt").as[String] shouldBe "1970-01-01T00:00:00.000+0000"
+      (json \ "generatedAt").as[String] mustBe "1970-01-01T00:00:00.000+0000"
     }
 
     "call data stream with extended event data converted to json" in {
-      val response = Future.successful(HttpResponse(200))
+      when(mockResponse.status).thenReturn(200)
 
-      val mockConnector = new MockAuditConnector(response)
       val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
       val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", detail = detail)
 
-      mockConnector.sendEvent(event)
+      when(mockRequestHolder.post(meq(Json.toJson(event)))(any(), any())).thenReturn(Future.successful(mockResponse))
 
-      mockConnector.called shouldBe Called(Some(Json.toJson(event)), true)
+      mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
     }
-
-    "calls handleResult" in {
-      val f = Future.failed(new Exception("failed"))
-      val mockConnector = new MockAuditConnector(f)
-      val event: DataEvent = DataEvent("source", "type")
-      mockConnector.sendEvent(event)
-      val Called(_, handleResultCalled) = mockConnector.called
-      handleResultCalled shouldBe true
-    }
-
   }
 
   private def checkAuditRequestFailureMessage(message: String, body: JsValue) {
-    message should startWith(AuditEventFailureKeys.LoggingAuditRequestFailureKey)
-    message should include(body.toString)
+    message must startWith(AuditEventFailureKeys.LoggingAuditRequestFailureKey)
+    message must include(body.toString)
   }
 
   private def checkAuditFailureMessage(message: String, body: JsValue, code: Int) {
-    message should startWith(AuditEventFailureKeys.LoggingAuditFailureResponseKey)
-    message should include(body.toString)
-    message should include(code.toString)
+    message must startWith(AuditEventFailureKeys.LoggingAuditFailureResponseKey)
+    message must include(body.toString)
+    message must include(code.toString)
   }
-
-
-  "makeFailureMessage" should {
-    "make a message containing the body and the right logging key" in {
-      val body: JsObject = Json.obj("key" -> "value")
-      val message: String = stubConnector.makeFailureMessage(body)
-      message should startWith(AuditEventFailureKeys.LoggingAuditRequestFailureKey)
-      message should include(body.toString)
-    }
-  }
-}
-
-trait StubAuditConnector extends AuditConnector {
-  override def auditingConfig: AuditingConfig = ???
-
-  override protected def callAuditConsumer(url: String, body: JsValue)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[HttpResponse] = ???
-
-  override protected def logError(s: String, t: Throwable) {}
-
-  override protected def logError(s: String) {}
 }
