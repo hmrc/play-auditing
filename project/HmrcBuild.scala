@@ -47,7 +47,7 @@ private object AppDependencies {
     ws,
     "uk.gov.hmrc" %% "time" % "2.0.0",
     "uk.gov.hmrc" %% "http-exceptions" % "1.0.0",
-    "uk.gov.hmrc" %% "http-verbs" % "3.0.0"
+    "uk.gov.hmrc" %% "http-verbs" % "3.2.0"
   )
 
   trait TestDependencies {

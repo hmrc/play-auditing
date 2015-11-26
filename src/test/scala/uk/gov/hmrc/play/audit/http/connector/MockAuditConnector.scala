@@ -37,10 +37,6 @@ class MockAuditConnector extends AuditConnector {
     Future.successful(AuditResult.Success)
   }
 
-  override protected def logError(s: String, t: Throwable): Unit = ???
-
-  override protected def logError(s: String): Unit = ???
-
   override protected def callAuditConsumer(url:String, body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] = ???
 
   override def auditingConfig: AuditingConfig = ???
