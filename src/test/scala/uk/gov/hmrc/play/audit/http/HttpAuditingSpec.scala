@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, MockAuditConnector}
 import uk.gov.hmrc.play.audit.model.MergedDataEvent
 import uk.gov.hmrc.play.http.HeaderNames._
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.{HeaderNames, HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.Concurrent.await
 import uk.gov.hmrc.play.test.Concurrent.liftFuture
 import uk.gov.hmrc.play.test.DummyHttpResponse
@@ -57,7 +57,6 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
   class HttpWithAuditing extends HttpAuditing {
 
     override lazy val appName: String = "httpWithAuditSpec"
-
     override lazy val auditConnector: AuditConnector = new MockAuditConnector
 
     def auditRequestWithResponseF(url: String, verb: String, requestBody: Option[_], response: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit =
@@ -89,6 +88,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
 
   "When asked to auditRequestWithResponseF the code" should {
 
+      val deviceID = "A_DEVICE_ID"
       val serviceUri = "/service/path"
 
     "handle the happy path with a valid audit event passing through" in {
@@ -101,7 +101,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       val statusCode = 200
       val response = Future.successful(new DummyHttpResponse(responseBody, statusCode))
 
-      implicit val hcWithHeaders = HeaderCarrier().withExtraHeaders("Surrogate" -> "true")
+      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true")
       await(httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response))
 
       eventually(timeout(Span(1, Seconds))) {
@@ -113,19 +113,18 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
         dataEvent.auditType shouldBe OutboundCall
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-")
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
         dataEvent.response.detail shouldBe Map(ResponseMessage -> responseBody, StatusCode -> statusCode.toString)
         dataEvent.response.generatedAt shouldBe responseDateTime
-
       }
     }
 
     "handle the case of an exception being raised inside the future and still send an audit message" in {
 
-      implicit val hc = HeaderCarrier()
+      implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
 
       val httpWithAudit = new HttpWithAuditing
 
@@ -145,7 +144,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
         dataEvent.auditType shouldBe OutboundCall
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-")
-          dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody, HeaderNames.deviceID -> deviceID)
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
@@ -176,8 +175,9 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
 
   "Calling audit" should {
     val serviceUri = "/service/path"
+    val deviceID = "A_DEVICE_ID"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
 
     "send unique event of type OutboundCall" in {
       val httpWithAudit = new HttpWithAuditing
@@ -187,7 +187,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       val request = httpWithAudit.buildRequest(serviceUri, getVerb, requestBody)
       val response = new DummyHttpResponse("the response body", 200)
 
-      implicit val hc = HeaderCarrier(trueClientIp = Some("192.168.1.2"), trueClientPort = Some("12000")).withExtraHeaders("Surrogate" -> "true")
+      implicit val hc = HeaderCarrier(deviceID = Some(deviceID), trueClientIp = Some("192.168.1.2"), trueClientPort = Some("12000")).withExtraHeaders("Surrogate" -> "true")
 
       httpWithAudit.audit(request, response)
 
@@ -199,7 +199,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       dataEvent.auditType shouldBe OutboundCall
 
       dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000")
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
+      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
@@ -226,7 +226,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       dataEvent.auditType shouldBe OutboundCall
 
       dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-")
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody.get)
+      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody.get, HeaderNames.deviceID -> deviceID)
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
@@ -261,6 +261,29 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
 
       httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
+    }
+  }
+
+  "Calling an external service with service in its domain name" should {
+    val AuditUri = "http://some.service.gov.uk:80/self-assessment/data"
+    val getVerb = "GET"
+
+    implicit val hc = HeaderCarrier()
+
+    "generate an audit event" in {
+      val httpWithAudit = new HttpWithAuditing
+      val requestBody = None
+      val response = new DummyHttpResponse("the response body", 200)
+      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+
+      httpWithAudit.audit(request, response)
+
+      httpWithAudit.auditConnector.recordedMergedEvent shouldBe defined
+
+      val dataEvent = httpWithAudit.auditConnector.recordedMergedEvent.get
+
+      dataEvent.auditSource shouldBe httpWithAudit.appName
+      dataEvent.auditType shouldBe OutboundCall
     }
   }
 

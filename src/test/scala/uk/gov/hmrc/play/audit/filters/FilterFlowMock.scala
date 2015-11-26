@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.filters
 
 import play.api.libs.iteratee.Iteratee
-import play.api.mvc.{EssentialAction, Results, Result, RequestHeader}
+import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
 
@@ -31,5 +31,7 @@ trait FilterFlowMock {
 
   def nextAction(implicit ec: ExecutionContext) = EssentialAction(action)
 
-
+  def exceptionThrowingAction(implicit ec: ExecutionContext) = Action.async { request =>
+    throw new RuntimeException("Something went wrong")
+  }
 }

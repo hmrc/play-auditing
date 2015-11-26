@@ -17,10 +17,15 @@
 package uk.gov.hmrc.play.audit.filters
 
 import play.api.http.HeaderNames
-import play.api.mvc.{RequestHeader, ResponseHeader}
+import play.api.mvc.{EssentialAction, Result, RequestHeader, ResponseHeader}
+import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
-import uk.gov.hmrc.play.audit.model.{DataEvent, DeviceFingerprint}
+import uk.gov.hmrc.play.audit.model.DeviceFingerprint
 import uk.gov.hmrc.play.http.HeaderCarrier
+
+import scala.util.{Try, Failure, Success}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait FrontendAuditFilter extends AuditFilter {
 
@@ -30,17 +35,36 @@ trait FrontendAuditFilter extends AuditFilter {
 
   def applicationPort: Option[Int]
 
-  override def buildAuditedHeaders(request: RequestHeader) = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
+  def buildAuditedHeaders(request: RequestHeader) = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
 
-  override def buildAuditRequestEvent(eventType: EventTypes.EventType, request: RequestHeader, requestBody: String)(implicit hc: HeaderCarrier): DataEvent = {
+  override def apply(nextFilter: EssentialAction) = new EssentialAction {
+    def apply(requestHeader: RequestHeader) = {
 
-    super.buildAuditRequestEvent(eventType, request, stripPasswords(request.contentType, requestBody, maskedFormFields))
-      .withDetail(buildRequestDetails(request).toSeq: _*)
-  }
+      val next = nextFilter(requestHeader)
+      implicit val hc = HeaderCarrier.fromHeadersAndSession(requestHeader.headers, Some(requestHeader.session))
 
-  override def buildAuditResponseEvent(eventType: EventTypes.EventType, request: RequestHeader, response: ResponseHeader, responseBody: String)(implicit hc: HeaderCarrier): DataEvent = {
-    super.buildAuditResponseEvent(eventType, request, response, filterResponseBody(response, responseBody))
-      .withDetail(buildResponseDetails(response).toSeq: _*)
+      def performAudit(requestBody: Array[Byte], maybeResult: Try[Result]): Unit = {
+        maybeResult match {
+          case Success(result) =>
+            val responseHeader = result.header
+            getBody(result) map { responseBody =>
+              auditConnector.sendEvent(
+                dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
+                  .withDetail(ResponseMessage -> filterResponseBody(responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
+                  .withDetail(buildRequestDetails(requestHeader, new String(requestBody)).toSeq: _*)
+                  .withDetail(buildResponseDetails(responseHeader).toSeq: _*))
+            }
+          case Failure(f) =>
+            auditConnector.sendEvent(
+              dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
+                .withDetail(FailedRequestMessage -> f.getMessage)
+                .withDetail(buildRequestDetails(requestHeader, new String(requestBody)).toSeq: _*))
+        }
+      }
+
+      if (needsAuditing(requestHeader)) onCompleteWithInput(next)(performAudit)
+      else next
+    }
   }
 
   private def filterResponseBody(response: ResponseHeader, responseBody: String) = {
@@ -49,22 +73,20 @@ trait FrontendAuditFilter extends AuditFilter {
       .getOrElse(responseBody)
   }
 
-  private def buildRequestDetails(request: RequestHeader)(implicit hc: HeaderCarrier): Map[String, String] = {
-
+  private def buildRequestDetails(requestHeader: RequestHeader, request: String)(implicit hc: HeaderCarrier): Map[String, String] = {
     val details = new collection.mutable.HashMap[String, String]
-    details.put("deviceFingerprint", DeviceFingerprint.deviceFingerprintFrom(request))
 
-    details.put("host", getHost(request))
+    details.put(RequestBody, stripPasswords(requestHeader.contentType, request, maskedFormFields))
+    details.put("deviceFingerprint", DeviceFingerprint.deviceFingerprintFrom(requestHeader))
+    details.put("host", getHost(requestHeader))
     details.put("port", getPort)
-    details.put("queryString", getQueryString(request.queryString))
+    details.put("queryString", getQueryString(requestHeader.queryString))
 
     details.toMap
   }
 
   private def buildResponseDetails(response: ResponseHeader)(implicit hc: HeaderCarrier): Map[String, String] = {
-
     val details = new collection.mutable.HashMap[String, String]
-
     response.headers.get(HeaderNames.LOCATION).map { location =>
       details.put(HeaderNames.LOCATION, location)
     }
@@ -89,7 +111,6 @@ trait FrontendAuditFilter extends AuditFilter {
   }
 
   private[filters] def getPort = applicationPort.map(_.toString).getOrElse("-")
-
 
   private[filters] def stripPasswords(contentType: Option[String], requestBody: String, maskedFormFields: Seq[String]): String = {
     contentType match {

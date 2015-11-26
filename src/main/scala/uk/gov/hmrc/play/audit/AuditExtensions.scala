@@ -31,7 +31,8 @@ object AuditExtensions {
     private lazy val auditDetails = Map[String, String](
       "ipAddress" -> carrier.forwarded.map(_.value).getOrElse("-"),
       carrier.names.authorisation -> carrier.authorization.map(_.value).getOrElse("-"),
-      carrier.names.token -> carrier.token.map(_.value).getOrElse("-")
+      carrier.names.token -> carrier.token.map(_.value).getOrElse("-"),
+      carrier.names.deviceID -> carrier.deviceID.getOrElse("-")
     )
 
     def toAuditTags(transactionName: String, path: String) = {

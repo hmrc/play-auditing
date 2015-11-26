@@ -20,9 +20,7 @@ trait EventTypes {
 
   type EventType = String
 
-  val ServiceReceivedRequest: EventType = "ServiceReceivedRequest"
-  val ServiceSentResponse: EventType = "ServiceSentResponse"
-
+  val RequestReceived: EventType = "RequestReceived"
   val OutboundCall:EventType = "OutboundCall"
 
   val TransactionFailureReason: EventType = "transactionFailureReason"
