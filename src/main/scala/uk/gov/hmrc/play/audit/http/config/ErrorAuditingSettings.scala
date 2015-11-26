@@ -18,10 +18,9 @@ package uk.gov.hmrc.play.audit.http.config
 
 import play.api.GlobalSettings
 import play.api.mvc.{RequestHeader, Result}
-import uk.gov.hmrc.play.audit.EventTypes
+import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
-import EventTypes._
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.audit.http.connector.Auditor
 import uk.gov.hmrc.play.http.{JsValidationException, NotFoundException}
 
 import scala.concurrent.Future
@@ -29,7 +28,7 @@ import scala.concurrent.Future
 trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def auditConnector: AuditConnector
+  def auditConnector: Auditor
 
   private val unexpectedError = "Unexpected error"
   private val notFoundError = "Resource Endpoint Not Found"

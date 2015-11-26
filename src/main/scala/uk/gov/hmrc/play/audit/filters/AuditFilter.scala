@@ -17,22 +17,20 @@
 package uk.gov.hmrc.play.audit.filters
 
 import play.api.Routes
-import play.api.libs.iteratee.{Cont, Input, Iteratee, Enumeratee}
+import play.api.libs.iteratee.{Cont, Enumeratee, Input, Iteratee}
 import play.api.mvc.{Result, _}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
+import uk.gov.hmrc.play.audit.http.connector.Auditor
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.concurrent.Future
-import scala.util.{Try, Failure, Success}
-
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
-  def auditConnector: AuditConnector
+  def auditConnector: Auditor
 
   def controllerNeedsAuditing(controllerName: String): Boolean
 

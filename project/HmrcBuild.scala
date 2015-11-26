@@ -29,7 +29,7 @@ object HmrcBuild extends Build {
     .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
     .settings(
       libraryDependencies ++= AppDependencies(),
-      crossScalaVersions := Seq("2.11.6"),
+      scalaVersion := "2.11.7",
       resolvers := Seq(
         Resolver.bintrayRepo("hmrc", "releases"),
         "typesafe-releases" at "http://repo.typesafe.com/typesafe/releases/"
