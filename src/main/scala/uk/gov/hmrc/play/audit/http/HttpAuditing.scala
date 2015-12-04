@@ -20,7 +20,7 @@ import org.joda.time.DateTime
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes._
-import uk.gov.hmrc.play.audit.http.connector.Auditor
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
 import uk.gov.hmrc.play.http.hooks.HttpHook
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
@@ -32,7 +32,7 @@ import scala.concurrent.Future
 
 trait HttpAuditing extends DateTimeUtils {
 
-  def auditConnector: Auditor
+  def auditConnector: AuditConnector
   def appName: String
   def auditDisabledForPattern = """http(s)?:\/\/.*\.service($|[:\/])""".r
 
