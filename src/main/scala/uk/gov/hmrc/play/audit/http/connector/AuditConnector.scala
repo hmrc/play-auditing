@@ -65,6 +65,10 @@ trait ConfigProvider {
 
 trait LoggerProvider {
   val logger: LoggerLike
+
+  protected def logError(s: String) = logger.warn(s)
+
+  protected def logError(s: String, t: Throwable) = logger.warn(s, t)
 }
 
 trait ResultHandler extends ResponseFormatter {
@@ -73,13 +77,13 @@ trait ResultHandler extends ResponseFormatter {
     resultF
       .recoverWith { case t =>
         val message = makeFailureMessage(body)
-        logger.warn(message, t)
+        logError(message, t)
         Future.failed(AuditResult.Failure(message, Some(t)))
       }
       .map { response =>
         checkResponse(body, response) match {
           case Some(error) =>
-            logger.warn(error)
+            logError(error)
             throw AuditResult.Failure(error)
           case None => response
         }
