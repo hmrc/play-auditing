@@ -22,7 +22,7 @@ import play.api.mvc.{Result, _}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
-import uk.gov.hmrc.play.audit.http.connector.Auditor
+import uk.gov.hmrc.play.audit.http.connector.{AuditConnector}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,7 +30,7 @@ import scala.util.{Failure, Success, Try}
 
 trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
-  def auditConnector: Auditor
+  def auditConnector: AuditConnector
 
   def controllerNeedsAuditing(controllerName: String): Boolean
 
