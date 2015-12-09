@@ -26,6 +26,8 @@ import uk.gov.hmrc.play.audit.model.{DataEvent, AuditEvent}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.Concurrent.await
 
+import uk.gov.hmrc.play.test.Http._
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -61,7 +63,8 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
       val mockAuditConnector = createAuditConnector
       val auditFilter = createAuditFilter(mockAuditConnector)
 
-      await(auditFilter.apply(nextAction)(request).run)
+      val result = await(auditFilter.apply(nextAction)(request).run)
+      await(enumerateResponseBody(result))
 
       eventually {
         val events = mockAuditConnector.events

@@ -23,6 +23,7 @@ import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.model.DeviceFingerprint
 import uk.gov.hmrc.play.http.HeaderCarrier
 
+import scala.concurrent.Promise
 import scala.util.{Try, Failure, Success}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -62,7 +63,12 @@ trait FrontendAuditFilter extends AuditFilter {
         }
       }
 
-      if (needsAuditing(requestHeader)) onCompleteWithInput(next)(performAudit)
+      if (needsAuditing(requestHeader)) {
+        val requestBodyPromise = Promise[Array[Byte]]
+
+        val responseCapture = captureResult(next, requestBodyPromise.future)(performAudit)
+        captureRequestBody(responseCapture, requestBodyPromise)
+      }
       else next
     }
   }

@@ -17,8 +17,12 @@
 package uk.gov.hmrc.play.audit.filters
 
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{TestData, Matchers, WordSpecLike}
+
+import org.scalatestplus.play._
+
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeApplication, FakeRequest}
@@ -26,7 +30,9 @@ import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.connector.MockAuditConnector
 import uk.gov.hmrc.play.audit.model.{DataEvent, DeviceFingerprint}
 import uk.gov.hmrc.play.http.{HeaderNames, CookieNames, HeaderCarrier}
-import uk.gov.hmrc.play.test.Concurrent
+
+import uk.gov.hmrc.play.test.AssetsTestController
+import uk.gov.hmrc.play.test.Http._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -88,7 +94,8 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       val request = FakeRequest("POST", "/foo").withHeaders("Content-Type" -> "application/x-www-form-urlencoded")
 
       "when the request succeeds" in {
-        await(requestBody |>>> filter.apply(nextAction)(request))
+        val result = await(requestBody |>>> filter.apply(nextAction)(request))
+        await(enumerateResponseBody(result))
         behave like expected
       }
 
@@ -116,7 +123,9 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       val request = FakeRequest("GET", "/foo").withCookies(Cookie(DeviceFingerprint.deviceFingerprintCookieName, encryptedFingerprint))
 
       "when the request succeeds" in {
-        await(filter.apply(nextAction)(request).run)
+        val result = await(filter.apply(nextAction)(request).run)
+        await(enumerateResponseBody(result))
+
         behave like expected
       }
 
@@ -140,7 +149,9 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       val request = FakeRequest("GET", "/foo")
 
       "when the request succeeds" in {
-        await(filter.apply(nextAction)(request).run)
+        val result = await(filter.apply(nextAction)(request).run)
+        await(enumerateResponseBody(result))
+
         behave like expected
       }
 
@@ -182,7 +193,9 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
         val request = FakeRequest("GET", "/foo").withSession("token" -> "aToken", "authToken" -> "Bearer fNAao9C4kTby8cqa6g75emw1DZIyA5B72nr9oKHHetE=",
           "sessionId" -> "mySessionId")
 
-        await(filter.apply(nextAction)(request).run)
+        val result = await(filter.apply(nextAction)(request).run)
+        await(enumerateResponseBody(result))
+
         behave like expected
       }
 
@@ -207,9 +220,11 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       implicit val hc = new HeaderCarrier()
 
       val next = Action.async { r =>
-        Future.successful(Results.Ok.withHeaders("Location" -> "some url")) }
+        Future.successful(Results.Ok.withHeaders("Location" -> "some url"))
+      }
 
-      await(filter.apply(next)(FakeRequest()).run)
+      val result = await(filter.apply(next)(FakeRequest()).run)
+      await(enumerateResponseBody(result))
 
       eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
@@ -223,7 +238,9 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       val request = FakeRequest("GET", "/foo").withCookies(Cookie(CookieNames.deviceID, deviceID))
 
       "when the request succeeds" in {
-        await(filter.apply(nextAction)(request).run)
+        val result = await(filter.apply(nextAction)(request).run)
+        await(enumerateResponseBody(result))
+
         behave like expected
       }
 
@@ -330,9 +347,11 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
     "not be included in the audit message if it is HTML" in {
       implicit val hc = new HeaderCarrier()
       val next = Action.async { r =>
-        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html")) }
+        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html"))
+      }
 
-      await(filter.apply(next)(FakeRequest()).run)
+      val result = await(filter.apply(next)(FakeRequest()).run)
+      await(enumerateResponseBody(result))
 
       eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
@@ -343,9 +362,11 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
     "not be included in the audit message if it is html with utf-8" in {
       implicit val hc = new HeaderCarrier()
       val next = Action.async { r =>
-        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html; charset=utf-8")) }
+        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html; charset=utf-8"))
+      }
 
-      await(filter.apply(next)(FakeRequest()).run)
+      val result = await(filter.apply(next)(FakeRequest()).run)
+      await(enumerateResponseBody(result))
 
       eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
@@ -353,17 +374,56 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
       }
     }
 
+
     "be included if the ContentType is not text/html" in {
       implicit val hc = new HeaderCarrier()
       val next = Action.async {
-        r => Future.successful(Results.Status(303)("....the response...").withHeaders("Content-Type" -> "application/json")) }
+        r => Future.successful(Results.Status(303)("....the response...").withHeaders("Content-Type" -> "application/json"))
+      }
 
-      await(filter.apply(next)(FakeRequest()).run)
+      val result = await(filter.apply(next)(FakeRequest()).run)
+      await(enumerateResponseBody(result))
 
       eventually {
         val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
         event.detail should contain("responseMessage" -> "....the response...")
       }
+    }
+  }
+}
+
+class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServerPerTest {
+
+  val random = new scala.util.Random
+
+  // Generate a random string of length n from the given alphabet
+  def randomString(alphabet: String)(n: Int): String =
+    Stream.continually(random.nextInt(alphabet.size)).map(alphabet).take(n).mkString
+
+  override def newAppForTest(testData: TestData): FakeApplication = FakeApplication(withRoutes = {
+    case ("GET", "/assets/stylesheet.css") => filter.apply(AssetsTestController.at("/", "stylesheet.css"))
+    case ("GET", "/longresponse") => filter.apply(Action { Results.Ok(randomString("abcdefghijklmnopqrstuvwxyz0123456789")(124000) ) })
+  })
+
+  "Attempting to audit a large in-memory response" in {
+
+    val url = s"http://localhost:$port/longresponse"
+    val response = await(WS.url(url).get())
+
+    eventually {
+      val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+      event.detail should not be null
+    }
+  }
+
+  "Attempting to audit assets" in {
+
+    val url = s"http://localhost:$port/assets/stylesheet.css"
+    val response = await(WS.url(url).withBody("Test").get())
+
+    eventually {
+      val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+      event.detail should not be null
     }
   }
 

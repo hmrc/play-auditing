@@ -16,23 +16,6 @@
 
 package uk.gov.hmrc.play.test
 
-import play.api.libs.iteratee.Iteratee
-import play.api.mvc.Result
+import controllers.AssetsBuilder
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-object Http {
-  def enumerateResponseBody(r: Result) = r.body.run( Iteratee.foreach {i => } )
-}
-
-object Concurrent {
-  import scala.concurrent.{Await, Future}
-  import scala.concurrent.duration._
-
-  val defaultTimeout = 5 seconds
-
-  implicit def extractAwait[A](future: Future[A]) = await[A](future)
-  implicit def liftFuture[A](v: A) = Future.successful(v)
-
-  def await[A](future: Future[A]) = Await.result(future, defaultTimeout)
-}
+object AssetsTestController extends AssetsBuilder

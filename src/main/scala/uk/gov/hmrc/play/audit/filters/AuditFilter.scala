@@ -17,15 +17,17 @@
 package uk.gov.hmrc.play.audit.filters
 
 import play.api.Routes
-import play.api.libs.iteratee.{Cont, Enumeratee, Input, Iteratee}
+import play.api.libs.iteratee._
 import play.api.mvc.{Result, _}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
-import uk.gov.hmrc.play.audit.http.connector.{AuditConnector}
+import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, Auditor}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Promise, Future}
 import scala.util.{Failure, Success, Try}
 
 trait AuditFilter extends EssentialFilter with HttpAuditEvent {
@@ -44,20 +46,37 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
     result.body |>>> bytesToString &>> consume
   }
 
-  protected def onCompleteWithInput(next: Iteratee[Array[Byte], Result])(handler: (Array[Byte], Try[Result]) => Unit): Iteratee[Array[Byte], Result] = {
+  protected def captureRequestBody(next: Iteratee[Array[Byte], Result], onDone: Promise[Array[Byte]]): Iteratee[Array[Byte], Result] = {
     def step(body: Array[Byte], nextI: Iteratee[Array[Byte], Result])(input: Input[Array[Byte]]): Iteratee[Array[Byte], Result] = {
       input match {
         case Input.El(e) => Cont[Array[Byte], Result](step(Array.concat(body, e), Iteratee.flatten(nextI.feed(Input.El(e)))))
         case Input.Empty => Cont[Array[Byte], Result](step(body, nextI))
         case Input.EOF => {
           val result = Iteratee.flatten(nextI.feed(Input.EOF))
-          result.run onComplete { r => handler(body, r) }
+          onDone.success(body)
           result
         }
       }
     }
 
     Cont[Array[Byte], Result](i => step(Array(), next)(i))
+  }
+
+  protected def captureResult(next: Iteratee[Array[Byte], Result], requestBody: Future[Array[Byte]])(handler: (Array[Byte], Try[Result]) => Unit): Iteratee[Array[Byte], Result] = {
+    next.map { result =>
+      val collectedBody = new ArrayBuffer[Byte](0)
+
+      def collect(i: Array[Byte]) = { collectedBody.appendAll(i); i }
+      def handleSuccess() = requestBody.onSuccess { case body =>
+        handler(body, Success(result.copy(body = Enumerator(collectedBody.toArray))))
+      }
+
+      result.copy(body = result.body.map { collect } onDoneEnumerating handleSuccess)
+
+    }.recoverWith { case ex: Throwable =>
+      requestBody.onSuccess { case body => handler(body, Failure(ex)) }
+      next
+    }
   }
 
   def apply(nextFilter: EssentialAction) = new EssentialAction {
@@ -80,7 +99,12 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
         }
       }
 
-      if (needsAuditing(requestHeader)) onCompleteWithInput(next)(performAudit)
+      if (needsAuditing(requestHeader)) {
+        val requestBodyPromise = Promise[Array[Byte]]()
+
+        val result = captureResult(next, requestBodyPromise.future)(performAudit)
+        captureRequestBody(result, requestBodyPromise)
+      }
       else next
     }
   }
