@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 HM Revenue & Customs
+ * Copyright 2016 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@ import uk.gov.hmrc.play.audit.http.HttpAuditEvent
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, Auditor}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 trait AuditFilter extends EssentialFilter with HttpAuditEvent {
@@ -47,24 +48,24 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
   }
 
   protected def captureRequestBody(next: Iteratee[Array[Byte], Result], onDone: Promise[Array[Byte]]): Iteratee[Array[Byte], Result] = {
-    def step(body: Array[Byte], nextI: Iteratee[Array[Byte], Result])(input: Input[Array[Byte]]): Iteratee[Array[Byte], Result] = {
+    def step(body: mutable.ArrayBuffer[Byte], nextI: Iteratee[Array[Byte], Result])(input: Input[Array[Byte]]): Iteratee[Array[Byte], Result] = {
       input match {
-        case Input.El(e) => Cont[Array[Byte], Result](step(Array.concat(body, e), Iteratee.flatten(nextI.feed(Input.El(e)))))
+        case Input.El(e) => Cont[Array[Byte], Result](step(body ++= e, Iteratee.flatten(nextI.feed(Input.El(e)))))
         case Input.Empty => Cont[Array[Byte], Result](step(body, nextI))
         case Input.EOF => {
           val result = Iteratee.flatten(nextI.feed(Input.EOF))
-          onDone.success(body)
+          onDone.success(body.toArray)
           result
         }
       }
     }
 
-    Cont[Array[Byte], Result](i => step(Array(), next)(i))
+    Cont[Array[Byte], Result](i => step(new ArrayBuffer[Byte](1024), next)(i))
   }
 
   protected def captureResult(next: Iteratee[Array[Byte], Result], requestBody: Future[Array[Byte]])(handler: (Array[Byte], Try[Result]) => Unit): Iteratee[Array[Byte], Result] = {
     next.map { result =>
-      val collectedBody = new ArrayBuffer[Byte](0)
+      val collectedBody = new mutable.ArrayBuffer[Byte](1024)
 
       def collect(i: Array[Byte]) = { collectedBody.appendAll(i); i }
       def handleSuccess() = requestBody.onSuccess { case body =>
