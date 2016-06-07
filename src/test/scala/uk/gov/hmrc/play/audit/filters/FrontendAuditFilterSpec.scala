@@ -17,20 +17,18 @@
 package uk.gov.hmrc.play.audit.filters
 
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import org.scalatest.{TestData, Matchers, WordSpecLike}
-
+import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.{Matchers, TestData, WordSpecLike}
 import org.scalatestplus.play._
-
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeApplication, FakeRequest}
-import uk.gov.hmrc.play.audit.EventTypes
+import uk.gov.hmrc.play.audit.{EventKeys, EventTypes}
 import uk.gov.hmrc.play.audit.http.connector.MockAuditConnector
 import uk.gov.hmrc.play.audit.model.{DataEvent, DeviceFingerprint}
-import uk.gov.hmrc.play.http.{HeaderNames, CookieNames, HeaderCarrier}
-
+import uk.gov.hmrc.play.http.{CookieNames, HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.test.AssetsTestController
 import uk.gov.hmrc.play.test.Http._
 
@@ -395,6 +393,8 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
 class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServerPerTest {
 
   val random = new scala.util.Random
+  val rs = randomString("abcdefghijklmnopqrstuvwxyz0123456789")(filter.maxBodySize * 4)
+  val pc = PatienceConfig(Span(5, Seconds), Span(15, Millis))
 
   // Generate a random string of length n from the given alphabet
   def randomString(alphabet: String)(n: Int): String =
@@ -402,10 +402,12 @@ class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServ
 
   override def newAppForTest(testData: TestData): FakeApplication = FakeApplication(withRoutes = {
     case ("GET", "/assets/stylesheet.css") => filter.apply(AssetsTestController.at("/", "stylesheet.css"))
-    case ("GET", "/longresponse") => filter.apply(Action { Results.Ok(randomString("abcdefghijklmnopqrstuvwxyz0123456789")(124000) ) })
+    case ("GET", "/longresponse") => filter.apply(Action { Results.Ok(rs) })
+    case ("POST", "/longrequest") => filter.apply(Action { Results.Ok })
   })
 
   "Attempting to audit a large in-memory response" in {
+    filter.auditConnector.reset
 
     val url = s"http://localhost:$port/longresponse"
     val response = await(WS.url(url).get())
@@ -413,18 +415,33 @@ class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServ
     eventually {
       val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
       event.detail should not be null
-    }
+      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(filter.maxBodySize)
+    }(pc)
   }
 
   "Attempting to audit assets" in {
-
+    filter.auditConnector.reset
     val url = s"http://localhost:$port/assets/stylesheet.css"
     val response = await(WS.url(url).withBody("Test").get())
 
     eventually {
       val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
       event.detail should not be null
+      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(filter.maxBodySize)
     }
+  }
+
+  "Attempting to audit a large request" in {
+    filter.auditConnector.reset
+
+    val url = s"http://localhost:$port/longrequest"
+    val response = await(WS.url(url).post(rs))
+
+    eventually {
+      val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+      event.detail should not be null
+      event.detail.get(EventKeys.RequestBody).getOrElse("").length should equal(filter.maxBodySize)
+    }(pc)
   }
 
 }

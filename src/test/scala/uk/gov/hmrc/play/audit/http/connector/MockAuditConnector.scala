@@ -37,6 +37,11 @@ class MockAuditConnector extends AuditConnector {
     Future.successful(AuditResult.Success)
   }
 
+  def reset() = {
+    recordedEvent = None
+    recordedMergedEvent = None
+  }
+
   override protected def logError(s: String, t: Throwable): Unit = ???
 
   override protected def logError(s: String): Unit = ???
