@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.play.audit.filters
 
-import play.api.Routes
+import play.api.{Logger, Routes}
 import play.api.libs.iteratee._
 import play.api.mvc.{Result, _}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
-import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, Auditor}
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.collection.mutable
@@ -53,8 +53,10 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
     def step(body: mutable.ArrayBuffer[Byte], nextI: Iteratee[Array[Byte], Result])(input: Input[Array[Byte]]): Iteratee[Array[Byte], Result] = {
       input match {
         case Input.El(e) => {
-          //TODO: log warning if exceeds max length
-          val newBody = if (body.length > maxBodySize) body else body ++= e.take(maxBodySize - body.length)
+          val newBody = if (body.length > maxBodySize) {
+            Logger.warn(s"Capture body of length ${body.length} exceeds maxLength ${maxBodySize}")
+            body
+          } else body ++= e.take(maxBodySize - body.length)
           Cont[Array[Byte], Result](step(newBody, Iteratee.flatten(nextI.feed(Input.El(e)))))
         }
         case Input.Empty => Cont[Array[Byte], Result](step(body, nextI))
@@ -80,7 +82,7 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
           else
             collectedBody.appendAll(i);
         }
-        //TODO: log warning if exceeds max length
+        Logger.warn(s"Capture body of length ${collectedBody.length} exceeds maxLength ${maxBodySize}")
         i
       }
       def handleSuccess() = requestBody.onSuccess { case body =>
