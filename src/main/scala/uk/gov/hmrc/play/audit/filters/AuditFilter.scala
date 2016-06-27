@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.play.audit.filters
 
-import play.api.Routes
+import play.api.{Logger, Routes}
 import play.api.libs.iteratee._
 import play.api.mvc.{Result, _}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
-import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, Auditor}
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.collection.mutable
@@ -37,6 +37,8 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
   def controllerNeedsAuditing(controllerName: String): Boolean
 
+  val maxBodySize = 32665
+
   protected def needsAuditing(request: RequestHeader): Boolean =
     (for (controllerName <- request.tags.get(Routes.ROUTE_CONTROLLER))
       yield controllerNeedsAuditing(controllerName)).getOrElse(true)
@@ -50,7 +52,13 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
   protected def captureRequestBody(next: Iteratee[Array[Byte], Result], onDone: Promise[Array[Byte]]): Iteratee[Array[Byte], Result] = {
     def step(body: mutable.ArrayBuffer[Byte], nextI: Iteratee[Array[Byte], Result])(input: Input[Array[Byte]]): Iteratee[Array[Byte], Result] = {
       input match {
-        case Input.El(e) => Cont[Array[Byte], Result](step(body ++= e, Iteratee.flatten(nextI.feed(Input.El(e)))))
+        case Input.El(e) => {
+          val newBody = if (body.length > maxBodySize) {
+            Logger.warn(s"txm play auditing: sanity check ${body.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
+            body
+          } else body ++= e.take(maxBodySize - body.length)
+          Cont[Array[Byte], Result](step(newBody, Iteratee.flatten(nextI.feed(Input.El(e)))))
+        }
         case Input.Empty => Cont[Array[Byte], Result](step(body, nextI))
         case Input.EOF => {
           val result = Iteratee.flatten(nextI.feed(Input.EOF))
@@ -60,14 +68,23 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
       }
     }
 
-    Cont[Array[Byte], Result](i => step(new ArrayBuffer[Byte](1024), next)(i))
+    Cont[Array[Byte], Result](i => step(new ArrayBuffer[Byte](maxBodySize), next)(i))
   }
 
   protected def captureResult(next: Iteratee[Array[Byte], Result], requestBody: Future[Array[Byte]])(handler: (Array[Byte], Try[Result]) => Unit): Iteratee[Array[Byte], Result] = {
     next.map { result =>
-      val collectedBody = new mutable.ArrayBuffer[Byte](1024)
+      val collectedBody = new mutable.ArrayBuffer[Byte](maxBodySize)
 
-      def collect(i: Array[Byte]) = { collectedBody.appendAll(i); i }
+      def collect(i: Array[Byte]) = {
+        if (collectedBody.length < maxBodySize) {
+          if(i.length > maxBodySize)
+            collectedBody.appendAll(i.take(maxBodySize));
+          else
+            collectedBody.appendAll(i);
+        }
+        Logger.warn(s"txm play auditing: sanity check ${collectedBody.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
+        i
+      }
       def handleSuccess() = requestBody.onSuccess { case body =>
         handler(body, Success(result.copy(body = Enumerator(collectedBody.toArray))))
       }
