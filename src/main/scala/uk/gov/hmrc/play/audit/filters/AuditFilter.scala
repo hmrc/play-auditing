@@ -37,7 +37,7 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
   def controllerNeedsAuditing(controllerName: String): Boolean
 
-  val maxBodySize = 1024
+  val maxBodySize = 32665
 
   protected def needsAuditing(request: RequestHeader): Boolean =
     (for (controllerName <- request.tags.get(Routes.ROUTE_CONTROLLER))
@@ -54,7 +54,7 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
       input match {
         case Input.El(e) => {
           val newBody = if (body.length > maxBodySize) {
-            Logger.warn(s"Capture body of length ${body.length} exceeds maxLength ${maxBodySize}")
+            Logger.warn(s"txm play auditing: sanity check ${body.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
             body
           } else body ++= e.take(maxBodySize - body.length)
           Cont[Array[Byte], Result](step(newBody, Iteratee.flatten(nextI.feed(Input.El(e)))))
@@ -82,7 +82,7 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
           else
             collectedBody.appendAll(i);
         }
-        Logger.warn(s"Capture body of length ${collectedBody.length} exceeds maxLength ${maxBodySize}")
+        Logger.warn(s"txm play auditing: sanity check ${collectedBody.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
         i
       }
       def handleSuccess() = requestBody.onSuccess { case body =>

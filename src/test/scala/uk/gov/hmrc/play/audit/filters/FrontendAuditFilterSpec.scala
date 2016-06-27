@@ -393,7 +393,7 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers  with Eventuall
 class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServerPerTest {
 
   val random = new scala.util.Random
-  val rs = randomString("abcdefghijklmnopqrstuvwxyz0123456789")(filter.maxBodySize * 4)
+  val rs = randomString("abcdefghijklmnopqrstuvwxyz0123456789")(filter.maxBodySize * 2)
   val pc = PatienceConfig(Span(5, Seconds), Span(15, Millis))
 
   // Generate a random string of length n from the given alphabet
@@ -427,7 +427,7 @@ class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServ
     eventually {
       val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
       event.detail should not be null
-      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(filter.maxBodySize)
+      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(10278)
     }
   }
 
