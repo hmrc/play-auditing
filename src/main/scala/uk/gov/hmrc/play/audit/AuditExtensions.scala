@@ -18,6 +18,7 @@ package uk.gov.hmrc.play.audit
 
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.http.logging.AkamaiReputation
 
 object AuditExtensions {
   class AuditHeaderCarrier(carrier: HeaderCarrier) {
@@ -25,7 +26,8 @@ object AuditExtensions {
       carrier.names.xRequestId -> carrier.requestId.map(_.value).getOrElse("-"),
       carrier.names.xSessionId -> carrier.sessionId.map(_.value).getOrElse("-"),
       "clientIP" -> carrier.trueClientIp.getOrElse("-"),
-      "clientPort" -> carrier.trueClientPort.getOrElse("-")
+      "clientPort" -> carrier.trueClientPort.getOrElse("-"),
+      "Akamai-Reputation" -> carrier.akamaiReputation.getOrElse(AkamaiReputation("-")).value
     )
 
     private lazy val auditDetails = Map[String, String](
