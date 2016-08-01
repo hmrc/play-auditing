@@ -112,7 +112,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
         dataEvent.auditSource shouldBe httpWithAudit.appName
         dataEvent.auditType shouldBe OutboundCall
 
-        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-")
+        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
         dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
         dataEvent.request.generatedAt shouldBe requestDateTime
 
@@ -143,7 +143,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
         dataEvent.auditSource shouldBe httpWithAudit.appName
         dataEvent.auditType shouldBe OutboundCall
 
-        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-")
+        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
         dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody, HeaderNames.deviceID -> deviceID)
         dataEvent.request.generatedAt shouldBe requestDateTime
 
@@ -198,7 +198,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       dataEvent.auditSource shouldBe httpWithAudit.appName
       dataEvent.auditType shouldBe OutboundCall
 
-      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000")
+      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000", "Akamai-Reputation" -> "-")
       dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
       dataEvent.request.generatedAt shouldBe requestDateTime
 
@@ -225,7 +225,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
       dataEvent.auditSource shouldBe httpWithAudit.appName
       dataEvent.auditType shouldBe OutboundCall
 
-      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-")
+      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
       dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody.get, HeaderNames.deviceID -> deviceID)
       dataEvent.request.generatedAt shouldBe requestDateTime
 

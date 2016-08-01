@@ -19,8 +19,8 @@ package uk.gov.hmrc.play.audit.http.connector
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.play.http.{UserId, Token, HeaderCarrier, HeaderNames}
-import uk.gov.hmrc.play.http.logging.{Authorization, ForwardedFor, RequestId, SessionId}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HeaderNames, Token, UserId}
+import uk.gov.hmrc.play.http.logging._
 
 
 
@@ -36,14 +36,15 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
   val sessionId = SessionId("1234567890")
   val requestId = RequestId("0987654321")
   val deviceId = "testDeviceId"
+  val akamaiReputation = AkamaiReputation("foo")
 
   "Audit TAGS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId))
+      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId), akamaiReputation = Some(akamaiReputation))
 
       val tags = hc.toAuditTags("theTransactionName", "/the/request/path")
 
-      tags.size shouldBe 6
+      tags.size shouldBe 7
 
       tags(xSessionId) shouldBe sessionId.value
       tags(xRequestId) shouldBe requestId.value
@@ -51,6 +52,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
       tags(Path) shouldBe "/the/request/path"
       tags("clientIP") shouldBe "-"
       tags("clientPort") shouldBe "-"
+      tags("Akamai-Reputation") shouldBe akamaiReputation.value
     }
 
     "be defaulted" in {
@@ -58,7 +60,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val tags = hc.toAuditTags("defaultsWhenNothingSet", "/the/request/path")
 
-      tags.size shouldBe 6
+      tags.size shouldBe 7
 
       tags(xSessionId) shouldBe "-"
       tags(xRequestId) shouldBe "-"
@@ -66,6 +68,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
       tags(Path) shouldBe "/the/request/path"
       tags("clientIP") shouldBe "-"
       tags("clientPort") shouldBe "-"
+      tags("Akamai-Reputation") shouldBe "-"
     }
 
     "have more tags.clientIP and tags.clientPort" in {

@@ -39,9 +39,10 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
     val xRequestId = "A_REQUEST_ID"
     val xSessionId = "A_SESSION_ID"
     val deviceID = "A_DEVICE_ID"
+    val akamaiReputation = "AN_AKAMAI_REPUTATION"
 
     implicit val hc = HeaderCarrier
-    val request = FakeRequest().withHeaders("X-Request-ID" -> xRequestId, "X-Session-ID" -> xSessionId, "deviceID" -> deviceID)
+    val request = FakeRequest().withHeaders("X-Request-ID" -> xRequestId, "X-Session-ID" -> xSessionId, "deviceID" -> deviceID, "Akamai-Reputation" -> akamaiReputation)
 
     def createAuditConnector = new MockAuditConnector {
       var events: List[AuditEvent] = List.empty[AuditEvent]
@@ -74,6 +75,7 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
         events(0).auditType shouldBe EventTypes.RequestReceived
         events(0).tags("X-Request-ID") shouldBe xRequestId
         events(0).tags("X-Session-ID") shouldBe xSessionId
+        events(0).tags("Akamai-Reputation") shouldBe akamaiReputation
         events(0).asInstanceOf[DataEvent].detail("deviceID") shouldBe deviceID
       }
     }
@@ -92,6 +94,7 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
         events(0).auditType shouldBe EventTypes.RequestReceived
         events(0).tags("X-Request-ID") shouldBe xRequestId
         events(0).tags("X-Session-ID") shouldBe xSessionId
+        events(0).tags("Akamai-Reputation") shouldBe akamaiReputation
         events(0).asInstanceOf[DataEvent].detail("deviceID") shouldBe deviceID
       }
     }
