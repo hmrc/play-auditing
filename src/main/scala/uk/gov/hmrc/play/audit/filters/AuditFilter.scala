@@ -77,12 +77,13 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
       def collect(i: Array[Byte]) = {
         if (collectedBody.length < maxBodySize) {
-          if(i.length > maxBodySize)
-            collectedBody.appendAll(i.take(maxBodySize));
+          if(i.length > maxBodySize) {
+            Logger.warn(s"txm play auditing: sanity check ${collectedBody.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
+            collectedBody.appendAll(i.take(maxBodySize))
+          }
           else
-            collectedBody.appendAll(i);
+            collectedBody.appendAll(i)
         }
-        Logger.warn(s"txm play auditing: sanity check ${collectedBody.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
         i
       }
       def handleSuccess() = requestBody.onSuccess { case body =>
