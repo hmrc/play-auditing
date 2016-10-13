@@ -27,7 +27,7 @@ import org.scalatest.mock.MockitoSugar
 import org.slf4j.Logger
 import play.api.LoggerLike
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.libs.ws.{WSRequestHolder, WSResponse}
+import play.api.libs.ws.{WSRequest, WSResponse}
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
@@ -157,7 +157,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
                                       enabled = true,
                                       traceRequests = true)
 
-  val mockRequestHolder = mock[WSRequestHolder]
+  val mockRequestHolder = mock[WSRequest]
 
   def mockConnector(config: AuditingConfig) = new AuditorImpl with ConfigProvider with RequestBuilder with LoggerProvider {
     override def auditingConfig = config
@@ -177,8 +177,8 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
           DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)))
 
       val expected = Json.toJson(mergedEvent)
-      when(mockRequestHolder.post[JsValue](meq(expected))(any(), any())).thenReturn(response)
-      when(mockRequestHolder.post[JsValue](any())(any(), any())).thenReturn(response)
+      when(mockRequestHolder.post[JsValue](meq(expected))(any())).thenReturn(response)
+      when(mockRequestHolder.post[JsValue](any())(any())).thenReturn(response)
 
       mockConnector(fakeConfig).sendLargeMergedEvent(mergedEvent).futureValue mustBe Success
     }
@@ -190,14 +190,14 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
     "call datastream with the event converted to json" in {
       when(mockResponse.status).thenReturn(200)
-      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.successful(mockResponse))
+      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
 
       mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
     }
 
     "return a failed future if the HTTP response status is greater than 299" in {
       when(mockResponse.status).thenReturn(300)
-      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.successful(mockResponse))
+      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
 
       val failureResponse = mockConnector(fakeConfig).sendEvent(event).failed.futureValue
       failureResponse must have ('nested (None))
@@ -206,7 +206,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
     "return a failed future if there is an exception in the HTTP connection" in {
       val exception = new Exception("failed")
-      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.failed(exception))
+      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.failed(exception))
 
       val failureResponse = mockConnector(fakeConfig).sendEvent(event).failed.futureValue
       failureResponse must have ('nested (Some(exception)))
@@ -219,7 +219,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
                                           traceRequests = true)
 
       when(mockResponse.status).thenReturn(200)
-      when(mockRequestHolder.post(meq(expected))(any(), any())).thenReturn(Future.successful(mockResponse))
+      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
       mockConnector(disabledConfig).sendEvent(event).futureValue must be (AuditResult.Disabled)
 
       verifyNoMoreInteractions(mockRequestHolder)
@@ -238,7 +238,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
       val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", detail = detail)
 
-      when(mockRequestHolder.post(meq(Json.toJson(event)))(any(), any())).thenReturn(Future.successful(mockResponse))
+      when(mockRequestHolder.post(meq(Json.toJson(event)))(any())).thenReturn(Future.successful(mockResponse))
 
       mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
     }

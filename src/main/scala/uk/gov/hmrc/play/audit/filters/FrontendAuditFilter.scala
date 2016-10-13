@@ -17,16 +17,14 @@
 package uk.gov.hmrc.play.audit.filters
 
 import play.api.http.HeaderNames
-import play.api.mvc.{EssentialAction, Result, RequestHeader, ResponseHeader}
+import play.api.mvc.{EssentialAction, RequestHeader, ResponseHeader, Result}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.model.DeviceFingerprint
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.concurrent.Promise
-import scala.util.{Try, Failure, Success}
-
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 trait FrontendAuditFilter extends AuditFilter {
 
@@ -44,7 +42,7 @@ trait FrontendAuditFilter extends AuditFilter {
       val next = nextFilter(requestHeader)
       implicit val hc = HeaderCarrier.fromHeadersAndSession(requestHeader.headers, Some(requestHeader.session))
 
-      def performAudit(requestBody: Array[Byte], maybeResult: Try[Result]): Unit = {
+      def performAudit(requestBody: String, maybeResult: Try[Result]): Unit = {
         maybeResult match {
           case Success(result) =>
             val responseHeader = result.header
@@ -52,22 +50,19 @@ trait FrontendAuditFilter extends AuditFilter {
               auditConnector.sendEvent(
                 dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
                   .withDetail(ResponseMessage -> filterResponseBody(responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
-                  .withDetail(buildRequestDetails(requestHeader, new String(requestBody)).toSeq: _*)
+                  .withDetail(buildRequestDetails(requestHeader, requestBody).toSeq: _*)
                   .withDetail(buildResponseDetails(responseHeader).toSeq: _*))
             }
           case Failure(f) =>
             auditConnector.sendEvent(
               dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
                 .withDetail(FailedRequestMessage -> f.getMessage)
-                .withDetail(buildRequestDetails(requestHeader, new String(requestBody)).toSeq: _*))
+                .withDetail(buildRequestDetails(requestHeader, requestBody).toSeq: _*))
         }
       }
 
       if (needsAuditing(requestHeader)) {
-        val requestBodyPromise = Promise[Array[Byte]]
-
-        val responseCapture = captureResult(next, requestBodyPromise.future)(performAudit)
-        captureRequestBody(responseCapture, requestBodyPromise)
+        onCompleteWithInput(next)(performAudit)
       }
       else next
     }
@@ -142,6 +137,7 @@ trait FrontendAuditFilter extends AuditFilter {
   private def cleanQueryStringForDatastream(queryString: String): String = {
     queryString.trim match {
       case "" => "-"
+      case ":" => "-" // play 2.5 FakeRequest now parses an empty query string into a two empty string params
       case _ => queryString.trim
     }
   }

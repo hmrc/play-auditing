@@ -16,20 +16,16 @@
 
 package uk.gov.hmrc.play.audit.filters
 
-import play.api.libs.iteratee.Iteratee
+import play.api.mvc.Results._
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
 
 trait FilterFlowMock {
 
-  def action(implicit ec: ExecutionContext) : (RequestHeader) => Iteratee[Array[Byte], Result] = { requestHeader =>
-    Iteratee.fold[Array[Byte], Result](new Results.Status(404)) {
-      (length, bytes) => new Results.Status(200)
-    }
-  }
+  def actionNotFoundMessage = "404 Not Found"
 
-  def nextAction(implicit ec: ExecutionContext) = EssentialAction(action)
+  def nextAction(implicit ec: ExecutionContext): Action[AnyContent] = Action(NotFound(actionNotFoundMessage))
 
   def exceptionThrowingAction(implicit ec: ExecutionContext) = Action.async { request =>
     throw new RuntimeException("Something went wrong")

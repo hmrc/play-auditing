@@ -55,7 +55,7 @@ class HttpAuditEventSpec extends WordSpecLike with Matchers with LoneElement {
     "create a valid audit event with optional headers" in new WithApplication {
       val r = FakeRequest().withHeaders(("Foo" -> "Bar"), ("Ehh" -> "Meh"), ("Surrogate" -> "Cool"), ("Surrogate" -> "Cool"))
       val event = HttpAuditEventForTest.dataEvent("foo", "bar", r)
-      event.detail.get("surrogate") shouldBe Some("Cool")
+      event.detail.get("surrogate") shouldBe Some("Cool,Cool") //FRIC - play 2.5 now comman delimits multiple headers with the same name into a single header
     }
     "create a valid audit event with no optional headers" in new WithApplication {
       val r = FakeRequest().withHeaders(("Foo" -> "Bar"), ("Ehh" -> "Meh"))

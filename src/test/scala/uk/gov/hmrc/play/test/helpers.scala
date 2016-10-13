@@ -16,22 +16,27 @@
 
 package uk.gov.hmrc.play.test
 
-import play.api.libs.iteratee.Iteratee
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import play.api.mvc.Result
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 object Http {
-  def enumerateResponseBody(r: Result) = r.body.run( Iteratee.foreach {i => } )
+
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+
+  def enumerateResponseBody(r: Result) = r.body.dataStream.runForeach({ i => })
 }
 
 object Concurrent {
-  import scala.concurrent.{Await, Future}
+
   import scala.concurrent.duration._
+  import scala.concurrent.{Await, Future}
 
   val defaultTimeout = 5 seconds
 
   implicit def extractAwait[A](future: Future[A]) = await[A](future)
+
   implicit def liftFuture[A](v: A) = Future.successful(v)
 
   def await[A](future: Future[A]) = Await.result(future, defaultTimeout)
