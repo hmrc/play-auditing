@@ -51,7 +51,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
 
   override def afterAll() {
     super.afterAll()
-    Play.stop()
+    Play.stop(fakeApplication)
   }
 
   class HttpWithAuditing extends HttpAuditing {

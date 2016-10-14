@@ -40,13 +40,14 @@ object HmrcBuild extends Build {
 
 private object AppDependencies {
 
-  import play.PlayImport._
+  import play.sbt.PlayImport._
   import play.core.PlayVersion
 
   val compile = Seq(
     "com.typesafe.play" %% "play" % PlayVersion.current,
     ws,
-    "uk.gov.hmrc" %% "http-verbs" % "5.0.0"
+    "uk.gov.hmrc" %% "http-verbs" % "6.0.0",
+    "com.ning" % "async-http-client" % "1.8.15"
   )
 
   trait TestDependencies {
@@ -58,12 +59,14 @@ private object AppDependencies {
     def apply() = new TestDependencies {
       override lazy val test = Seq(
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
+        "com.typesafe.play" %% "play-specs2" % PlayVersion.current % scope,
         "commons-codec" % "commons-codec" % "1.7" % scope,
-        "org.scalatest" %% "scalatest" % "2.2.4" % scope,
-        "org.scalatestplus" %% "play" % "1.2.0" % scope,
-        "org.scalacheck" %% "scalacheck" % "1.12.2" % scope,
+        "org.scalatest" %% "scalatest" % "2.2.6" % scope,
+        "org.scalatestplus" %% "play" % "1.4.0" % scope,
+        "org.scalacheck" %% "scalacheck" % "1.13.1" % scope,
         "org.pegdown" % "pegdown" % "1.5.0" % scope,
-        "com.github.tomakehurst" % "wiremock" % "1.52" % scope
+        "com.github.tomakehurst" % "wiremock" % "1.52" % scope,
+        "org.mockito" % "mockito-all" % "1.10.19" % scope
       )
     }.test
   }
