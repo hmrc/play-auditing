@@ -42,11 +42,13 @@ trait FrontendAuditFilter extends AuditFilter {
       val next = nextFilter(requestHeader)
       implicit val hc = HeaderCarrier.fromHeadersAndSession(requestHeader.headers, Some(requestHeader.session))
 
+      val loggingContext = s"${requestHeader.method} ${requestHeader.uri} "
+
       def performAudit(requestBody: String, maybeResult: Try[Result]): Unit = {
         maybeResult match {
           case Success(result) =>
             val responseHeader = result.header
-            getBody(result) map { responseBody =>
+            getResponseBody(loggingContext, result) map { responseBody =>
               auditConnector.sendEvent(
                 dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
                   .withDetail(ResponseMessage -> filterResponseBody(responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
@@ -62,7 +64,7 @@ trait FrontendAuditFilter extends AuditFilter {
       }
 
       if (needsAuditing(requestHeader)) {
-        onCompleteWithInput(next)(performAudit)
+        onCompleteWithInput(loggingContext, next)(performAudit)
       }
       else next
     }

@@ -47,12 +47,12 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
     (for (controllerName <- request.tags.get(play.routing.Router.Tags.ROUTE_CONTROLLER))
       yield controllerNeedsAuditing(controllerName)).getOrElse(true)
 
-  protected def getBody(result: Result) = {
+  protected def getResponseBody(loggingContext: String, result: Result) = {
     val sink = Sink.fold[String, ByteString]("")({
       (bufferIn, bs) => {
         val bufferOut = bufferIn + bs.decodeString("UTF-8")
         if (bufferOut.length > maxBodySize) {
-          Logger.warn(s"txm play auditing: sanity check response body ${bufferOut.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
+          Logger.warn(s"txm play auditing: $loggingContext response body ${bufferOut.length} exceeds maxLength ${maxBodySize} - do you need to be auditing this payload?")
           bufferOut.substring(0, maxBodySize)
         } else {
           bufferOut
@@ -62,7 +62,7 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
     result.body.dataStream.runWith(sink)
   }
 
-  protected def onCompleteWithInput(next: Accumulator[ByteString, Result])(handler: (String, Try[Result]) => Unit): Accumulator[ByteString, Result] = {
+  protected def onCompleteWithInput(loggingContext: String, next: Accumulator[ByteString, Result])(handler: (String, Try[Result]) => Unit): Accumulator[ByteString, Result] = {
     val requestBodyPromise = Promise[String]()
     val requestBodyFuture = requestBodyPromise.future
 
@@ -74,7 +74,7 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
 
     //grabbed from plays csrf filter
     val wrappedAcc: Accumulator[ByteString, Result] = Accumulator(
-      Flow[ByteString].via(new BodyCaptor(maxBodySize, callback))
+      Flow[ByteString].via(new RequestBodyCaptor(loggingContext, maxBodySize, callback))
         .splitWhen(_ => false)
         .prefixAndTail(0)
         .map(_._2)
@@ -101,10 +101,12 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
       val next: Accumulator[ByteString, Result] = nextFilter(requestHeader)
       implicit val hc = HeaderCarrier.fromHeadersAndSession(requestHeader.headers)
 
+      val loggingContext = s"${requestHeader.method} ${requestHeader.uri}"
+
       def performAudit(requestBody: String, maybeResult: Try[Result]): Unit = {
         maybeResult match {
           case Success(result) =>
-            getBody(result) map { responseBody =>
+            getResponseBody(loggingContext, result) map { responseBody =>
               auditConnector.sendEvent(
                 dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
                   .withDetail(ResponseMessage -> responseBody, StatusCode -> result.header.status.toString))
@@ -117,14 +119,14 @@ trait AuditFilter extends EssentialFilter with HttpAuditEvent {
       }
 
       if (needsAuditing(requestHeader)) {
-        onCompleteWithInput(next)(performAudit)
+        onCompleteWithInput(loggingContext, next)(performAudit)
       } else next
     }
   }
 }
 
 
-private class BodyCaptor(val maxBodyLength: Int, callback: (ByteString) => Unit) extends GraphStage[FlowShape[ByteString, ByteString]] {
+private class RequestBodyCaptor(val loggingContext: String, val maxBodyLength: Int, callback: (ByteString) => Unit) extends GraphStage[FlowShape[ByteString, ByteString]] {
   val in = Inlet[ByteString]("BodyCaptor.in")
   val out = Outlet[ByteString]("BodyCaptor.out")
   override val shape = FlowShape.of(in, out)
@@ -149,7 +151,7 @@ private class BodyCaptor(val maxBodyLength: Int, callback: (ByteString) => Unit)
 
       override def onUpstreamFinish(): Unit = {
         if (bodyLength > maxBodyLength)
-          Logger.warn(s"txm play auditing: sanity check request body ${bodyLength} exceeds maxLength ${maxBodyLength} - do you need to be auditing this payload?")
+          Logger.warn(s"txm play auditing: $loggingContext sanity check request body ${bodyLength} exceeds maxLength ${maxBodyLength} - do you need to be auditing this payload?")
         callback(buffer.take(maxBodyLength))
         if (buffer == ByteString.empty)
           push(out, buffer)
