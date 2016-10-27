@@ -63,7 +63,7 @@ class ErrorAuditingSettingsSpec extends WordSpecLike with Matchers {
       val mockConnector = new MockAuditConnector
       val auditing = new TestErrorAuditing(mockConnector)
 
-      val resultF = auditing.onError(new DummyRequestHeader(), new PlayException("", "", new Exception("a generic application exception")))
+      val resultF = auditing.onError(new DummyRequestHeader(), new Exception("a generic application exception"))
       await(resultF)
       mockConnector.recordedEvent shouldNot be(None)
       mockConnector.recordedEvent.map(_.auditType shouldBe EventTypes.ServerInternalError)
@@ -73,7 +73,7 @@ class ErrorAuditingSettingsSpec extends WordSpecLike with Matchers {
       val mockConnector = new MockAuditConnector()
       val auditing = new TestErrorAuditing(mockConnector)
 
-      val resultF = auditing.onError(new DummyRequestHeader(), new PlayException("", "", new NotFoundException("test")))
+      val resultF = auditing.onError(new DummyRequestHeader(), new NotFoundException("test"))
       await(resultF)
       mockConnector.recordedEvent shouldNot be(None)
       mockConnector.recordedEvent.map(_.auditType shouldBe EventTypes.ResourceNotFound)
@@ -83,7 +83,7 @@ class ErrorAuditingSettingsSpec extends WordSpecLike with Matchers {
       val mockConnector = new MockAuditConnector()
       val auditing = new TestErrorAuditing(mockConnector)
 
-      val resultF = auditing.onError(new DummyRequestHeader(), new PlayException("", "", new JsValidationException("GET", "", classOf[String], Seq.empty)))
+      val resultF = auditing.onError(new DummyRequestHeader(), new JsValidationException("GET", "", classOf[String], Seq.empty))
       await(resultF)
       mockConnector.recordedEvent shouldNot be(None)
       mockConnector.recordedEvent.map(_.auditType shouldBe EventTypes.ServerValidationError)
@@ -93,7 +93,7 @@ class ErrorAuditingSettingsSpec extends WordSpecLike with Matchers {
       val mockConnector = new MockAuditConnector()
       val auditing = new TestErrorAuditing(mockConnector)
 
-      val resultF = auditing.onError(new DummyRequestHeader(), new PlayException("", "", new NotFoundException("test")))
+      val resultF = auditing.onError(new DummyRequestHeader(), new NotFoundException("test"))
       await(resultF)
       auditing.onErrorCalled shouldBe true
     }
