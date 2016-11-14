@@ -44,17 +44,15 @@ trait FrontendAuditFilter extends AuditFilter {
 
       val loggingContext = s"${requestHeader.method} ${requestHeader.uri} "
 
-      def performAudit(requestBody: String, maybeResult: Try[Result]): Unit = {
+      def performAudit(requestBody: String, maybeResult: Try[Result])(responseBody: String): Unit = {
         maybeResult match {
           case Success(result) =>
             val responseHeader = result.header
-            getResponseBody(loggingContext, result) map { responseBody =>
-              auditConnector.sendEvent(
-                dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
-                  .withDetail(ResponseMessage -> filterResponseBody(responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
-                  .withDetail(buildRequestDetails(requestHeader, requestBody).toSeq: _*)
-                  .withDetail(buildResponseDetails(responseHeader).toSeq: _*))
-            }
+            auditConnector.sendEvent(
+              dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
+                .withDetail(ResponseMessage -> filterResponseBody(responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
+                .withDetail(buildRequestDetails(requestHeader, requestBody).toSeq: _*)
+                .withDetail(buildResponseDetails(responseHeader).toSeq: _*))
           case Failure(f) =>
             auditConnector.sendEvent(
               dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
@@ -64,7 +62,7 @@ trait FrontendAuditFilter extends AuditFilter {
       }
 
       if (needsAuditing(requestHeader)) {
-        onCompleteWithInput(loggingContext, next)(performAudit)
+        onCompleteWithInput(loggingContext, next, performAudit)
       }
       else next
     }
@@ -72,7 +70,7 @@ trait FrontendAuditFilter extends AuditFilter {
 
   private def filterResponseBody(response: ResponseHeader, responseBody: String) = {
     response.headers.get("Content-Type")
-      .collect { case textHtml(a) => "<HTML>...</HTML>"}
+      .collect { case textHtml(a) => "<HTML>...</HTML>" }
       .getOrElse(responseBody)
   }
 
