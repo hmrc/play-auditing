@@ -1,0 +1,3173 @@
+@import '../../../node_modules/govuk_frontend_toolkit/govuk_frontend_toolkit/stylesheets/grid_layout';
+@import '../../../node_modules/govuk_frontend_toolkit/govuk_frontend_toolkit/stylesheets/colours';
+@import '../../../node_modules/govuk_frontend_toolkit/govuk_frontend_toolkit/stylesheets/conditionals';
+
+//Global
+.section-border {
+  border-bottom: 5px solid $link-colour;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+}
+
+@media(max-width: 800px) {
+  span.nino {
+    display: block;
+  }
+}
+
+@include media(desktop) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+.no-margin-bottom {
+  margin-bottom: 0px !important;
+}
+
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
+.pertax-hr {
+  border: 0;
+  border-bottom: 1px solid $border-colour;
+  margin: 30px 0;
+}
+
+address {
+  font-style: normal;
+}
+
+.useful-forms-row.grid-row {
+  @include media(mobile) {
+    margin-bottom: 40px !important;
+  }
+  h3 {
+    margin: 0;
+  }
+  p {
+    margin-top: 0;
+  }
+}
+
+.service-info {
+  border-bottom: 1px solid $grey-3;
+
+  p {
+    margin-bottom: 0;
+  }
+
+  @include media(desktop) {
+    .last-login {
+      float: right;
+    }
+  }
+
+}
+
+#global-breadcrumb {
+  border-bottom: 0;
+  padding-bottom: 0;
+  ol {
+    padding: .75em 0 .55em;
+    li {
+      a {
+        &:focus {
+          outline: 3px solid $yellow;
+        }
+      }
+    }
+  }
+}
+
+.error-summary {
+  border: 5px solid $red;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding: 20px 15px 15px;
+}
+.form-field--error {
+  border-left: 5px solid $red;
+  padding-left: 15px;
+}
+.validation-summary {
+  @extend .error-summary;
+  li {
+    font-size: 19px;
+    font-weight: bold;
+    a {
+      color: $red;
+    }
+  }
+}
+
+.highlighted-event {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 2px 5px 20px;
+  h2 {
+    color: $white;
+    &.heading-large {
+      margin-top: 1.25em !important;
+    }
+  }
+}
+
+
+
+//This is to override the content__body class attached to .article wrapper - don't know where that is defined
+.content__body {
+  width: 100%;
+}
+
+//layout helpers - I think these can go once ASSETS_FRONTEND is updated to include new grid system
+.grid-row {
+  @extend %grid-row;
+}
+
+.column-whole {
+  @include grid-column(1);
+}
+
+.column-quarter {
+  @include grid-column(1 / 4);
+}
+
+.column-half {
+  @include grid-column(1 / 2);
+  @media(max-width: 700px) {
+    width: 100%;
+  }
+}
+
+.column-third {
+  @include grid-column(1 / 3);
+}
+
+.column-two-thirds {
+  @include grid-column(2 / 3);
+}
+
+//IE7 and IE8 fixes
+.lte-ie8 {
+  .grid-row {
+    margin: 0;
+    width: 100%;
+    .column-two-thirds,
+    .column-half,
+    .column-third,
+    .column-whole {
+      float: left;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .column-two-thirds {
+      width: 66.66667%;
+    }
+    .column-half {
+      width: 50%;
+    }
+    .column-third {
+      width: 33.3333%;
+    }
+    .column-whole {
+      width: 100%;
+    }
+  }
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+//Home page
+.pertax-home {
+  .grid-row {
+    margin-bottom: 20px;
+    .income-estimate {
+      margin-bottom: 20px;
+      padding-top: 10px;
+      @include media(desktop) {
+        margin-bottom: 0;
+      }
+    }
+  }
+  .pertax-panel {
+    h2 {
+      &.name-header {
+        border-bottom: 2px solid #BFC1C3;
+        font-size: 30px;
+        line-height: 1.04167;
+        margin: 60px 0px 30px;
+        padding-bottom: 12px !important;
+      }
+    }
+    h3 {
+      font-size: 24px;
+      font-weight: 700;
+      padding-bottom: 0px !important;
+      margin-bottom: 24px;
+      margin-top: 0;
+      border-bottom: medium none;
+    }
+    .panel-indent {
+      border-left: medium none !important;
+      padding-left: 0px;
+      margin: 0px 15px 45px 0px;
+    }
+    &.money-tax-block {
+      .column-half {
+        height: 200px;
+        .panel-indent {
+          margin: 0px 10px 20px 0px;
+        }
+        @media(max-width: 800px) {
+          height: auto;
+          width: 100%;
+        }
+      }
+    }
+    @include media(mobile) {
+      margin-bottom: 60px;
+      width: auto;
+    }
+  }
+}
+.pertax-panel {
+  width: 97%;
+}
+.margin-top {
+  margin-top: 30px;
+}
+.gray-sub-heading {
+  color: $secondary-text-colour;
+  display: block;
+  font-size: 22px;
+  font-weight: normal;
+  margin: 0 !important;
+}
+
+.annual-income-notification {
+  background: $turquoise;
+  color: $white;
+  display: inline-block;
+  padding: 0 10px;
+  p,
+  a {
+    color: $white;
+  }
+}
+
+//Personal details page
+.personal-details {
+
+  .update-address-link {
+    margin-top: 12px;
+    text-align: right;
+  }
+
+  .section-border {
+    margin-bottom: 30px;
+  }
+}
+
+//Start Page
+.start-page {
+  .text {
+    margin: 30px 0 45px;
+    max-width: 100%;
+  }
+
+  .button {
+    &.button-get-started {
+      font-size: 24px;
+      margin: 10px 0 0;
+      padding: 9px 50px 5px 20px;
+    }
+  }
+
+  .list-bullet {
+    margin: 20px 0 20px 20px;
+  }
+}
+
+//Summary pages
+.summary-page {
+  width: 93%;
+  .sa-header {
+    padding-bottom:0;
+    h1 {
+      font-size: 46px;
+      margin-top: 25px;
+    }
+    p {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      margin-top: 35px;
+    }
+  }
+  .name-header {
+    border-bottom: 3px solid #005ea5;
+    font-weight: 700;
+    line-height: 1.04167;
+    margin-bottom: 30px !important;
+    padding-bottom: 20px;
+    h1 {
+      font-size: 36px;
+    }
+  }
+  .lede {
+  margin-top: 6px !important;
+  }
+  h2 {
+    &.name-header {
+      border-bottom: 2px solid #BFC1C3;
+      font-size: 30px;
+      margin-top: 60px !important;
+      padding-bottom: 12px !important;
+    }
+  }
+}
+
+//Logged out page
+.logged-out-page {
+  textarea {
+    background-color: $white;
+    border: 1px solid $border-colour;
+    padding: 0;
+    width: 100%;
+  }
+
+  legend,
+  #howCanWeImprove_field label {
+    font-size: 24px;
+    font-weight: bold;
+  }
+}
+
+.form-group {
+  &.postcode-container {
+    position: relative;
+    a {
+      display: inline-block;
+      margin-top: 15px;
+    }
+  }
+  span {
+    display: block;
+    width: 100%;
+  }
+}
+
+
+@include media(mobile) {
+  .error-notification {
+    font-size: 19px;
+    font-weight: bold;
+  }
+  .find-address-form {
+    label {
+      &.postcode-label {
+        span {
+          display: inline-block;
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+.form-field--error {
+  padding-left: 10px;
+  .error-notification {
+    font-size: 16px;
+    font-weight: bold;
+  }
+}
+
+@include media(desktop) {
+  .form-field--error {
+    padding-left: 15px;
+    .error-notification {
+      font-size: 19px;
+    }
+  }
+  .find-address-form {
+    label {
+      span {
+        display: block;
+      }
+      .form-control {
+        &#postcode {
+          width: 25%;
+        }
+      }
+    }
+  }
+}
+
+.find-address-form-block {
+  margin-bottom: 30px;
+  margin-top: 15px;
+}
+.select-address-list-block {
+  margin-bottom: 75px;
+  h2 {
+    font-size:30px;
+  }
+  #select-address-form {
+    fieldset {
+      display: block;
+      margin-bottom: 30px;
+      .block-label {
+        box-sizing: border-box;
+        width: 100%;
+      }
+    }
+    a {
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+  }
+}
+.postal-address-block {
+  margin-top: 30px;
+  h2 {
+    font-size:30px;
+  }
+}
+
+.form-field--error {
+  .form-control {
+    border: 4px solid $red;
+  }
+}
+.back-to-account-home {
+  display: inline-block;
+  margin-bottom: 52px;
+  margin-top: 45px;
+}
+
+//Header
+#global-header {
+  .header-wrapper {
+    .header-proposition {
+      .menu.js-hidden {
+        display: block !important;
+      }
+      @include media(desktop) {
+        .menu.js-hidden {
+          display: none !important;
+        }
+      }
+      #proposition-links {
+        li {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+.service-info-p {
+  color: $grey-1;
+  font-family: nta,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+//Sidebar
+.pertax-sidebar {
+  margin-top: 15px;
+  .sidebar-panel {
+    margin-bottom: 15px;
+    padding-bottom: 30px;
+    padding-top: 0px;
+    h2 {
+      margin-bottom: 24px;
+    }
+    a {
+      margin-bottom: 7px;
+      margin-top: 7px;
+    }
+    &.messages {
+      .section--branded {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        padding-top: 0;
+        h2 {
+          border-bottom: 0;
+          margin-bottom: 1em;
+        }
+      }
+    }
+  }
+  @include media(mobile) {
+    .sidebar-panel {
+      margin-bottom: 30px;
+      h2 {
+        border-bottom: 2px solid #BFC1C3 !important;
+        font-size: 30px;
+        line-height: 1.04167;
+        margin: 60px 0px 30px;
+        padding-bottom: 12px !important;
+      }
+    }
+  }
+}
+
+//Error page
+.pertax-error {
+  .section-border {
+    padding-bottom: 0;
+  }
+}
+
+//Survey page
+.satisfactionSurveyForm {
+  fieldset {
+    margin-bottom: 40px;
+  }
+  input[type="radio"] {
+    border: 0 !important;
+    &:checked {
+      background-color: $white !important;
+    }
+  }
+  .panel-indent {
+    margin-bottom: 40px;
+  }
+  #easyToUseExplainPanel,
+  #correctInformationPanel {
+    padding-bottom: 30px;
+    padding-left: 20px;
+    dl {
+      margin-top: 0;
+    }
+  }
+}
+
+.income-figure {
+  color: $grey-1;
+  float: left;
+  font-size: 54px;
+  font-weight: 700;
+  margin-top: 0;
+  margin: 0 !important;
+  span {
+    color: $banner-text-colour;
+    display: block;
+    font-size: 19px;
+  }
+}
+
+.tax-codes {
+  float: right;
+  margin-top: 9px;
+  width: 65%;
+}
+
+.content-body-no-margin {
+  margin: 0;
+}
+
+.panel-indent {
+    clear: both;
+    border-left: 4px solid #BFC1C3;
+    padding: 10px 0px 10px 15px;
+    margin: 30px 15px 45px 0px;
+}
+
+a:link {
+  color: #005ea5; }
+
+a:visited {
+  color: #4c2c92; }
+
+a:hover {
+  color: #2e8aca; }
+
+a:active {
+  color: #2e8aca; }
+
+.alert-notification {
+  border-left: 4px solid #000;
+  background-color: #FEF1D5;
+}
+
+.deadline {
+  margin-right: 0px;
+  margin-top: 6px;
+  @include media(desktop) {
+    max-width: 21%;
+  }
+  .calendar-block {
+    width: 90px;
+    height: 70px;
+    text-align: center;
+    border: solid 1px #DEE0E2;
+    background-color: #DEE0E2;
+    padding: 5px 0;
+    @include media(mobile) {
+      max-width: 90px;
+    }
+    .bottom {
+      padding: 6px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #0B0C0C;
+    }
+  }
+
+}
+
+.amounts {
+  @include media(desktop) {
+    width: 79%;
+  }
+  p:first-child {
+    margin-top: 3px;
+    @include media(mobile) {
+      margin-top: 15px;
+    }
+  }
+}
+
+//Global
+  .section-border {
+    border-bottom: 5px solid $link-colour;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+  }
+
+@media(max-width: 800px) {
+  span.nino {
+    display: block;
+  }
+}
+
+@include media(desktop) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+.no-margin-bottom {
+  margin-bottom: 0px !important;
+}
+
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
+.pertax-hr {
+  border: 0;
+  border-bottom: 1px solid $border-colour;
+  margin: 30px 0;
+}
+
+address {
+  font-style: normal;
+}
+
+.useful-forms-row.grid-row {
+@include media(mobile) {
+  margin-bottom: 40px !important;
+}
+h3 {
+  margin: 0;
+}
+p {
+  margin-top: 0;
+}
+}
+
+.service-info {
+  border-bottom: 1px solid $grey-3;
+
+p {
+  margin-bottom: 0;
+}
+
+@include media(desktop) {
+  .last-login {
+    float: right;
+  }
+}
+
+}
+
+#global-breadcrumb {
+  border-bottom: 0;
+  padding-bottom: 0;
+ol {
+  padding: .75em 0 .55em;
+li {
+a {
+&:focus {
+   outline: 3px solid $yellow;
+ }
+}
+}
+}
+}
+
+.error-summary {
+  border: 5px solid $red;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding: 20px 15px 15px;
+}
+.form-field--error {
+  border-left: 5px solid $red;
+  padding-left: 15px;
+}
+.validation-summary {
+@extend .error-summary;
+li {
+  font-size: 19px;
+  font-weight: bold;
+a {
+  color: $red;
+}
+}
+}
+
+.highlighted-event {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 2px 5px 20px;
+h2 {
+  color: $white;
+&.heading-large {
+   margin-top: 1.25em !important;
+ }
+}
+}
+
+
+
+//This is to override the content__body class attached to .article wrapper - don't know where that is defined
+.content__body {
+  width: 100%;
+}
+
+//layout helpers - I think these can go once ASSETS_FRONTEND is updated to include new grid system
+                   .grid-row {
+                   @extend %grid-row;
+                   }
+
+.column-whole {
+@include grid-column(1);
+}
+
+.column-quarter {
+@include grid-column(1 / 4);
+}
+
+.column-half {
+@include grid-column(1 / 2);
+@media(max-width: 700px) {
+  width: 100%;
+}
+}
+
+.column-third {
+@include grid-column(1 / 3);
+}
+
+.column-two-thirds {
+@include grid-column(2 / 3);
+}
+
+//IE7 and IE8 fixes
+  .lte-ie8 {
+.grid-row {
+  margin: 0;
+  width: 100%;
+.column-two-thirds,
+.column-half,
+.column-third,
+.column-whole {
+  float: left;
+  padding-left: 0;
+  padding-right: 0;
+}
+.column-two-thirds {
+  width: 66.66667%;
+}
+.column-half {
+  width: 50%;
+}
+.column-third {
+  width: 33.3333%;
+}
+.column-whole {
+  width: 100%;
+}
+}
+.desktop-hidden {
+  display: none !important;
+}
+}
+
+//Home page
+  .pertax-home {
+.grid-row {
+  margin-bottom: 20px;
+.income-estimate {
+  margin-bottom: 20px;
+  padding-top: 10px;
+@include media(desktop) {
+  margin-bottom: 0;
+}
+}
+}
+.pertax-panel {
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   line-height: 1.04167;
+   margin: 60px 0px 30px;
+   padding-bottom: 12px !important;
+ }
+}
+h3 {
+  font-size: 24px;
+  font-weight: 700;
+  padding-bottom: 0px !important;
+  margin-bottom: 24px;
+  margin-top: 0;
+  border-bottom: medium none;
+}
+.panel-indent {
+  border-left: medium none !important;
+  padding-left: 0px;
+  margin: 0px 15px 45px 0px;
+}
+&.money-tax-block {
+.column-half {
+  height: 200px;
+.panel-indent {
+  margin: 0px 10px 20px 0px;
+}
+@media(max-width: 800px) {
+  height: auto;
+  width: 100%;
+}
+}
+}
+@include media(mobile) {
+  margin-bottom: 60px;
+  width: auto;
+}
+}
+}
+.pertax-panel {
+  width: 97%;
+}
+.margin-top {
+  margin-top: 30px;
+}
+.gray-sub-heading {
+  color: $secondary-text-colour;
+  display: block;
+  font-size: 22px;
+  font-weight: normal;
+  margin: 0 !important;
+}
+
+.annual-income-notification {
+  background: $turquoise;
+  color: $white;
+  display: inline-block;
+  padding: 0 10px;
+p,
+a {
+  color: $white;
+}
+}
+
+//Personal details page
+  .personal-details {
+
+.update-address-link {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.section-border {
+  margin-bottom: 30px;
+}
+}
+
+//Start Page
+  .start-page {
+.text {
+  margin: 30px 0 45px;
+  max-width: 100%;
+}
+
+.button {
+&.button-get-started {
+   font-size: 24px;
+   margin: 10px 0 0;
+   padding: 9px 50px 5px 20px;
+ }
+}
+
+.list-bullet {
+  margin: 20px 0 20px 20px;
+}
+}
+
+//Summary pages
+  .summary-page {
+    width: 93%;
+.sa-header {
+  padding-bottom:0;
+h1 {
+  font-size: 46px;
+  margin-top: 25px;
+}
+p {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  margin-top: 35px;
+}
+}
+.name-header {
+  border-bottom: 3px solid #005ea5;
+  font-weight: 700;
+  line-height: 1.04167;
+  margin-bottom: 30px !important;
+  padding-bottom: 20px;
+h1 {
+  font-size: 36px;
+}
+}
+.lede {
+  margin-top: 6px !important;
+}
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   margin-top: 60px !important;
+   padding-bottom: 12px !important;
+ }
+}
+}
+
+//Logged out page
+  .logged-out-page {
+textarea {
+  background-color: $white;
+  border: 1px solid $border-colour;
+  padding: 0;
+  width: 100%;
+}
+
+legend,
+#howCanWeImprove_field label {
+  font-size: 24px;
+  font-weight: bold;
+}
+}
+
+.form-group {
+&.postcode-container {
+   position: relative;
+a {
+  display: inline-block;
+  margin-top: 15px;
+}
+}
+span {
+  display: block;
+  width: 100%;
+}
+}
+
+
+@include media(mobile) {
+  .error-notification {
+    font-size: 19px;
+    font-weight: bold;
+  }
+  .find-address-form {
+  label {
+&.postcode-label {
+  span {
+    display: inline-block;
+    width: 100%;
+  }
+}
+}
+}
+}
+
+.form-field--error {
+  padding-left: 10px;
+.error-notification {
+  font-size: 16px;
+  font-weight: bold;
+}
+}
+
+@include media(desktop) {
+  .form-field--error {
+    padding-left: 15px;
+  .error-notification {
+    font-size: 19px;
+  }
+}
+.find-address-form {
+label {
+span {
+  display: block;
+}
+.form-control {
+&#postcode {
+   width: 25%;
+ }
+}
+}
+}
+}
+
+.find-address-form-block {
+  margin-bottom: 30px;
+  margin-top: 15px;
+}
+.select-address-list-block {
+  margin-bottom: 75px;
+h2 {
+  font-size:30px;
+}
+#select-address-form {
+fieldset {
+  display: block;
+  margin-bottom: 30px;
+.block-label {
+  box-sizing: border-box;
+  width: 100%;
+}
+}
+a {
+  display: inline-block;
+  margin-bottom: 15px;
+}
+}
+}
+.postal-address-block {
+  margin-top: 30px;
+h2 {
+  font-size:30px;
+}
+}
+
+.form-field--error {
+.form-control {
+  border: 4px solid $red;
+}
+}
+.back-to-account-home {
+  display: inline-block;
+  margin-bottom: 52px;
+  margin-top: 45px;
+}
+
+//Header
+  #global-header {
+.header-wrapper {
+.header-proposition {
+.menu.js-hidden {
+  display: block !important;
+}
+@include media(desktop) {
+  .menu.js-hidden {
+    display: none !important;
+  }
+}
+#proposition-links {
+li {
+  width: 100%;
+}
+}
+}
+}
+}
+
+.service-info-p {
+  color: $grey-1;
+  font-family: nta,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+//Sidebar
+  .pertax-sidebar {
+    margin-top: 15px;
+.sidebar-panel {
+  margin-bottom: 15px;
+  padding-bottom: 30px;
+  padding-top: 0px;
+h2 {
+  margin-bottom: 24px;
+}
+a {
+  margin-bottom: 7px;
+  margin-top: 7px;
+}
+&.messages {
+.section--branded {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  padding-top: 0;
+h2 {
+  border-bottom: 0;
+  margin-bottom: 1em;
+}
+}
+}
+}
+@include media(mobile) {
+  .sidebar-panel {
+    margin-bottom: 30px;
+  h2 {
+    border-bottom: 2px solid #BFC1C3 !important;
+    font-size: 30px;
+    line-height: 1.04167;
+    margin: 60px 0px 30px;
+    padding-bottom: 12px !important;
+  }
+}
+}
+}
+
+//Error page
+  .pertax-error {
+.section-border {
+  padding-bottom: 0;
+}
+}
+
+//Survey page
+  .satisfactionSurveyForm {
+fieldset {
+  margin-bottom: 40px;
+}
+input[type="radio"] {
+  border: 0 !important;
+&:checked {
+   background-color: $white !important;
+ }
+}
+.panel-indent {
+  margin-bottom: 40px;
+}
+#easyToUseExplainPanel,
+#correctInformationPanel {
+  padding-bottom: 30px;
+  padding-left: 20px;
+dl {
+  margin-top: 0;
+}
+}
+}
+
+.income-figure {
+  color: $grey-1;
+  float: left;
+  font-size: 54px;
+  font-weight: 700;
+  margin-top: 0;
+  margin: 0 !important;
+span {
+  color: $banner-text-colour;
+  display: block;
+  font-size: 19px;
+}
+}
+
+.tax-codes {
+  float: right;
+  margin-top: 9px;
+  width: 65%;
+}
+
+.content-body-no-margin {
+  margin: 0;
+}
+
+.panel-indent {
+  clear: both;
+  border-left: 4px solid #BFC1C3;
+  padding: 10px 0px 10px 15px;
+  margin: 30px 15px 45px 0px;
+}
+
+a:link {
+  color: #005ea5; }
+
+a:visited {
+  color: #4c2c92; }
+
+a:hover {
+  color: #2e8aca; }
+
+a:active {
+  color: #2e8aca; }
+
+.alert-notification {
+  border-left: 4px solid #000;
+  background-color: #FEF1D5;
+}
+
+.deadline {
+  margin-right: 0px;
+  margin-top: 6px;
+@include media(desktop) {
+  max-width: 21%;
+}
+.calendar-block {
+  width: 90px;
+  height: 70px;
+  text-align: center;
+  border: solid 1px #DEE0E2;
+  background-color: #DEE0E2;
+  padding: 5px 0;
+@include media(mobile) {
+  max-width: 90px;
+}
+.bottom {
+  padding: 6px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #0B0C0C;
+}
+}
+
+}
+
+.amounts {
+@include media(desktop) {
+  width: 79%;
+}
+p:first-child {
+  margin-top: 3px;
+@include media(mobile) {
+  margin-top: 15px;
+}
+}
+}
+
+//Global
+  .section-border {
+    border-bottom: 5px solid $link-colour;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+  }
+
+@media(max-width: 800px) {
+  span.nino {
+    display: block;
+  }
+}
+
+@include media(desktop) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+.no-margin-bottom {
+  margin-bottom: 0px !important;
+}
+
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
+.pertax-hr {
+  border: 0;
+  border-bottom: 1px solid $border-colour;
+  margin: 30px 0;
+}
+
+address {
+  font-style: normal;
+}
+
+.useful-forms-row.grid-row {
+@include media(mobile) {
+  margin-bottom: 40px !important;
+}
+h3 {
+  margin: 0;
+}
+p {
+  margin-top: 0;
+}
+}
+
+.service-info {
+  border-bottom: 1px solid $grey-3;
+
+p {
+  margin-bottom: 0;
+}
+
+@include media(desktop) {
+  .last-login {
+    float: right;
+  }
+}
+
+}
+
+#global-breadcrumb {
+  border-bottom: 0;
+  padding-bottom: 0;
+ol {
+  padding: .75em 0 .55em;
+li {
+a {
+&:focus {
+   outline: 3px solid $yellow;
+ }
+}
+}
+}
+}
+
+.error-summary {
+  border: 5px solid $red;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding: 20px 15px 15px;
+}
+.form-field--error {
+  border-left: 5px solid $red;
+  padding-left: 15px;
+}
+.validation-summary {
+@extend .error-summary;
+li {
+  font-size: 19px;
+  font-weight: bold;
+a {
+  color: $red;
+}
+}
+}
+
+.highlighted-event {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 2px 5px 20px;
+h2 {
+  color: $white;
+&.heading-large {
+   margin-top: 1.25em !important;
+ }
+}
+}
+
+
+
+//This is to override the content__body class attached to .article wrapper - don't know where that is defined
+.content__body {
+  width: 100%;
+}
+
+//layout helpers - I think these can go once ASSETS_FRONTEND is updated to include new grid system
+                   .grid-row {
+                   @extend %grid-row;
+                   }
+
+.column-whole {
+@include grid-column(1);
+}
+
+.column-quarter {
+@include grid-column(1 / 4);
+}
+
+.column-half {
+@include grid-column(1 / 2);
+@media(max-width: 700px) {
+  width: 100%;
+}
+}
+
+.column-third {
+@include grid-column(1 / 3);
+}
+
+.column-two-thirds {
+@include grid-column(2 / 3);
+}
+
+//IE7 and IE8 fixes
+  .lte-ie8 {
+.grid-row {
+  margin: 0;
+  width: 100%;
+.column-two-thirds,
+.column-half,
+.column-third,
+.column-whole {
+  float: left;
+  padding-left: 0;
+  padding-right: 0;
+}
+.column-two-thirds {
+  width: 66.66667%;
+}
+.column-half {
+  width: 50%;
+}
+.column-third {
+  width: 33.3333%;
+}
+.column-whole {
+  width: 100%;
+}
+}
+.desktop-hidden {
+  display: none !important;
+}
+}
+
+//Home page
+  .pertax-home {
+.grid-row {
+  margin-bottom: 20px;
+.income-estimate {
+  margin-bottom: 20px;
+  padding-top: 10px;
+@include media(desktop) {
+  margin-bottom: 0;
+}
+}
+}
+.pertax-panel {
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   line-height: 1.04167;
+   margin: 60px 0px 30px;
+   padding-bottom: 12px !important;
+ }
+}
+h3 {
+  font-size: 24px;
+  font-weight: 700;
+  padding-bottom: 0px !important;
+  margin-bottom: 24px;
+  margin-top: 0;
+  border-bottom: medium none;
+}
+.panel-indent {
+  border-left: medium none !important;
+  padding-left: 0px;
+  margin: 0px 15px 45px 0px;
+}
+&.money-tax-block {
+.column-half {
+  height: 200px;
+.panel-indent {
+  margin: 0px 10px 20px 0px;
+}
+@media(max-width: 800px) {
+  height: auto;
+  width: 100%;
+}
+}
+}
+@include media(mobile) {
+  margin-bottom: 60px;
+  width: auto;
+}
+}
+}
+.pertax-panel {
+  width: 97%;
+}
+.margin-top {
+  margin-top: 30px;
+}
+.gray-sub-heading {
+  color: $secondary-text-colour;
+  display: block;
+  font-size: 22px;
+  font-weight: normal;
+  margin: 0 !important;
+}
+
+.annual-income-notification {
+  background: $turquoise;
+  color: $white;
+  display: inline-block;
+  padding: 0 10px;
+p,
+a {
+  color: $white;
+}
+}
+
+//Personal details page
+  .personal-details {
+
+.update-address-link {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.section-border {
+  margin-bottom: 30px;
+}
+}
+
+//Start Page
+  .start-page {
+.text {
+  margin: 30px 0 45px;
+  max-width: 100%;
+}
+
+.button {
+&.button-get-started {
+   font-size: 24px;
+   margin: 10px 0 0;
+   padding: 9px 50px 5px 20px;
+ }
+}
+
+.list-bullet {
+  margin: 20px 0 20px 20px;
+}
+}
+
+//Summary pages
+  .summary-page {
+    width: 93%;
+.sa-header {
+  padding-bottom:0;
+h1 {
+  font-size: 46px;
+  margin-top: 25px;
+}
+p {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  margin-top: 35px;
+}
+}
+.name-header {
+  border-bottom: 3px solid #005ea5;
+  font-weight: 700;
+  line-height: 1.04167;
+  margin-bottom: 30px !important;
+  padding-bottom: 20px;
+h1 {
+  font-size: 36px;
+}
+}
+.lede {
+  margin-top: 6px !important;
+}
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   margin-top: 60px !important;
+   padding-bottom: 12px !important;
+ }
+}
+}
+
+//Logged out page
+  .logged-out-page {
+textarea {
+  background-color: $white;
+  border: 1px solid $border-colour;
+  padding: 0;
+  width: 100%;
+}
+
+legend,
+#howCanWeImprove_field label {
+  font-size: 24px;
+  font-weight: bold;
+}
+}
+
+.form-group {
+&.postcode-container {
+   position: relative;
+a {
+  display: inline-block;
+  margin-top: 15px;
+}
+}
+span {
+  display: block;
+  width: 100%;
+}
+}
+
+
+@include media(mobile) {
+  .error-notification {
+    font-size: 19px;
+    font-weight: bold;
+  }
+  .find-address-form {
+  label {
+&.postcode-label {
+  span {
+    display: inline-block;
+    width: 100%;
+  }
+}
+}
+}
+}
+
+.form-field--error {
+  padding-left: 10px;
+.error-notification {
+  font-size: 16px;
+  font-weight: bold;
+}
+}
+
+@include media(desktop) {
+  .form-field--error {
+    padding-left: 15px;
+  .error-notification {
+    font-size: 19px;
+  }
+}
+.find-address-form {
+label {
+span {
+  display: block;
+}
+.form-control {
+&#postcode {
+   width: 25%;
+ }
+}
+}
+}
+}
+
+.find-address-form-block {
+  margin-bottom: 30px;
+  margin-top: 15px;
+}
+.select-address-list-block {
+  margin-bottom: 75px;
+h2 {
+  font-size:30px;
+}
+#select-address-form {
+fieldset {
+  display: block;
+  margin-bottom: 30px;
+.block-label {
+  box-sizing: border-box;
+  width: 100%;
+}
+}
+a {
+  display: inline-block;
+  margin-bottom: 15px;
+}
+}
+}
+.postal-address-block {
+  margin-top: 30px;
+h2 {
+  font-size:30px;
+}
+}
+
+.form-field--error {
+.form-control {
+  border: 4px solid $red;
+}
+}
+.back-to-account-home {
+  display: inline-block;
+  margin-bottom: 52px;
+  margin-top: 45px;
+}
+
+//Header
+  #global-header {
+.header-wrapper {
+.header-proposition {
+.menu.js-hidden {
+  display: block !important;
+}
+@include media(desktop) {
+  .menu.js-hidden {
+    display: none !important;
+  }
+}
+#proposition-links {
+li {
+  width: 100%;
+}
+}
+}
+}
+}
+
+.service-info-p {
+  color: $grey-1;
+  font-family: nta,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+//Sidebar
+  .pertax-sidebar {
+    margin-top: 15px;
+.sidebar-panel {
+  margin-bottom: 15px;
+  padding-bottom: 30px;
+  padding-top: 0px;
+h2 {
+  margin-bottom: 24px;
+}
+a {
+  margin-bottom: 7px;
+  margin-top: 7px;
+}
+&.messages {
+.section--branded {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  padding-top: 0;
+h2 {
+  border-bottom: 0;
+  margin-bottom: 1em;
+}
+}
+}
+}
+@include media(mobile) {
+  .sidebar-panel {
+    margin-bottom: 30px;
+  h2 {
+    border-bottom: 2px solid #BFC1C3 !important;
+    font-size: 30px;
+    line-height: 1.04167;
+    margin: 60px 0px 30px;
+    padding-bottom: 12px !important;
+  }
+}
+}
+}
+
+//Error page
+  .pertax-error {
+.section-border {
+  padding-bottom: 0;
+}
+}
+
+//Survey page
+  .satisfactionSurveyForm {
+fieldset {
+  margin-bottom: 40px;
+}
+input[type="radio"] {
+  border: 0 !important;
+&:checked {
+   background-color: $white !important;
+ }
+}
+.panel-indent {
+  margin-bottom: 40px;
+}
+#easyToUseExplainPanel,
+#correctInformationPanel {
+  padding-bottom: 30px;
+  padding-left: 20px;
+dl {
+  margin-top: 0;
+}
+}
+}
+
+.income-figure {
+  color: $grey-1;
+  float: left;
+  font-size: 54px;
+  font-weight: 700;
+  margin-top: 0;
+  margin: 0 !important;
+span {
+  color: $banner-text-colour;
+  display: block;
+  font-size: 19px;
+}
+}
+
+.tax-codes {
+  float: right;
+  margin-top: 9px;
+  width: 65%;
+}
+
+.content-body-no-margin {
+  margin: 0;
+}
+
+.panel-indent {
+  clear: both;
+  border-left: 4px solid #BFC1C3;
+  padding: 10px 0px 10px 15px;
+  margin: 30px 15px 45px 0px;
+}
+
+a:link {
+  color: #005ea5; }
+
+a:visited {
+  color: #4c2c92; }
+
+a:hover {
+  color: #2e8aca; }
+
+a:active {
+  color: #2e8aca; }
+
+.alert-notification {
+  border-left: 4px solid #000;
+  background-color: #FEF1D5;
+}
+
+.deadline {
+  margin-right: 0px;
+  margin-top: 6px;
+@include media(desktop) {
+  max-width: 21%;
+}
+.calendar-block {
+  width: 90px;
+  height: 70px;
+  text-align: center;
+  border: solid 1px #DEE0E2;
+  background-color: #DEE0E2;
+  padding: 5px 0;
+@include media(mobile) {
+  max-width: 90px;
+}
+.bottom {
+  padding: 6px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #0B0C0C;
+}
+}
+
+}
+
+.amounts {
+@include media(desktop) {
+  width: 79%;
+}
+p:first-child {
+  margin-top: 3px;
+@include media(mobile) {
+  margin-top: 15px;
+}
+}
+}
+
+//Global
+  .section-border {
+    border-bottom: 5px solid $link-colour;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+  }
+
+@media(max-width: 800px) {
+  span.nino {
+    display: block;
+  }
+}
+
+@include media(desktop) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+.no-margin-bottom {
+  margin-bottom: 0px !important;
+}
+
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
+.pertax-hr {
+  border: 0;
+  border-bottom: 1px solid $border-colour;
+  margin: 30px 0;
+}
+
+address {
+  font-style: normal;
+}
+
+.useful-forms-row.grid-row {
+@include media(mobile) {
+  margin-bottom: 40px !important;
+}
+h3 {
+  margin: 0;
+}
+p {
+  margin-top: 0;
+}
+}
+
+.service-info {
+  border-bottom: 1px solid $grey-3;
+
+p {
+  margin-bottom: 0;
+}
+
+@include media(desktop) {
+  .last-login {
+    float: right;
+  }
+}
+
+}
+
+#global-breadcrumb {
+  border-bottom: 0;
+  padding-bottom: 0;
+ol {
+  padding: .75em 0 .55em;
+li {
+a {
+&:focus {
+   outline: 3px solid $yellow;
+ }
+}
+}
+}
+}
+
+.error-summary {
+  border: 5px solid $red;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding: 20px 15px 15px;
+}
+.form-field--error {
+  border-left: 5px solid $red;
+  padding-left: 15px;
+}
+.validation-summary {
+@extend .error-summary;
+li {
+  font-size: 19px;
+  font-weight: bold;
+a {
+  color: $red;
+}
+}
+}
+
+.highlighted-event {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 2px 5px 20px;
+h2 {
+  color: $white;
+&.heading-large {
+   margin-top: 1.25em !important;
+ }
+}
+}
+
+
+
+//This is to override the content__body class attached to .article wrapper - don't know where that is defined
+.content__body {
+  width: 100%;
+}
+
+//layout helpers - I think these can go once ASSETS_FRONTEND is updated to include new grid system
+                   .grid-row {
+                   @extend %grid-row;
+                   }
+
+.column-whole {
+@include grid-column(1);
+}
+
+.column-quarter {
+@include grid-column(1 / 4);
+}
+
+.column-half {
+@include grid-column(1 / 2);
+@media(max-width: 700px) {
+  width: 100%;
+}
+}
+
+.column-third {
+@include grid-column(1 / 3);
+}
+
+.column-two-thirds {
+@include grid-column(2 / 3);
+}
+
+//IE7 and IE8 fixes
+  .lte-ie8 {
+.grid-row {
+  margin: 0;
+  width: 100%;
+.column-two-thirds,
+.column-half,
+.column-third,
+.column-whole {
+  float: left;
+  padding-left: 0;
+  padding-right: 0;
+}
+.column-two-thirds {
+  width: 66.66667%;
+}
+.column-half {
+  width: 50%;
+}
+.column-third {
+  width: 33.3333%;
+}
+.column-whole {
+  width: 100%;
+}
+}
+.desktop-hidden {
+  display: none !important;
+}
+}
+
+//Home page
+  .pertax-home {
+.grid-row {
+  margin-bottom: 20px;
+.income-estimate {
+  margin-bottom: 20px;
+  padding-top: 10px;
+@include media(desktop) {
+  margin-bottom: 0;
+}
+}
+}
+.pertax-panel {
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   line-height: 1.04167;
+   margin: 60px 0px 30px;
+   padding-bottom: 12px !important;
+ }
+}
+h3 {
+  font-size: 24px;
+  font-weight: 700;
+  padding-bottom: 0px !important;
+  margin-bottom: 24px;
+  margin-top: 0;
+  border-bottom: medium none;
+}
+.panel-indent {
+  border-left: medium none !important;
+  padding-left: 0px;
+  margin: 0px 15px 45px 0px;
+}
+&.money-tax-block {
+.column-half {
+  height: 200px;
+.panel-indent {
+  margin: 0px 10px 20px 0px;
+}
+@media(max-width: 800px) {
+  height: auto;
+  width: 100%;
+}
+}
+}
+@include media(mobile) {
+  margin-bottom: 60px;
+  width: auto;
+}
+}
+}
+.pertax-panel {
+  width: 97%;
+}
+.margin-top {
+  margin-top: 30px;
+}
+.gray-sub-heading {
+  color: $secondary-text-colour;
+  display: block;
+  font-size: 22px;
+  font-weight: normal;
+  margin: 0 !important;
+}
+
+.annual-income-notification {
+  background: $turquoise;
+  color: $white;
+  display: inline-block;
+  padding: 0 10px;
+p,
+a {
+  color: $white;
+}
+}
+
+//Personal details page
+  .personal-details {
+
+.update-address-link {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.section-border {
+  margin-bottom: 30px;
+}
+}
+
+//Start Page
+  .start-page {
+.text {
+  margin: 30px 0 45px;
+  max-width: 100%;
+}
+
+.button {
+&.button-get-started {
+   font-size: 24px;
+   margin: 10px 0 0;
+   padding: 9px 50px 5px 20px;
+ }
+}
+
+.list-bullet {
+  margin: 20px 0 20px 20px;
+}
+}
+
+//Summary pages
+  .summary-page {
+    width: 93%;
+.sa-header {
+  padding-bottom:0;
+h1 {
+  font-size: 46px;
+  margin-top: 25px;
+}
+p {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  margin-top: 35px;
+}
+}
+.name-header {
+  border-bottom: 3px solid #005ea5;
+  font-weight: 700;
+  line-height: 1.04167;
+  margin-bottom: 30px !important;
+  padding-bottom: 20px;
+h1 {
+  font-size: 36px;
+}
+}
+.lede {
+  margin-top: 6px !important;
+}
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   margin-top: 60px !important;
+   padding-bottom: 12px !important;
+ }
+}
+}
+
+//Logged out page
+  .logged-out-page {
+textarea {
+  background-color: $white;
+  border: 1px solid $border-colour;
+  padding: 0;
+  width: 100%;
+}
+
+legend,
+#howCanWeImprove_field label {
+  font-size: 24px;
+  font-weight: bold;
+}
+}
+
+.form-group {
+&.postcode-container {
+   position: relative;
+a {
+  display: inline-block;
+  margin-top: 15px;
+}
+}
+span {
+  display: block;
+  width: 100%;
+}
+}
+
+
+@include media(mobile) {
+  .error-notification {
+    font-size: 19px;
+    font-weight: bold;
+  }
+  .find-address-form {
+  label {
+&.postcode-label {
+  span {
+    display: inline-block;
+    width: 100%;
+  }
+}
+}
+}
+}
+
+.form-field--error {
+  padding-left: 10px;
+.error-notification {
+  font-size: 16px;
+  font-weight: bold;
+}
+}
+
+@include media(desktop) {
+  .form-field--error {
+    padding-left: 15px;
+  .error-notification {
+    font-size: 19px;
+  }
+}
+.find-address-form {
+label {
+span {
+  display: block;
+}
+.form-control {
+&#postcode {
+   width: 25%;
+ }
+}
+}
+}
+}
+
+.find-address-form-block {
+  margin-bottom: 30px;
+  margin-top: 15px;
+}
+.select-address-list-block {
+  margin-bottom: 75px;
+h2 {
+  font-size:30px;
+}
+#select-address-form {
+fieldset {
+  display: block;
+  margin-bottom: 30px;
+.block-label {
+  box-sizing: border-box;
+  width: 100%;
+}
+}
+a {
+  display: inline-block;
+  margin-bottom: 15px;
+}
+}
+}
+.postal-address-block {
+  margin-top: 30px;
+h2 {
+  font-size:30px;
+}
+}
+
+.form-field--error {
+.form-control {
+  border: 4px solid $red;
+}
+}
+.back-to-account-home {
+  display: inline-block;
+  margin-bottom: 52px;
+  margin-top: 45px;
+}
+
+//Header
+  #global-header {
+.header-wrapper {
+.header-proposition {
+.menu.js-hidden {
+  display: block !important;
+}
+@include media(desktop) {
+  .menu.js-hidden {
+    display: none !important;
+  }
+}
+#proposition-links {
+li {
+  width: 100%;
+}
+}
+}
+}
+}
+
+.service-info-p {
+  color: $grey-1;
+  font-family: nta,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+//Sidebar
+  .pertax-sidebar {
+    margin-top: 15px;
+.sidebar-panel {
+  margin-bottom: 15px;
+  padding-bottom: 30px;
+  padding-top: 0px;
+h2 {
+  margin-bottom: 24px;
+}
+a {
+  margin-bottom: 7px;
+  margin-top: 7px;
+}
+&.messages {
+.section--branded {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  padding-top: 0;
+h2 {
+  border-bottom: 0;
+  margin-bottom: 1em;
+}
+}
+}
+}
+@include media(mobile) {
+  .sidebar-panel {
+    margin-bottom: 30px;
+  h2 {
+    border-bottom: 2px solid #BFC1C3 !important;
+    font-size: 30px;
+    line-height: 1.04167;
+    margin: 60px 0px 30px;
+    padding-bottom: 12px !important;
+  }
+}
+}
+}
+
+//Error page
+  .pertax-error {
+.section-border {
+  padding-bottom: 0;
+}
+}
+
+//Survey page
+  .satisfactionSurveyForm {
+fieldset {
+  margin-bottom: 40px;
+}
+input[type="radio"] {
+  border: 0 !important;
+&:checked {
+   background-color: $white !important;
+ }
+}
+.panel-indent {
+  margin-bottom: 40px;
+}
+#easyToUseExplainPanel,
+#correctInformationPanel {
+  padding-bottom: 30px;
+  padding-left: 20px;
+dl {
+  margin-top: 0;
+}
+}
+}
+
+.income-figure {
+  color: $grey-1;
+  float: left;
+  font-size: 54px;
+  font-weight: 700;
+  margin-top: 0;
+  margin: 0 !important;
+span {
+  color: $banner-text-colour;
+  display: block;
+  font-size: 19px;
+}
+}
+
+.tax-codes {
+  float: right;
+  margin-top: 9px;
+  width: 65%;
+}
+
+.content-body-no-margin {
+  margin: 0;
+}
+
+.panel-indent {
+  clear: both;
+  border-left: 4px solid #BFC1C3;
+  padding: 10px 0px 10px 15px;
+  margin: 30px 15px 45px 0px;
+}
+
+a:link {
+  color: #005ea5; }
+
+a:visited {
+  color: #4c2c92; }
+
+a:hover {
+  color: #2e8aca; }
+
+a:active {
+  color: #2e8aca; }
+
+.alert-notification {
+  border-left: 4px solid #000;
+  background-color: #FEF1D5;
+}
+
+.deadline {
+  margin-right: 0px;
+  margin-top: 6px;
+@include media(desktop) {
+  max-width: 21%;
+}
+.calendar-block {
+  width: 90px;
+  height: 70px;
+  text-align: center;
+  border: solid 1px #DEE0E2;
+  background-color: #DEE0E2;
+  padding: 5px 0;
+@include media(mobile) {
+  max-width: 90px;
+}
+.bottom {
+  padding: 6px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #0B0C0C;
+}
+}
+
+}
+
+.amounts {
+@include media(desktop) {
+  width: 79%;
+}
+p:first-child {
+  margin-top: 3px;
+@include media(mobile) {
+  margin-top: 15px;
+}
+}
+}
+
+//Global
+  .section-border {
+    border-bottom: 5px solid $link-colour;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+  }
+
+@media(max-width: 800px) {
+  span.nino {
+    display: block;
+  }
+}
+
+@include media(desktop) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+.no-margin-bottom {
+  margin-bottom: 0px !important;
+}
+
+.no-margin-top {
+  margin-top: 0px !important;
+}
+
+.pertax-hr {
+  border: 0;
+  border-bottom: 1px solid $border-colour;
+  margin: 30px 0;
+}
+
+address {
+  font-style: normal;
+}
+
+.useful-forms-row.grid-row {
+@include media(mobile) {
+  margin-bottom: 40px !important;
+}
+h3 {
+  margin: 0;
+}
+p {
+  margin-top: 0;
+}
+}
+
+.service-info {
+  border-bottom: 1px solid $grey-3;
+
+p {
+  margin-bottom: 0;
+}
+
+@include media(desktop) {
+  .last-login {
+    float: right;
+  }
+}
+
+}
+
+#global-breadcrumb {
+  border-bottom: 0;
+  padding-bottom: 0;
+ol {
+  padding: .75em 0 .55em;
+li {
+a {
+&:focus {
+   outline: 3px solid $yellow;
+ }
+}
+}
+}
+}
+
+.error-summary {
+  border: 5px solid $red;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding: 20px 15px 15px;
+}
+.form-field--error {
+  border-left: 5px solid $red;
+  padding-left: 15px;
+}
+.validation-summary {
+@extend .error-summary;
+li {
+  font-size: 19px;
+  font-weight: bold;
+a {
+  color: $red;
+}
+}
+}
+
+.highlighted-event {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 2px 5px 20px;
+h2 {
+  color: $white;
+&.heading-large {
+   margin-top: 1.25em !important;
+ }
+}
+}
+
+
+
+//This is to override the content__body class attached to .article wrapper - don't know where that is defined
+.content__body {
+  width: 100%;
+}
+
+//layout helpers - I think these can go once ASSETS_FRONTEND is updated to include new grid system
+                   .grid-row {
+                   @extend %grid-row;
+                   }
+
+.column-whole {
+@include grid-column(1);
+}
+
+.column-quarter {
+@include grid-column(1 / 4);
+}
+
+.column-half {
+@include grid-column(1 / 2);
+@media(max-width: 700px) {
+  width: 100%;
+}
+}
+
+.column-third {
+@include grid-column(1 / 3);
+}
+
+.column-two-thirds {
+@include grid-column(2 / 3);
+}
+
+//IE7 and IE8 fixes
+  .lte-ie8 {
+.grid-row {
+  margin: 0;
+  width: 100%;
+.column-two-thirds,
+.column-half,
+.column-third,
+.column-whole {
+  float: left;
+  padding-left: 0;
+  padding-right: 0;
+}
+.column-two-thirds {
+  width: 66.66667%;
+}
+.column-half {
+  width: 50%;
+}
+.column-third {
+  width: 33.3333%;
+}
+.column-whole {
+  width: 100%;
+}
+}
+.desktop-hidden {
+  display: none !important;
+}
+}
+
+//Home page
+  .pertax-home {
+.grid-row {
+  margin-bottom: 20px;
+.income-estimate {
+  margin-bottom: 20px;
+  padding-top: 10px;
+@include media(desktop) {
+  margin-bottom: 0;
+}
+}
+}
+.pertax-panel {
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   line-height: 1.04167;
+   margin: 60px 0px 30px;
+   padding-bottom: 12px !important;
+ }
+}
+h3 {
+  font-size: 24px;
+  font-weight: 700;
+  padding-bottom: 0px !important;
+  margin-bottom: 24px;
+  margin-top: 0;
+  border-bottom: medium none;
+}
+.panel-indent {
+  border-left: medium none !important;
+  padding-left: 0px;
+  margin: 0px 15px 45px 0px;
+}
+&.money-tax-block {
+.column-half {
+  height: 200px;
+.panel-indent {
+  margin: 0px 10px 20px 0px;
+}
+@media(max-width: 800px) {
+  height: auto;
+  width: 100%;
+}
+}
+}
+@include media(mobile) {
+  margin-bottom: 60px;
+  width: auto;
+}
+}
+}
+.pertax-panel {
+  width: 97%;
+}
+.margin-top {
+  margin-top: 30px;
+}
+.gray-sub-heading {
+  color: $secondary-text-colour;
+  display: block;
+  font-size: 22px;
+  font-weight: normal;
+  margin: 0 !important;
+}
+
+.annual-income-notification {
+  background: $turquoise;
+  color: $white;
+  display: inline-block;
+  padding: 0 10px;
+p,
+a {
+  color: $white;
+}
+}
+
+//Personal details page
+  .personal-details {
+
+.update-address-link {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.section-border {
+  margin-bottom: 30px;
+}
+}
+
+//Start Page
+  .start-page {
+.text {
+  margin: 30px 0 45px;
+  max-width: 100%;
+}
+
+.button {
+&.button-get-started {
+   font-size: 24px;
+   margin: 10px 0 0;
+   padding: 9px 50px 5px 20px;
+ }
+}
+
+.list-bullet {
+  margin: 20px 0 20px 20px;
+}
+}
+
+//Summary pages
+  .summary-page {
+    width: 93%;
+.sa-header {
+  padding-bottom:0;
+h1 {
+  font-size: 46px;
+  margin-top: 25px;
+}
+p {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  margin-top: 35px;
+}
+}
+.name-header {
+  border-bottom: 3px solid #005ea5;
+  font-weight: 700;
+  line-height: 1.04167;
+  margin-bottom: 30px !important;
+  padding-bottom: 20px;
+h1 {
+  font-size: 36px;
+}
+}
+.lede {
+  margin-top: 6px !important;
+}
+h2 {
+&.name-header {
+   border-bottom: 2px solid #BFC1C3;
+   font-size: 30px;
+   margin-top: 60px !important;
+   padding-bottom: 12px !important;
+ }
+}
+}
+
+//Logged out page
+  .logged-out-page {
+textarea {
+  background-color: $white;
+  border: 1px solid $border-colour;
+  padding: 0;
+  width: 100%;
+}
+
+legend,
+#howCanWeImprove_field label {
+  font-size: 24px;
+  font-weight: bold;
+}
+}
+
+.form-group {
+&.postcode-container {
+   position: relative;
+a {
+  display: inline-block;
+  margin-top: 15px;
+}
+}
+span {
+  display: block;
+  width: 100%;
+}
+}
+
+
+@include media(mobile) {
+  .error-notification {
+    font-size: 19px;
+    font-weight: bold;
+  }
+  .find-address-form {
+  label {
+&.postcode-label {
+  span {
+    display: inline-block;
+    width: 100%;
+  }
+}
+}
+}
+}
+
+.form-field--error {
+  padding-left: 10px;
+.error-notification {
+  font-size: 16px;
+  font-weight: bold;
+}
+}
+
+@include media(desktop) {
+  .form-field--error {
+    padding-left: 15px;
+  .error-notification {
+    font-size: 19px;
+  }
+}
+.find-address-form {
+label {
+span {
+  display: block;
+}
+.form-control {
+&#postcode {
+   width: 25%;
+ }
+}
+}
+}
+}
+
+.find-address-form-block {
+  margin-bottom: 30px;
+  margin-top: 15px;
+}
+.select-address-list-block {
+  margin-bottom: 75px;
+h2 {
+  font-size:30px;
+}
+#select-address-form {
+fieldset {
+  display: block;
+  margin-bottom: 30px;
+.block-label {
+  box-sizing: border-box;
+  width: 100%;
+}
+}
+a {
+  display: inline-block;
+  margin-bottom: 15px;
+}
+}
+}
+.postal-address-block {
+  margin-top: 30px;
+h2 {
+  font-size:30px;
+}
+}
+
+.form-field--error {
+.form-control {
+  border: 4px solid $red;
+}
+}
+.back-to-account-home {
+  display: inline-block;
+  margin-bottom: 52px;
+  margin-top: 45px;
+}
+
+//Header
+  #global-header {
+.header-wrapper {
+.header-proposition {
+.menu.js-hidden {
+  display: block !important;
+}
+@include media(desktop) {
+  .menu.js-hidden {
+    display: none !important;
+  }
+}
+#proposition-links {
+li {
+  width: 100%;
+}
+}
+}
+}
+}
+
+.service-info-p {
+  color: $grey-1;
+  font-family: nta,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+//Sidebar
+  .pertax-sidebar {
+    margin-top: 15px;
+.sidebar-panel {
+  margin-bottom: 15px;
+  padding-bottom: 30px;
+  padding-top: 0px;
+h2 {
+  margin-bottom: 24px;
+}
+a {
+  margin-bottom: 7px;
+  margin-top: 7px;
+}
+&.messages {
+.section--branded {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  padding-top: 0;
+h2 {
+  border-bottom: 0;
+  margin-bottom: 1em;
+}
+}
+}
+}
+@include media(mobile) {
+  .sidebar-panel {
+    margin-bottom: 30px;
+  h2 {
+    border-bottom: 2px solid #BFC1C3 !important;
+    font-size: 30px;
+    line-height: 1.04167;
+    margin: 60px 0px 30px;
+    padding-bottom: 12px !important;
+  }
+}
+}
+}
+
+//Error page
+  .pertax-error {
+.section-border {
+  padding-bottom: 0;
+}
+}
+
+//Survey page
+  .satisfactionSurveyForm {
+fieldset {
+  margin-bottom: 40px;
+}
+input[type="radio"] {
+  border: 0 !important;
+&:checked {
+   background-color: $white !important;
+ }
+}
+.panel-indent {
+  margin-bottom: 40px;
+}
+#easyToUseExplainPanel,
+#correctInformationPanel {
+  padding-bottom: 30px;
+  padding-left: 20px;
+dl {
+  margin-top: 0;
+}
+}
+}
+
+.income-figure {
+  color: $grey-1;
+  float: left;
+  font-size: 54px;
+  font-weight: 700;
+  margin-top: 0;
+  margin: 0 !important;
+span {
+  color: $banner-text-colour;
+  display: block;
+  font-size: 19px;
+}
+}
+
+.tax-codes {
+  float: right;
+  margin-top: 9px;
+  width: 65%;
+}
+
+.content-body-no-margin {
+  margin: 0;
+}
+
+.panel-indent {
+  clear: both;
+  border-left: 4px solid #BFC1C3;
+  padding: 10px 0px 10px 15px;
+  margin: 30px 15px 45px 0px;
+}
+
+a:link {
+  color: #005ea5; }
+
+a:visited {
+  color: #4c2c92; }
+
+a:hover {
+  color: #2e8aca; }
+
+a:active {
+  color: #2e8aca; }
+
+.alert-notification {
+  border-left: 4px solid #000;
+  background-color: #FEF1D5;
+}
+
+.deadline {
+  margin-right: 0px;
+  margin-top: 6px;
+@include media(desktop) {
+  max-width: 21%;
+}
+.calendar-block {
+  width: 90px;
+  height: 70px;
+  text-align: center;
+  border: solid 1px #DEE0E2;
+  background-color: #DEE0E2;
+  padding: 5px 0;
+@include media(mobile) {
+  max-width: 90px;
+}
+.bottom {
+  padding: 6px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #0B0C0C;
+}
+}
+
+}
+
+.amounts {
+@include media(desktop) {
+  width: 79%;
+}
+p:first-child {
+  margin-top: 3px;
+@include media(mobile) {
+  margin-top: 15px;
+}
+}
+}

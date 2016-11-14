@@ -20,11 +20,14 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import controllers.Assets
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{Matchers, TestData, WordSpecLike}
 import org.scalatestplus.play._
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.test.Helpers._
@@ -170,8 +173,6 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
       }
     }
 
-    //This test now fails because the play 2.5 validates the cookie upfront and therefore throws an exception before ever invoking the filter
-    //Will need investigation
     "generate audit events without the device finger print when the value supplied in the request cookie is invalid" when {
       def request = FakeRequest("GET", "/foo").withCookies(Cookie(DeviceFingerprint.deviceFingerprintCookieName, "THIS IS SOME JUST THAT SHOULDN'T BE DECRYPTABLE *!@&£$)B__!@£$"))
 
@@ -405,17 +406,18 @@ class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServ
   def randomString(alphabet: String)(n: Int): String =
   Stream.continually(random.nextInt(alphabet.size)).map(alphabet).take(n).mkString
 
-  override def newAppForTest(testData: TestData): FakeApplication = FakeApplication(withRoutes = {
-    case ("GET", "/assets/stylesheet.css") => filter.apply(Action {
-      Results.Ok("body {color:red}").withHeaders(CONTENT_TYPE -> "test/css")
-    })
+  val assets = new GuiceApplicationBuilder().injector().instanceOf[Assets]
+
+  override def newAppForTest(testData: TestData): Application = new GuiceApplicationBuilder().routes({
+    case ("GET", "/assets/stylesheet.css") => filter.apply(assets.at("/", "stylesheet.css"))
+    case ("GET", "/assets/stylesheetLarge.css") => filter.apply(assets.at("/", "stylesheetLarge.css"))
     case ("GET", "/longresponse") => filter.apply(Action {
       Results.Ok(rs)
     })
     case ("POST", "/longrequest") => filter.apply(Action {
       Results.Ok
     })
-  })
+  }).build()
 
   "Attempting to audit a large in-memory response" in {
     filter.auditConnector.reset
@@ -438,10 +440,24 @@ class FrontendAuditFilterServerSpec extends FrontendAuditFilterSpec with OneServ
     val response = await(WS.url(url).get())
 
     eventually {
+      response.body.length should equal(10278)
       val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
-      response.body.length should equal(16)
       event.detail should not be null
-      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(16)
+      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(10278)
+    }
+  }
+
+  "Attempting to audit truncated large assets" in {
+    filter.auditConnector.reset
+
+    val url = s"http://localhost:$port/assets/stylesheetLarge.css"
+    val response = await(WS.url(url).get())
+
+    eventually {
+      response.body.length should equal(45423)
+      val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+      event.detail should not be null
+      event.detail.get(EventKeys.ResponseMessage).getOrElse("").length should equal(filter.maxBodySize)
     }
   }
 
