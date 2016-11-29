@@ -246,11 +246,13 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
   private def checkAuditRequestFailureMessage(message: String, body: JsValue) {
     message must startWith(AuditEventFailureKeys.LoggingAuditRequestFailureKey)
+    message must include("_AuditRequestFailure")
     message must include(body.toString)
   }
 
   private def checkAuditFailureMessage(message: String, body: JsValue, code: Int) {
     message must startWith(AuditEventFailureKeys.LoggingAuditFailureResponseKey)
+    message must include("_AuditFailureResponse")
     message must include(body.toString)
     message must include(code.toString)
   }
