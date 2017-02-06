@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -352,7 +352,20 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
   "A frontend response" should {
     "not be included in the audit message if it is HTML" in {
       implicit val hc = new HeaderCarrier()
-      val next = Action(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html"))
+      val next = Action(Results.Ok(<h1>Hello, world!</h1>).as(HTML).withHeaders("Content-Type" -> "text/html"))
+
+      val result = await(filter.apply(next)(FakeRequest()).run)
+      await(enumerateResponseBody(result))
+
+      eventually {
+        val event = filter.auditConnector.recordedEvent.get.asInstanceOf[DataEvent]
+        event.detail should contain("responseMessage" -> "<HTML>...</HTML>")
+      }
+    }
+
+    "not depend on response headers when truncating HTML" in {
+      implicit val hc = new HeaderCarrier()
+      val next = Action(Results.Ok(<h1>Hello, world!</h1>).as(HTML))
 
       val result = await(filter.apply(next)(FakeRequest()).run)
       await(enumerateResponseBody(result))
@@ -366,7 +379,7 @@ class FrontendAuditFilterSpec extends WordSpecLike with Matchers with Eventually
     "not be included in the audit message if it is html with utf-8" in {
       implicit val hc = new HeaderCarrier()
       val next = Action.async { r =>
-        Future.successful(Results.Ok("....the response...").withHeaders("Content-Type" -> "text/html; charset=utf-8"))
+        Future.successful(Results.Ok(<h1>Hello, world!</h1>).as(HTML).withHeaders("Content-Type" -> "text/html; charset=utf-8"))
       }
 
       val result = await(filter.apply(next)(FakeRequest()).run)

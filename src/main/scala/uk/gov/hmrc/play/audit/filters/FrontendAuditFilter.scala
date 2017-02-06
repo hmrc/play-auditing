@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ trait FrontendAuditFilter extends AuditFilter {
             val responseHeader = result.header
             auditConnector.sendEvent(
               dataEvent(EventTypes.RequestReceived, requestHeader.uri, requestHeader)
-                .withDetail(ResponseMessage -> filterResponseBody(responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
+                .withDetail(ResponseMessage -> filterResponseBody(result, responseHeader, new String(responseBody)), StatusCode -> responseHeader.status.toString)
                 .withDetail(buildRequestDetails(requestHeader, requestBody).toSeq: _*)
                 .withDetail(buildResponseDetails(responseHeader).toSeq: _*))
           case Failure(f) =>
@@ -68,10 +68,10 @@ trait FrontendAuditFilter extends AuditFilter {
     }
   }
 
-  private def filterResponseBody(response: ResponseHeader, responseBody: String) = {
-    response.headers.get("Content-Type")
-      .collect { case textHtml(a) => "<HTML>...</HTML>" }
-      .getOrElse(responseBody)
+  private def filterResponseBody(result: Result, response: ResponseHeader, responseBody: String) = {
+    result.body.contentType.collect {
+      case textHtml(a) => "<HTML>...</HTML>"
+    }.getOrElse(responseBody)
   }
 
   private def buildRequestDetails(requestHeader: RequestHeader, request: String)(implicit hc: HeaderCarrier): Map[String, String] = {
