@@ -81,7 +81,7 @@ auditing {
 }
 ```
 
-```HttpAuditing``` provides ```def auditDisabledForPattern = ("""http://.*\.service""").r``` which client applications may chose to override when mixing in ```HttpAuditing```.
+```HttpAuditing``` provides ```def auditDisabledForPattern: Regex``` which client applications may chose to override when mixing in ```HttpAuditing```.
 
 _NOTE:_ This configuration used to be provided by reading Play configuration property ```<env>.http-client.audit.disabled-for``` which is now obsolete.
 
