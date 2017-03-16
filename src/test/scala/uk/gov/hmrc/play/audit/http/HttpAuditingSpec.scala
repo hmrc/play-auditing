@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package uk.gov.hmrc.play.audit.http
 import org.joda.time.DateTime
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, Inspectors, Matchers, WordSpecLike}
 import play.api.Play
 import play.api.test.FakeApplication
 import uk.gov.hmrc.play.audit.EventKeys._
@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, MockAuditConnector}
 import uk.gov.hmrc.play.audit.model.MergedDataEvent
 import uk.gov.hmrc.play.http.HeaderNames._
-import uk.gov.hmrc.play.http.{HeaderNames, HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HeaderNames, HttpResponse}
 import uk.gov.hmrc.play.test.Concurrent.await
 import uk.gov.hmrc.play.test.Concurrent.liftFuture
 import uk.gov.hmrc.play.test.DummyHttpResponse
@@ -35,7 +35,7 @@ import uk.gov.hmrc.play.test.DummyHttpResponse
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with BeforeAndAfterAll {
+class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with Eventually with BeforeAndAfterAll {
 
   implicit def mockDatastreamConnector(ds: AuditConnector) : MockAuditConnector = ds.asInstanceOf[MockAuditConnector]
 
@@ -237,30 +237,36 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Eventually with B
   }
 
   "Calling an internal microservice" should {
-    val AuditUri = "http://auth.service:80/auth/authority"
+    val auditUris = Seq("service", "public.mdtp", "protected.mdtp", "private.mdtp").map { zone =>
+      s"http://auth.$zone:80/auth/authority"
+    }
     val getVerb = "GET"
 
     implicit val hc = HeaderCarrier()
 
     "not generate an audit event" in {
-      val httpWithAudit = new HttpWithAuditing
-      val requestBody = None
-      val response = new DummyHttpResponse("the response body", 200)
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+      forAll(auditUris) { auditUri =>
+        val httpWithAudit = new HttpWithAuditing
+        val requestBody = None
+        val response = new DummyHttpResponse("the response body", 200)
+        val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
 
-      httpWithAudit.audit(request, response)
+        httpWithAudit.audit(request, response)
 
-      httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
+        httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
+      }
     }
 
     "not generate an audit event when an exception has been thrown" in {
-      val httpWithAudit = new HttpWithAuditing
-      val requestBody = None
+      forAll(auditUris) { auditUri =>
+        val httpWithAudit = new HttpWithAuditing
+        val requestBody = None
 
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
-      httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
+        val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
+        httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
 
-      httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
+        httpWithAudit.auditConnector.recordedMergedEvent shouldBe None
+      }
     }
   }
 

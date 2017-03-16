@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,13 +28,14 @@ import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.matching.Regex
 
 
 trait HttpAuditing extends DateTimeUtils {
 
   def auditConnector: AuditConnector
   def appName: String
-  def auditDisabledForPattern = """http(s)?:\/\/.*\.service($|[:\/])""".r
+  def auditDisabledForPattern: Regex = """http(s)?:\/\/.*\.(service|public\.mdtp|protected\.mdtp|private\.mdtp)($|[:\/])""".r
 
   object AuditingHook extends HttpHook {
     override def apply(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit = {
