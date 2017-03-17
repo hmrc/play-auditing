@@ -237,7 +237,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
   }
 
   "Calling an internal microservice" should {
-    val auditUris = Seq("service", "public.mdtp", "protected.mdtp", "private.mdtp").map { zone =>
+    val auditUris = Seq("service", "public.mdtp", "protected.mdtp", "private.mdtp", "monolith.mdtp", "foobar.mdtp", "mdtp").map { zone =>
       s"http://auth.$zone:80/auth/authority"
     }
     val getVerb = "GET"
