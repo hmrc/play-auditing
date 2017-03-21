@@ -156,7 +156,7 @@ private class RequestBodyCaptor(val loggingContext: String, val maxBodyLength: I
         if (bodyLength > maxBodyLength)
           Logger.warn(s"txm play auditing: $loggingContext sanity check request body ${bodyLength} exceeds maxLength ${maxBodyLength} - do you need to be auditing this payload?")
         callback(buffer.take(maxBodyLength))
-        if (buffer == ByteString.empty)
+        if (isAvailable(out) && buffer == ByteString.empty)
           push(out, buffer)
         completeStage()
       }
