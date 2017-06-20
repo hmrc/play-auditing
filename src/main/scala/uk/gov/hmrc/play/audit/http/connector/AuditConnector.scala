@@ -30,8 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AuditEventFailureKeys {
   private val EventMissed = "DS_EventMissed"
-  val LoggingAuditRequestFailureKey : String = EventMissed + "_AuditFailureResponse"
-  val LoggingAuditFailureResponseKey : String = EventMissed + "_AuditRequestFailure"
+  val LoggingAuditFailureResponseKey : String = EventMissed + "_AuditFailureResponse"
+  val LoggingAuditRequestFailureKey : String = EventMissed + "_AuditRequestFailure"
 }
 
 object AuditEventFailureKeys extends AuditEventFailureKeys
