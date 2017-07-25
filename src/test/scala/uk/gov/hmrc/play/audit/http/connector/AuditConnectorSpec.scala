@@ -154,8 +154,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
   val eventTypes = new EventTypes {}
 
   val fakeConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
-                                      enabled = true,
-                                      traceRequests = true)
+                                      enabled = true)
 
   val mockRequestHolder = mock[WSRequest]
 
@@ -215,8 +214,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
     "return disabled if auditing is not enabled" in {
       val disabledConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
-                                          enabled = false,
-                                          traceRequests = true)
+                                          enabled = false)
 
       when(mockResponse.status).thenReturn(200)
       when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
