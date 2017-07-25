@@ -71,7 +71,6 @@ Request auditing is provided for all HTTP requests that are made using http-verb
 ```javascript
 auditing {
   enabled = true
-  traceRequests = true
   consumer {
     baseUri {
       host = ...
