@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-import play.api.Play
+import play.api.Configuration
 
 case class BaseUri(host: String, port: Int, protocol: String) {
   val uri = s"$protocol://$host:$port".stripSuffix("/") + "/"
@@ -45,10 +45,13 @@ case class AuditingConfig(consumer: Option[Consumer],
 
 object LoadAuditingConfig {
 
-  import play.api.Play.current
+  @deprecated("Use an explicit `Configuration` instance", "2.11.0")
+  def apply(key: String): AuditingConfig =
+    apply(key, play.api.Play.current.configuration)
 
-  def apply(key: String): AuditingConfig = {
-    Play.configuration.getConfig(key).map { c =>
+  def apply(key: String, config: Configuration): AuditingConfig = {
+
+    config.getConfig(key).map { c =>
 
       val enabled = c.getBoolean("enabled").getOrElse(true)
 

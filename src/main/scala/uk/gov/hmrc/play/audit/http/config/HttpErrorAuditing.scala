@@ -16,44 +16,48 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-import play.api.{GlobalSettings, PlayException}
+import play.api.http.HttpErrorHandler
+import play.api.http.Status._
 import play.api.mvc.{RequestHeader, Result}
 import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.http.{JsValidationException, NotFoundException}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-@deprecated("Use DI with `HttpErrorAuditing`", "2.11.0")
-trait ErrorAuditingSettings extends GlobalSettings with HttpAuditEvent {
-  import scala.concurrent.ExecutionContext.Implicits.global
+trait HttpErrorAuditing extends HttpErrorHandler with HttpAuditEvent {
 
   def auditConnector: AuditConnector
+  implicit def ec: ExecutionContext
 
   private val unexpectedError = "Unexpected error"
   private val notFoundError = "Resource Endpoint Not Found"
   private val badRequestError = "Request bad format exception"
 
-  override def onError(request: RequestHeader, ex: Throwable): Future[Result] = {
-    val code = ex match {
-      case e: NotFoundException => ResourceNotFound
-      case jsError: JsValidationException => ServerValidationError
+  abstract override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = {
+
+    statusCode match {
+      case NOT_FOUND =>
+        auditConnector.sendEvent(dataEvent(ResourceNotFound, notFoundError, request))
+      case _ =>
+        auditConnector.sendEvent(dataEvent(ServerValidationError, badRequestError, request))
+    }
+
+    super.onClientError(request, statusCode, message)
+  }
+
+  abstract override def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = {
+
+    val code = exception match {
+      case _: NotFoundException => ResourceNotFound
+      case _: JsValidationException => ServerValidationError
       case _ => ServerInternalError
     }
 
     auditConnector.sendEvent(dataEvent(code, unexpectedError, request)
-      .withDetail((TransactionFailureReason, ex.getMessage)))
-    super.onError(request, ex)
-  }
+      .withDetail(TransactionFailureReason -> exception.getMessage))
 
-  override def onHandlerNotFound(request: RequestHeader): Future[Result] = {
-    auditConnector.sendEvent(dataEvent(ResourceNotFound, notFoundError, request))
-    super.onHandlerNotFound(request)
-  }
-
-  override def onBadRequest(request: RequestHeader, error: String): Future[Result] = {
-    auditConnector.sendEvent(dataEvent(ServerValidationError, badRequestError, request))
-    super.onBadRequest(request, error)
+    super.onServerError(request, exception)
   }
 }
