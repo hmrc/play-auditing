@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import play.api.libs.json.JsValue
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
-import uk.gov.hmrc.play.audit.model.{AuditEvent, MergedDataEvent}
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.audit.model.{AuditEvent, DataEvent, MergedDataEvent}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,7 +30,7 @@ class MockAuditConnector extends AuditConnector {
   var sendEventFuture: Future[Success.type] = null
   var sendMergedEventFuture: Future[Success.type] = null
 
-  override def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier, ec : ExecutionContext) = {
+  override def sendEvent(event: DataEvent)(implicit hc: HeaderCarrier, ec : ExecutionContext) = {
     recordedEvent = Some(event)
     Future.successful(AuditResult.Success)
   }
@@ -45,12 +44,6 @@ class MockAuditConnector extends AuditConnector {
     recordedEvent = None
     recordedMergedEvent = None
   }
-
-  override protected def logError(s: String, t: Throwable): Unit = ???
-
-  override protected def logError(s: String): Unit = ???
-
-  override protected def callAuditConsumer(url:String, body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] = ???
 
   override def auditingConfig: AuditingConfig = ???
 }

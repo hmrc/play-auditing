@@ -32,10 +32,10 @@ import play.api.libs.ws.WS
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.{FakeApplication, FakeRequest}
+import uk.gov.hmrc.http.{CookieNames, HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.audit.http.connector.MockAuditConnector
 import uk.gov.hmrc.play.audit.model.{DataEvent, DeviceFingerprint}
 import uk.gov.hmrc.play.audit.{EventKeys, EventTypes}
-import uk.gov.hmrc.play.http.{CookieNames, HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.test.Http._
 
 import scala.concurrent.ExecutionContext.Implicits.global

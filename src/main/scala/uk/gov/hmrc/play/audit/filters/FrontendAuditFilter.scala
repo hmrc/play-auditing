@@ -21,7 +21,8 @@ import play.api.mvc.{EssentialAction, RequestHeader, ResponseHeader, Result}
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.model.DeviceFingerprint
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.audit.http.PlayHeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
@@ -34,13 +35,13 @@ trait FrontendAuditFilter extends AuditFilter {
 
   def applicationPort: Option[Int]
 
-  def buildAuditedHeaders(request: RequestHeader) = HeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
+  def buildAuditedHeaders(request: RequestHeader) = PlayHeaderCarrier.fromHeadersAndSession(request.headers, Some(request.session))
 
   override def apply(nextFilter: EssentialAction) = new EssentialAction {
     def apply(requestHeader: RequestHeader) = {
 
       val next = nextFilter(requestHeader)
-      implicit val hc = HeaderCarrier.fromHeadersAndSession(requestHeader.headers, Some(requestHeader.session))
+      implicit val hc = PlayHeaderCarrier.fromHeadersAndSession(requestHeader.headers, Some(requestHeader.session))
 
       val loggingContext = s"${requestHeader.method} ${requestHeader.uri} "
 

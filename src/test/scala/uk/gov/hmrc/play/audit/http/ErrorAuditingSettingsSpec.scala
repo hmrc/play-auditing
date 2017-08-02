@@ -17,12 +17,13 @@
 package uk.gov.hmrc.play.audit.http
 
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.GlobalSettings
 import play.api.mvc.{RequestHeader, Result, Results}
-import play.api.{GlobalSettings, PlayException}
+import uk.gov.hmrc.http.JsValidationException
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.config.ErrorAuditingSettings
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, MockAuditConnector}
-import uk.gov.hmrc.play.http.{JsValidationException, NotFoundException}
+import uk.gov.hmrc.play.http.NotFoundException
 import uk.gov.hmrc.play.test.Concurrent.await
 import uk.gov.hmrc.play.test.DummyRequestHeader
 
@@ -83,7 +84,7 @@ class ErrorAuditingSettingsSpec extends WordSpecLike with Matchers {
       val mockConnector = new MockAuditConnector()
       val auditing = new TestErrorAuditing(mockConnector)
 
-      val resultF = auditing.onError(new DummyRequestHeader(), new JsValidationException("GET", "", classOf[String], Seq.empty))
+      val resultF = auditing.onError(new DummyRequestHeader(), new JsValidationException("GET", "", classOf[String], ""))
       await(resultF)
       mockConnector.recordedEvent shouldNot be(None)
       mockConnector.recordedEvent.map(_.auditType shouldBe EventTypes.ServerValidationError)

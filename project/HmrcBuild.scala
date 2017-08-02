@@ -46,8 +46,9 @@ private object AppDependencies {
   val compile = Seq(
     "com.typesafe.play" %% "play" % PlayVersion.current,
     ws,
-    "uk.gov.hmrc" %% "http-verbs" % "6.4.0",
-    "com.ning" % "async-http-client" % "1.8.15"
+    "uk.gov.hmrc" %% "http-core" % "0.4.0",
+    "com.ning" % "async-http-client" % "1.8.15",
+    "auditing" %% "auditing" % "0.1-SNAPSHOT"
   )
 
   trait TestDependencies {

@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-import play.api.{GlobalSettings, PlayException}
+import play.api.GlobalSettings
 import play.api.mvc.{RequestHeader, Result}
+import uk.gov.hmrc.http.JsValidationException
 import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.HttpAuditEvent
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.http.{JsValidationException, NotFoundException}
+import uk.gov.hmrc.play.http.NotFoundException
 
 import scala.concurrent.Future
 

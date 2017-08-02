@@ -21,14 +21,12 @@ import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{Matchers, WordSpecLike}
-import play.api.libs.iteratee.Iteratee
-import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{FakeApplication, FakeRequest}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult, MockAuditConnector}
-import uk.gov.hmrc.play.audit.model.{AuditEvent, DataEvent}
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.test.Concurrent.await
 import uk.gov.hmrc.play.test.Http._
 
@@ -47,12 +45,12 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
 
     val config = PatienceConfig(Span(5, Seconds), Span(15, Millis))
 
-    implicit val hc = HeaderCarrier
+    implicit val hc = new HeaderCarrier
     val request = FakeRequest().withHeaders("X-Request-ID" -> xRequestId, "X-Session-ID" -> xSessionId, "deviceID" -> deviceID, "Akamai-Reputation" -> akamaiReputation)
 
     def createAuditConnector = new MockAuditConnector {
-      var events: List[AuditEvent] = List.empty[AuditEvent]
-      override def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext) = {
+      var events: List[DataEvent] = List.empty[DataEvent]
+      override def sendEvent(event: DataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext) = {
         events = events :+ event
         Future.successful(AuditResult.Success)
       }
@@ -89,8 +87,8 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
         events(0).tags("X-Request-ID") shouldBe xRequestId
         events(0).tags("X-Session-ID") shouldBe xSessionId
         events(0).tags("Akamai-Reputation") shouldBe akamaiReputation
-        events(0).asInstanceOf[DataEvent].detail("deviceID") shouldBe deviceID
-        events(0).asInstanceOf[DataEvent].detail("responseMessage") shouldBe actionNotFoundMessage
+        events(0).detail("deviceID") shouldBe deviceID
+        events(0).detail("responseMessage") shouldBe actionNotFoundMessage
       } (config)
     }
 
@@ -111,7 +109,7 @@ class AuditFilterSpec extends WordSpecLike with Matchers with Eventually with Sc
         events(0).tags("X-Request-ID") shouldBe xRequestId
         events(0).tags("X-Session-ID") shouldBe xSessionId
         events(0).tags("Akamai-Reputation") shouldBe akamaiReputation
-        events(0).asInstanceOf[DataEvent].detail("deviceID") shouldBe deviceID
+        events(0).detail("deviceID") shouldBe deviceID
       } (config)
     }
   }
