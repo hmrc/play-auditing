@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.play.audit.model
 
-import java.util.{TimeZone, UUID}
 
-import org.apache.commons.lang3.time.FastDateFormat
-import org.joda.time.DateTime
+import java.util.UUID
+
+import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import play.api.libs.json._
 import uk.gov.hmrc.time.DateTimeUtils
 
@@ -34,9 +35,10 @@ sealed trait AuditEvent {
 
 object DateWriter {
   implicit def dateTimeWrites = new Writes[DateTime] {
-    private val dateFormat = FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZ", TimeZone.getTimeZone("UTC"))
+//    private val dateFormat = FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSSZ", TimeZone.getTimeZone("UTC"))
+    private val dateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
 
-    def writes(dt: DateTime): JsValue = JsString(dateFormat.format(dt.getMillis))
+    def writes(dt: DateTime): JsValue = JsString(dateFormat.withZone(DateTimeZone.UTC).print(dt.getMillis))
   }
 }
 

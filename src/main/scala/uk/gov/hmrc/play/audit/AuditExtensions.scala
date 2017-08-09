@@ -17,8 +17,8 @@
 package uk.gov.hmrc.play.audit
 
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.http.logging.AkamaiReputation
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.logging.AkamaiReputation
 
 object AuditExtensions {
   class AuditHeaderCarrier(carrier: HeaderCarrier) {

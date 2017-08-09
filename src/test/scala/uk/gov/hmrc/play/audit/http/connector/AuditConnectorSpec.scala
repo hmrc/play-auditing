@@ -24,17 +24,17 @@ import org.mockito.Mockito._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.slf4j.Logger
 import play.api.LoggerLike
-import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.libs.ws.{WSRequest, WSResponse}
+import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import uk.gov.hmrc.play.audit.EventTypes
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
-import uk.gov.hmrc.play.connectors.RequestBuilder
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{CorePost, HeaderCarrier, HttpReads, HttpResponse}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ResponseFormatterSpec extends WordSpec with Matchers with ResponseFormatter {
   "checkResponse" should {
@@ -89,11 +89,12 @@ class ResultHandlerSpec extends WordSpec
                        with MockitoSugar
                        with ScalaFutures
                        with LoggerProvider {
+
+  implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(5, Millis))
+
   val mockLogger = mock[Logger]
   when(mockLogger.isWarnEnabled()).thenReturn(true)
-  override val logger = new LoggerLike {
-    override val logger = mockLogger
-  }
+  override val logger = mockLogger
 
   "handleResult" should {
     "not log any error or for a result status of 200" in {
@@ -103,7 +104,7 @@ class ResultHandlerSpec extends WordSpec
         override val status = 200
       }
 
-      handleResult(Future.successful(response), body)(new HeaderCarrier)
+      handleResult(Future.successful(response), body)
 
       verifyNoMoreInteractions(mockLogger)
     }
@@ -124,7 +125,7 @@ class ResultHandlerSpec extends WordSpec
       }
 
       val f = Future.successful(response)
-      handleResult(f, body)(new HeaderCarrier).failed.futureValue
+      handleResult(f, body).failed.futureValue
 
       val isValidFailureMessage = new IsValidFailureMessage(AuditEventFailureKeys.LoggingAuditFailureResponseKey,
                                                             body.toString(), code.toString)
@@ -136,8 +137,7 @@ class ResultHandlerSpec extends WordSpec
       val body = Json.obj("key" -> "value")
 
       val f = Future.failed(new Exception("failed"))
-      handleResult(f, body)(new HeaderCarrier).failed.futureValue
-
+      handleResult(f, body).failed.futureValue
 
       val isValidFailureMessage = new IsValidFailureMessage(AuditEventFailureKeys.LoggingAuditRequestFailureKey,
                                                             body.toString())
@@ -157,15 +157,29 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
                                       enabled = true,
                                       traceRequests = true)
 
-  val mockRequestHolder = mock[WSRequest]
+  trait MockHttp extends CorePost {
+    def response: Future[HttpResponse]
+    var postedBody: String = ""
 
-  def mockConnector(config: AuditingConfig) = new AuditorImpl with ConfigProvider with RequestBuilder with LoggerProvider {
-    override def auditingConfig = config
-    override def buildRequest(url: String)(implicit hc: HeaderCarrier) = mockRequestHolder
-    override val logger = mock[LoggerLike]
+    def POSTString[O](url: String, body: String, headers: Seq[(String, String)])(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = {
+      postedBody = body
+      response.asInstanceOf[Future[O]]
+    }
+
+    override def POST[I, O](url: String, body: I, headers: Seq[(String, String)])(implicit wts: Writes[I], rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
+    override def POSTForm[O](url: String, body: Map[String, Seq[String]])(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
+    override def POSTEmpty[O](url: String)(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
   }
 
-  val mockResponse = mock[WSResponse]
+  def createConnector(res: Future[HttpResponse], config: AuditingConfig = fakeConfig) = new AuditConnector with MockHttp {
+    override def auditingConfig: AuditingConfig = config
+
+    override val logger: Logger = mock[Logger]
+
+    override def response: Future[HttpResponse] = res
+  }
+
+  val mockResponse: HttpResponse = mock[HttpResponse]
 
   "sendLargeMergedEvent" should {
     "call datastream with large merged event" taggedAs Tag("txm80") in {
@@ -177,10 +191,9 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
           DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)))
 
       val expected = Json.toJson(mergedEvent)
-      when(mockRequestHolder.post[JsValue](meq(expected))(any())).thenReturn(response)
-      when(mockRequestHolder.post[JsValue](any())(any())).thenReturn(response)
 
-      mockConnector(fakeConfig).sendLargeMergedEvent(mergedEvent).futureValue mustBe Success
+      val connector = createConnector(response)
+      connector.sendLargeMergedEvent(mergedEvent).futureValue mustBe Success
     }
   }
 
@@ -190,25 +203,25 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
     "call datastream with the event converted to json" in {
       when(mockResponse.status).thenReturn(200)
-      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
 
-      mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
+      val connector = createConnector(Future.successful(mockResponse))
+      connector.sendEvent(event).futureValue mustBe AuditResult.Success
     }
 
     "return a failed future if the HTTP response status is greater than 299" in {
       when(mockResponse.status).thenReturn(300)
-      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
+      val connector = createConnector(Future.successful(mockResponse))
 
-      val failureResponse = mockConnector(fakeConfig).sendEvent(event).failed.futureValue
+      val failureResponse = connector.sendEvent(event).failed.futureValue
       failureResponse must have ('nested (None))
       checkAuditFailureMessage(failureResponse.getMessage, Json.toJson(event), 300)
     }
 
     "return a failed future if there is an exception in the HTTP connection" in {
       val exception = new Exception("failed")
-      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.failed(exception))
+      val connector = createConnector(Future.failed(exception))
 
-      val failureResponse = mockConnector(fakeConfig).sendEvent(event).failed.futureValue
+      val failureResponse = connector.sendEvent(event).failed.futureValue
       failureResponse must have ('nested (Some(exception)))
       checkAuditRequestFailureMessage(failureResponse.getMessage, Json.toJson(event))
     }
@@ -219,10 +232,8 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
                                           traceRequests = true)
 
       when(mockResponse.status).thenReturn(200)
-      when(mockRequestHolder.post(meq(expected))(any())).thenReturn(Future.successful(mockResponse))
-      mockConnector(disabledConfig).sendEvent(event).futureValue must be (AuditResult.Disabled)
-
-      verifyNoMoreInteractions(mockRequestHolder)
+      val connector = createConnector(Future.successful(mockResponse), disabledConfig)
+      connector.sendEvent(event).futureValue must be (AuditResult.Disabled)
     }
 
     "serialize the date correctly" in {
@@ -233,14 +244,17 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
     }
 
     "call data stream with extended event data converted to json" in {
-      when(mockResponse.status).thenReturn(200)
+//      when(mockResponse.status).thenReturn(200)
+//
+//      val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
+//      val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", detail = detail)
+//
+//      val connector = createConnector(Future.successful(mockResponse)
+//      when(mockRequestHolder.post(meq(Json.toJson(event)))(any())).thenReturn(Future.successful(mockResponse))
+//
+//      mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
 
-      val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
-      val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", detail = detail)
-
-      when(mockRequestHolder.post(meq(Json.toJson(event)))(any())).thenReturn(Future.successful(mockResponse))
-
-      mockConnector(fakeConfig).sendEvent(event).futureValue mustBe AuditResult.Success
+      fail("Pending AuditConnector changes to take constructor dependencies (Pete)")
     }
   }
 

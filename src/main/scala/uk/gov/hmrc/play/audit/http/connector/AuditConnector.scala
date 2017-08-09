@@ -16,15 +16,11 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import play.api.{LoggerLike, Logger}
 import play.api.libs.json.{JsValue, Json}
+import uk.gov.hmrc.http.{CorePost, HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.model.{AuditEvent, MergedDataEvent}
-import uk.gov.hmrc.play.connectors.{PlayWSRequestBuilder, RequestBuilder, Connector}
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.http.logging.{ConnectionTracing, LoggingDetails}
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
-import uk.gov.hmrc.play.http.ws.WSHttpResponse
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -56,7 +52,7 @@ trait ResponseFormatter {
 trait Auditor {
   def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult]
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult]
-  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier()): Future[AuditResult]
+  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult]
 }
 
 trait ConfigProvider {
@@ -64,7 +60,7 @@ trait ConfigProvider {
 }
 
 trait LoggerProvider {
-  val logger: LoggerLike
+  val logger: Logger
 
   protected def logError(s: String) = logger.warn(s)
 
@@ -73,7 +69,7 @@ trait LoggerProvider {
 
 trait ResultHandler extends ResponseFormatter {
   this: LoggerProvider =>
-  protected def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ld: LoggingDetails): Future[HttpResponse] = {
+  protected def handleResult(resultF: Future[HttpResponse], body: JsValue)(implicit ec: ExecutionContext): Future[HttpResponse] = {
     resultF
       .recoverWith { case t =>
         val message = makeFailureMessage(body)
@@ -91,13 +87,11 @@ trait ResultHandler extends ResponseFormatter {
   }
 }
 
-trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
-  this: ConfigProvider with RequestBuilder with LoggerProvider =>
+trait AuditorImpl extends Auditor with ResultHandler with CorePost  {
+  this: ConfigProvider with LoggerProvider =>
 
-  protected def callAuditConsumer(url:String , body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] =
-    withTracing("Post", url) {
-      buildRequest(url).post(body).map(new WSHttpResponse(_))(ec)
-    }
+  protected def callAuditConsumer(url:String, body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext): Future[HttpResponse] =
+    POSTString(url, Json.stringify(body))
 
   def sendEvent(event: AuditEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.singleEventUrl), Json.toJson(event))
@@ -105,25 +99,21 @@ trait AuditorImpl extends Auditor with ConnectionTracing with ResultHandler {
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.mergedEventUrl), Json.toJson(event))
 
-  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier()): Future[AuditResult] =
+  def sendLargeMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] =
     sendEvent(auditingConfig.consumer.map(_.largeMergedEventUrl), Json.toJson(event))
 
-  private def sendEvent(urlOption: Option[String], body: JsValue)(implicit hc: HeaderCarrier) = {
+  private def sendEvent(urlOption: Option[String], body: JsValue)(implicit hc: HeaderCarrier, ec : ExecutionContext) = {
     if (auditingConfig.enabled) {
       val url = urlOption.getOrElse( throw new Exception("Missing event consumer URL") )
       handleResult(callAuditConsumer(url, body), body).map { _ => AuditResult.Success }
     } else {
-      Logger.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
+      logger.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
       Future.successful(AuditResult.Disabled)
     }
   }
 }
 
-trait AuditConnector extends AuditorImpl with ConfigProvider with PlayWSRequestBuilder with LoggerProvider {
+trait AuditConnector extends AuditorImpl with ConfigProvider with LoggerProvider {
   def auditingConfig: AuditingConfig
-  val logger = Logger
-}
-
-object AuditConnector {
-  def apply(config: AuditingConfig) = new AuditConnector { def auditingConfig = config }
+  override val logger: Logger = LoggerFactory.getLogger("auditing")
 }

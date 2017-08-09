@@ -16,32 +16,28 @@
 
 package uk.gov.hmrc.play.audit.model
 
-import play.api.Logger._
-import play.api.mvc.RequestHeader
-
-
 case class DeviceId(id: String, hash: String)
-
-object DeviceId {
-
-  private val CookieName = "mdtpdi"
-
-  // device ID cookie value is made up of [device ID]_[hash of device ID]
-  private val DeviceIdPattern = """"?([^_^"]+)_([^_^"]+)"?""".r
-
-  def apply(request: RequestHeader): Option[DeviceId] = request.cookies.get(CookieName) match {
-    case Some(cookie) =>
-      cookie.value match {
-        case DeviceIdPattern(deviceId, hash) =>
-          debug(s"Device ID is '$deviceId'")
-          Some(DeviceId(deviceId, hash))
-        case _ =>
-          error(s"Failed to extract device ID from '${cookie.value}'")
-          None
-      }
-    case _ =>
-      error(s"Cannot get device ID for this request - cookie '$CookieName' not found")
-      None
-  }
-
-}
+//
+//object DeviceId {
+//
+//  private val CookieName = "mdtpdi"
+//
+//  // device ID cookie value is made up of [device ID]_[hash of device ID]
+//  private val DeviceIdPattern = """"?([^_^"]+)_([^_^"]+)"?""".r
+//
+//  def apply(request: RequestHeader): Option[DeviceId] = request.cookies.get(CookieName) match {
+//    case Some(cookie) =>
+//      cookie.value match {
+//        case DeviceIdPattern(deviceId, hash) =>
+//          debug(s"Device ID is '$deviceId'")
+//          Some(DeviceId(deviceId, hash))
+//        case _ =>
+//          error(s"Failed to extract device ID from '${cookie.value}'")
+//          None
+//      }
+//    case _ =>
+//      error(s"Cannot get device ID for this request - cookie '$CookieName' not found")
+//      None
+//  }
+//
+//}

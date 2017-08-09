@@ -18,14 +18,15 @@ package uk.gov.hmrc.play.audit.model
 
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.libs.json.Writes
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.http.HeaderNames._
-import uk.gov.hmrc.play.http.logging.RequestId
+import uk.gov.hmrc.http.{CorePost, HeaderCarrier, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.HeaderNames._
+import uk.gov.hmrc.http.logging.RequestId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
@@ -58,7 +59,16 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
   val events = Audit.defaultEventTypes
   val exampleRequestId = "12345"
   implicit val hc = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
-  val auditConnector = new AuditConnector {
+
+  trait MockHttp extends CorePost {
+
+    override def POSTString[O](url: String, body: String, headers: Seq[(String, String)])(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
+    override def POST[I, O](url: String, body: I, headers: Seq[(String, String)])(implicit wts: Writes[I], rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
+    override def POSTForm[O](url: String, body: Map[String, Seq[String]])(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
+    override def POSTEmpty[O](url: String)(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
+  }
+
+  val auditConnector = new AuditConnector with MockHttp {
     override val auditingConfig = new AuditingConfig(consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))), enabled = true, traceRequests = true)
   }
 

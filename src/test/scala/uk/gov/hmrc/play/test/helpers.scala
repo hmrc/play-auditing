@@ -16,18 +16,6 @@
 
 package uk.gov.hmrc.play.test
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import play.api.mvc.Result
-
-object Http {
-
-  implicit val system = ActorSystem()
-  implicit val materializer = ActorMaterializer()
-
-  def enumerateResponseBody(r: Result) = r.body.dataStream.runForeach({ i => })
-}
-
 object Concurrent {
 
   import scala.concurrent.duration._
