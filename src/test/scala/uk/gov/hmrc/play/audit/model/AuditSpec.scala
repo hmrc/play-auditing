@@ -18,15 +18,15 @@ package uk.gov.hmrc.play.audit.model
 
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpecLike}
-import play.api.libs.json.Writes
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
-import uk.gov.hmrc.http.{CorePost, HeaderCarrier, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.logging.RequestId
+import scala.concurrent.duration._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
@@ -59,18 +59,9 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
   val events = Audit.defaultEventTypes
   val exampleRequestId = "12345"
   implicit val hc = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
-
-  trait MockHttp extends CorePost {
-
-    override def POSTString[O](url: String, body: String, headers: Seq[(String, String)])(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
-    override def POST[I, O](url: String, body: I, headers: Seq[(String, String)])(implicit wts: Writes[I], rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
-    override def POSTForm[O](url: String, body: Map[String, Seq[String]])(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
-    override def POSTEmpty[O](url: String)(implicit rds: HttpReads[O], hc: HeaderCarrier, ec: ExecutionContext): Future[O] = ???
-  }
-
-  val auditConnector = new AuditConnector with MockHttp {
-    override val auditingConfig = new AuditingConfig(consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))), enabled = true, traceRequests = true)
-  }
+  val auditConnector = AuditConnector(AuditingConfig(
+    consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
+    enabled = true, traceRequests = true))
 
   "An Audit object" should {
     "be represented as an DataEvent when only passed an input" in {
@@ -156,8 +147,7 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
       val audit = new MockAudit(appName, auditConnector)
 
-      import uk.gov.hmrc.play.test.Concurrent.await
-      await(audit.asyncAs[AuditableEvent](transactionName, "request body no key provided", transformer) { () => Future.successful(auditable)})
+      Await.result(audit.asyncAs[AuditableEvent](transactionName, "request body no key provided", transformer) { () => Future.successful(auditable)}, 5 seconds)
 
       eventually {
         audit.verifyDataEvent(new DataEvent(auditSource = appName,

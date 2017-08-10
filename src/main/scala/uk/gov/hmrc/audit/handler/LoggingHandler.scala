@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.test
+package uk.gov.hmrc.audit.handler
 
-object Concurrent {
+import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.hmrc.audit.HandlerResult
 
-  import scala.concurrent.duration._
-  import scala.concurrent.{Await, Future}
+class LoggingHandler(log: Logger) extends AuditHandler {
 
-  val defaultTimeout = 5 seconds
+  private val ErrorKey = "DS_EventMissed_AuditRequestFailure"
 
-  implicit def extractAwait[A](future: Future[A]) = await[A](future)
+  def makeFailureMessage(event: String): String = s"$ErrorKey : audit item : $event"
 
-  implicit def liftFuture[A](v: A) = Future.successful(v)
-
-  def await[A](future: Future[A]) = Await.result(future, defaultTimeout)
+  def sendEvent(event: String): HandlerResult = {
+    val message = makeFailureMessage(event)
+    log.warn(message)
+    HandlerResult.Success
+  }
 }
+
+object LoggingHandler extends LoggingHandler(LoggerFactory.getLogger(getClass))
