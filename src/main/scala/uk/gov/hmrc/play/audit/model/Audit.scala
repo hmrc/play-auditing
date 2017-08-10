@@ -89,7 +89,7 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
 
   def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
 
-  def sendLargeMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendLargeMergedEvent(_)
+  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent(_)
 
   private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier): Unit = {
     val requestId = hc.requestId.map(_.value).getOrElse("")

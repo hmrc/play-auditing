@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.audit.model
+package uk.gov.hmrc.audit
 
-import com.ning.http.util.Base64
-
-import scala.util.Try
-
+sealed trait HandlerResult
+object HandlerResult {
+  case object Success extends HandlerResult
+  case object Rejected extends HandlerResult
+  case object Failure extends HandlerResult
+}
