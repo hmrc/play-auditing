@@ -19,7 +19,6 @@ package uk.gov.hmrc.play.audit.http
 import org.joda.time.DateTime
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
 import uk.gov.hmrc.http.hooks.HttpHook
@@ -32,6 +31,8 @@ import scala.util.matching.Regex
 
 
 trait HttpAuditing extends DateTimeUtils {
+
+  val outboundCallAuditType: String = "OutboundCall"
 
   def auditConnector: AuditConnector
   def appName: String
@@ -49,7 +50,7 @@ trait HttpAuditing extends DateTimeUtils {
     }
   }
 
-  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier) = audit(HttpRequest(url, "", None, now), response)(hc)
+  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier): Unit = audit(HttpRequest(url, "", None, now), response)(hc)
 
   private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier): Unit =
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
@@ -72,7 +73,7 @@ trait HttpAuditing extends DateTimeUtils {
 
     MergedDataEvent(
       auditSource = appName,
-      auditType = OutboundCall,
+      auditType = outboundCallAuditType,
       request = DataCall(hc.toAuditTags(request.url, request.url), hc.toAuditDetails(requestDetails(request): _*), request.generatedAt),
       response = DataCall(Map.empty, responseDetails, now))
   }
@@ -80,7 +81,7 @@ trait HttpAuditing extends DateTimeUtils {
   private def requestDetails(request: HttpRequest)(implicit hc: HeaderCarrier): Seq[(String, String)] =
     Seq(Path -> request.url, Method -> request.verb) ++ request.body.map(b => Seq(RequestBody -> b.toString)).getOrElse(Seq.empty) ++ HeaderFieldsExtractor.optionalAuditFields(hc.extraHeaders.toMap)
 
-  private def isAuditable(url: String) = !url.contains("/write/audit") && !auditDisabledForPattern.findFirstIn(url).isDefined
+  private def isAuditable(url: String) = !url.contains("/write/audit") && auditDisabledForPattern.findFirstIn(url).isEmpty
 
   protected case class HttpRequest(url: String, verb: String, body: Option[_], generatedAt: DateTime)
 
