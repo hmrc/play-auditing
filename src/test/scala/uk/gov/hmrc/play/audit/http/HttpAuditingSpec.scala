@@ -25,7 +25,6 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.play.audit.EventTypes._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
 import uk.gov.hmrc.play.audit.model.MergedDataEvent
@@ -38,6 +37,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with Eventually with MockitoSugar {
 
+  val outboundCallAuditType: String = "OutboundCall"
   val requestDateTime = new DateTime()
   val responseDateTime: DateTime = requestDateTime.plusSeconds(5)
 
@@ -86,7 +86,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
         val dataEvent = verifyAndRetrieveEvent(connector)
 
         dataEvent.auditSource shouldBe httpWithAudit.appName
-        dataEvent.auditType shouldBe OutboundCall
+        dataEvent.auditType shouldBe outboundCallAuditType
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
         dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
@@ -116,7 +116,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
         val dataEvent = verifyAndRetrieveEvent(connector)
 
         dataEvent.auditSource shouldBe httpWithAudit.appName
-        dataEvent.auditType shouldBe OutboundCall
+        dataEvent.auditType shouldBe outboundCallAuditType
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
         dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody, HeaderNames.deviceID -> deviceID)
@@ -174,7 +174,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.auditSource shouldBe httpWithAudit.appName
-      dataEvent.auditType shouldBe OutboundCall
+      dataEvent.auditType shouldBe outboundCallAuditType
 
       dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000", "Akamai-Reputation" -> "-")
       dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
@@ -202,7 +202,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.auditSource shouldBe httpWithAudit.appName
-      dataEvent.auditType shouldBe OutboundCall
+      dataEvent.auditType shouldBe outboundCallAuditType
 
       dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
       dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody.get, HeaderNames.deviceID -> deviceID)
@@ -271,7 +271,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.auditSource shouldBe httpWithAudit.appName
-      dataEvent.auditType shouldBe OutboundCall
+      dataEvent.auditType shouldBe outboundCallAuditType
     }
   }
 

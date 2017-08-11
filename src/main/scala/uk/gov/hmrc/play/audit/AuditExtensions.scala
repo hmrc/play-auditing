@@ -37,15 +37,15 @@ object AuditExtensions {
       carrier.names.deviceID -> carrier.deviceID.getOrElse("-")
     )
 
-    def toAuditTags(transactionName: String, path: String) = {
+    def toAuditTags(transactionName: String, path: String): Map[String, String] = {
       auditTags ++ Map[String, String](
         TransactionName -> transactionName,
         Path -> path
       )
     }
 
-    def toAuditDetails(details: (String, String)*) = auditDetails ++ details
+    def toAuditDetails(details: (String, String)*): Map[String, String] = auditDetails ++ details
   }
 
-  implicit def auditHeaderCarrier(carrier: HeaderCarrier) = new AuditHeaderCarrier(carrier)
+  implicit def auditHeaderCarrier(carrier: HeaderCarrier): AuditHeaderCarrier = new AuditHeaderCarrier(carrier)
 }
