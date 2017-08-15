@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.http.config
 
 case class BaseUri(host: String, port: Int, protocol: String) {
-  val uri = s"$protocol://$host:$port".stripSuffix("/") + "/"
+  val uri: String = s"$protocol://$host:$port".stripSuffix("/") + "/"
 
   def addEndpoint(endpoint: String): String = s"$uri${endpoint.stripPrefix("/")}"
 }
@@ -27,9 +27,9 @@ case class Consumer(baseUri: BaseUri,
                     mergedEventUri: String = "write/audit/merged",
                     largeMergedEventUri: String = "write/audit/merged/large") {
 
-  val singleEventUrl = baseUri.addEndpoint(singleEventUri)
-  val mergedEventUrl = baseUri.addEndpoint(mergedEventUri)
-  val largeMergedEventUrl = baseUri.addEndpoint(largeMergedEventUri)
+  val singleEventUrl: String = baseUri.addEndpoint(singleEventUri)
+  val mergedEventUrl: String = baseUri.addEndpoint(mergedEventUri)
+  val largeMergedEventUrl: String = baseUri.addEndpoint(largeMergedEventUri)
 
 }
 
@@ -38,5 +38,4 @@ object Consumer {
 }
 
 case class AuditingConfig(consumer: Option[Consumer],
-                          enabled: Boolean,
-                          traceRequests: Boolean)
+                          enabled: Boolean)

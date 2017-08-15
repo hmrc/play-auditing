@@ -40,7 +40,7 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
       this.capturedDataEvent = de
     }
 
-    def verifyDataEvent(expected: DataEvent) = {
+    def verifyDataEvent(expected: DataEvent): Unit = {
       this.capturedDataEvent.auditSource shouldBe expected.auditSource
       this.capturedDataEvent.auditType shouldBe expected.auditType
       this.capturedDataEvent.tags shouldBe expected.tags
@@ -56,22 +56,17 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
     TransactionSuccess("transactionId" -> auditable.transaction, "event" -> auditable.event)
   }
 
-  val events = Audit.defaultEventTypes
   val exampleRequestId = "12345"
   implicit val hc = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
   val auditConnector = AuditConnector(AuditingConfig(
     consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
-    enabled = true, traceRequests = true))
+    enabled = true))
 
   "An Audit object" should {
     "be represented as an DataEvent when only passed an input" in {
-
       val appName = "app-name-input-as-STRING"
-
       val inputSuffixKey = ""
-
       val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val outputs = Map("output-transactionId" -> auditable.transaction, "output-event" -> auditable.event)
 
@@ -79,21 +74,17 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
       audit.as[AuditableEvent](transactionName, "request body no key provided", transformer) { () => auditable}
 
-      audit.verifyDataEvent(new DataEvent(auditSource = appName,
-        auditType = events._1,
+      audit.verifyDataEvent(DataEvent(auditSource = appName,
+        auditType = EventTypes.Succeeded,
         tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
         detail = inputs ++ outputs))
 
     }
 
     "be represented as an DataEvent when passed inputs map" in {
-
       val appName = "app-name-input-as-MAP"
-
       val inputSuffixKey = "-event-key"
-
       val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val outputs = Map("output-transactionId" -> auditable.transaction, "output-event" -> auditable.event)
 
@@ -101,32 +92,29 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
       audit.as[AuditableEvent](transactionName, Map("event-key" -> "request body no key provided"), transformer) { () => auditable}
 
-      audit.verifyDataEvent(new DataEvent(auditSource = appName,
-        auditType = events._1,
+      audit.verifyDataEvent(DataEvent(auditSource = appName,
+        auditType = EventTypes.Succeeded,
         tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
         detail = inputs ++ outputs))
     }
 
     "detail failure as an DataEvent" in {
       val appName = "app-name"
-
       val inputSuffixKey = ""
-
       val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val failureReason: String = "Some error while mapping body result to transaction result"
       val outputs = Map("transactionFailureReason" -> s"Exception Generated: $failureReason")
 
       val audit = new MockAudit(appName, auditConnector)
-      val failingTransformer: OutputTransformer[AuditableEvent] = (auditable: AuditableEvent) => {
+      val failingTransformer: OutputTransformer[AuditableEvent] = (_: AuditableEvent) => {
         throw new RuntimeException(failureReason)
       }
       audit.as[AuditableEvent](transactionName, "request body no key provided", failingTransformer) { () => auditable}
 
       eventually {
-        audit.verifyDataEvent(new DataEvent(auditSource = appName,
-          auditType = events._2,
+        audit.verifyDataEvent(DataEvent(auditSource = appName,
+          auditType = EventTypes.Failed,
           tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
           detail = inputs ++ outputs))
       }
@@ -137,11 +125,8 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
     "generate a DataEvent of type success if the body was successfully executed" in {
       val appName = "app-name"
-
       val inputSuffixKey = ""
-
       val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val outputs = Map("output-transactionId" -> auditable.transaction, "output-event" -> auditable.event)
 
@@ -150,8 +135,8 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
       Await.result(audit.asyncAs[AuditableEvent](transactionName, "request body no key provided", transformer) { () => Future.successful(auditable)}, 5 seconds)
 
       eventually {
-        audit.verifyDataEvent(new DataEvent(auditSource = appName,
-          auditType = events._1,
+        audit.verifyDataEvent(DataEvent(auditSource = appName,
+          auditType = EventTypes.Succeeded,
           tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
           detail = inputs ++ outputs))
       }
@@ -159,11 +144,7 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
     "generate a DataEvent of type failed if the body failed to be executed" in {
       val appName = "app-name"
-
       val inputSuffixKey = ""
-
-      val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val failureReason: String = "Some error while invoking body"
       val outputs = Map("transactionFailureReason" -> s"Exception Generated: $failureReason")
@@ -173,8 +154,8 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
       audit.asyncAs[AuditableEvent](transactionName, "request body no key provided", transformer) { () => Future.failed(new RuntimeException(failureReason))}
 
       eventually {
-        audit.verifyDataEvent(new DataEvent(auditSource = appName,
-          auditType = events._2,
+        audit.verifyDataEvent(DataEvent(auditSource = appName,
+          auditType = EventTypes.Failed,
           tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
           detail = inputs ++ outputs))
       }
@@ -182,37 +163,29 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
     "generate a DataEvent of type failed if the body was successfully executed but the output transformer mapped the result into a failure" in {
       val appName = "app-name"
-
       val inputSuffixKey = ""
-
       val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val failureReason = "Some error while mapping body result to transaction result"
       val outputs = Map("transactionFailureReason" -> s"Exception Generated: $failureReason")
 
       val audit = new MockAudit(appName, auditConnector)
-      val failingTransformer: OutputTransformer[AuditableEvent] = (auditable: AuditableEvent) => {
+      val failingTransformer: OutputTransformer[AuditableEvent] = (_: AuditableEvent) => {
         throw new RuntimeException(failureReason)
       }
       audit.asyncAs[AuditableEvent](transactionName, "request body no key provided", failingTransformer) { () => Future.successful(auditable)}
 
       eventually {
-        audit.verifyDataEvent(new DataEvent(auditSource = appName,
-          auditType = events._2,
+        audit.verifyDataEvent(DataEvent(auditSource = appName,
+          auditType = EventTypes.Failed,
           tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
           detail = inputs ++ outputs))
       }
     }
 
     "handle an exception thrown when the future body gets created" in {
-
       val appName = "app-name"
-
       val inputSuffixKey = ""
-
-      val auditable = AuditableEvent("txId1", "an event to log")
-
       val inputs = Map(s"input$inputSuffixKey" -> "request body no key provided")
       val failureReason: String = "Some error while instantiating body future"
       val outputs = Map("transactionFailureReason" -> s"Exception Generated: $failureReason")
@@ -223,8 +196,8 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
       audit.asyncAs[AuditableEvent](transactionName, "request body no key provided", transformer) { throwException }
 
       eventually {
-        audit.verifyDataEvent(new DataEvent(auditSource = appName,
-          auditType = events._2,
+        audit.verifyDataEvent(DataEvent(auditSource = appName,
+          auditType = EventTypes.Failed,
           tags = Map(xRequestId -> exampleRequestId, "transactionName" -> transactionName),
           detail = inputs ++ outputs))
       }

@@ -38,8 +38,8 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val consumer = Consumer(BaseUri("datastream-base-url", 8080, "http"))
-  val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true, traceRequests = true)
-  val disabledConfig = AuditingConfig(consumer = Some(consumer), enabled = false, traceRequests = true)
+  val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true)
+  val disabledConfig = AuditingConfig(consumer = Some(consumer), enabled = false)
 
   val mockSimpleDatastreamHandler: AuditHandler = mock[AuditHandler]
   val mockMergedDatastreamHandler: AuditHandler = mock[AuditHandler]
@@ -54,7 +54,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
     "allow the configuration to be specified" in {
       val testPort = 9876
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
-      val config = AuditingConfig(consumer = Some(consumer), enabled = true, traceRequests = true)
+      val config = AuditingConfig(consumer = Some(consumer), enabled = true)
       val connector = AuditConnector(config)
       val dataCall = DataCall(Map(), Map(), DateTime.now())
 
@@ -114,9 +114,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
     }
 
     "return Disabled if auditing is not enabled" in {
-      val disabledConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
-        enabled = false,
-        traceRequests = true)
+      val disabledConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))), enabled = false)
 
       mockConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)
 
