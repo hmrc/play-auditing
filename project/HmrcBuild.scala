@@ -21,20 +21,19 @@ import uk.gov.hmrc.versioning.SbtGitVersioning
 object HmrcBuild extends Build {
 
   import uk.gov.hmrc._
-  import DefaultBuildSettings._
 
   val appName = "play-auditing"
 
-  lazy val microservice = Project(appName, file("."))
+  lazy val microservice: Project = Project(appName, file("."))
     .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
     .settings(
+      scalacOptions += "-language:implicitConversions",
       libraryDependencies ++= AppDependencies(),
       scalaVersion := "2.11.7",
       resolvers := Seq(
         Resolver.bintrayRepo("hmrc", "releases"),
         "typesafe-releases" at "http://repo.typesafe.com/typesafe/releases/"
       ),
-      unmanagedResourceDirectories in Test += baseDirectory.value / "src" / "test" / "scala" / "assets",
       version := "100.0-SNAPSHOT"
     )
 }
@@ -52,7 +51,7 @@ private object AppDependencies {
   }
 
   object Test {
-    def apply() = new TestDependencies {
+    def apply(): Seq[ModuleID] = new TestDependencies {
       override lazy val test = Seq(
         "commons-codec" % "commons-codec" % "1.7" % scope,
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
@@ -65,5 +64,5 @@ private object AppDependencies {
     }.test
   }
 
-  def apply() = compile ++ Test()
+  def apply(): Seq[ModuleID] = compile ++ Test()
 }
