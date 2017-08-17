@@ -33,8 +33,7 @@ object HmrcBuild extends Build {
       resolvers := Seq(
         Resolver.bintrayRepo("hmrc", "releases"),
         "typesafe-releases" at "http://repo.typesafe.com/typesafe/releases/"
-      ),
-      version := "100.0-SNAPSHOT"
+      )
     )
 }
 
