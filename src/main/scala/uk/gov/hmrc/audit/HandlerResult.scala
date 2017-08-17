@@ -14,19 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.audit
+package uk.gov.hmrc.audit
 
-trait EventTypes {
-
-  type EventType = String
-
-  val RequestReceived: EventType = "RequestReceived"
-  val OutboundCall:EventType = "OutboundCall"
-
-  val TransactionFailureReason: EventType = "transactionFailureReason"
-  val ServerInternalError: EventType = "ServerInternalError"
-  val ResourceNotFound: EventType = "ResourceNotFound"
-  val ServerValidationError: EventType = "ServerValidationError"
+sealed trait HandlerResult
+object HandlerResult {
+  case object Success extends HandlerResult
+  case object Rejected extends HandlerResult
+  case object Failure extends HandlerResult
 }
-
-object EventTypes extends EventTypes

@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.audit.filters
+package uk.gov.hmrc.audit.handler
 
-import play.api.mvc.Results._
-import play.api.mvc._
+import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.hmrc.audit.HandlerResult
 
-import scala.concurrent.ExecutionContext
+class LoggingHandler(log: Logger) extends AuditHandler {
 
-trait FilterFlowMock {
+  private val ErrorKey = "DS_EventMissed_AuditRequestFailure"
 
-  def actionNotFoundMessage = "404 Not Found"
+  def makeFailureMessage(event: String): String = s"$ErrorKey : audit item : $event"
 
-  def nextAction(implicit ec: ExecutionContext): Action[AnyContent] = Action(NotFound(actionNotFoundMessage))
-
-  def exceptionThrowingAction(implicit ec: ExecutionContext) = Action.async { request =>
-    throw new RuntimeException("Something went wrong")
+  def sendEvent(event: String): HandlerResult = {
+    val message = makeFailureMessage(event)
+    log.warn(message)
+    HandlerResult.Success
   }
 }
+
+object LoggingHandler extends LoggingHandler(LoggerFactory.getLogger(getClass))

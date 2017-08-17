@@ -19,14 +19,12 @@ package uk.gov.hmrc.play.audit.http.connector
 import org.scalatest.{Matchers, WordSpecLike}
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.play.http.{HeaderCarrier, HeaderNames, Token, UserId}
-import uk.gov.hmrc.play.http.logging._
-
-
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, Token, UserId}
+import uk.gov.hmrc.http.logging._
 
 class AuditTagsSpec extends WordSpecLike with Matchers {
 
-  import uk.gov.hmrc.play.http.HeaderNames._
+  import uk.gov.hmrc.http.HeaderNames._
   import AuditExtensions._
 
   val authorization = Authorization("authorization")

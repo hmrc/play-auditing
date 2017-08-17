@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-import play.api.Play
-
 case class BaseUri(host: String, port: Int, protocol: String) {
-  val uri = s"$protocol://$host:$port".stripSuffix("/") + "/"
+  val uri: String = s"$protocol://$host:$port".stripSuffix("/") + "/"
 
   def addEndpoint(endpoint: String): String = s"$uri${endpoint.stripPrefix("/")}"
 }
@@ -29,9 +27,9 @@ case class Consumer(baseUri: BaseUri,
                     mergedEventUri: String = "write/audit/merged",
                     largeMergedEventUri: String = "write/audit/merged/large") {
 
-  val singleEventUrl = baseUri.addEndpoint(singleEventUri)
-  val mergedEventUrl = baseUri.addEndpoint(mergedEventUri)
-  val largeMergedEventUrl = baseUri.addEndpoint(largeMergedEventUri)
+  val singleEventUrl: String = baseUri.addEndpoint(singleEventUri)
+  val mergedEventUrl: String = baseUri.addEndpoint(mergedEventUri)
+  val largeMergedEventUrl: String = baseUri.addEndpoint(largeMergedEventUri)
 
 }
 
@@ -40,38 +38,4 @@ object Consumer {
 }
 
 case class AuditingConfig(consumer: Option[Consumer],
-                          enabled: Boolean,
-                          traceRequests: Boolean)
-
-object LoadAuditingConfig {
-
-  import play.api.Play.current
-
-  def apply(key: String): AuditingConfig = {
-    Play.configuration.getConfig(key).map { c =>
-
-      val enabled = c.getBoolean("enabled").getOrElse(true)
-
-      if(enabled) {
-        AuditingConfig(
-          enabled = enabled,
-          traceRequests = c.getBoolean("traceRequests").getOrElse(true),
-          consumer = Some(c.getConfig("consumer").map { con =>
-            Consumer(
-              baseUri = con.getConfig("baseUri").map { uri =>
-                BaseUri(
-                  host = uri.getString("host").getOrElse(throw new Exception("Missing consumer host for auditing")),
-                  port = uri.getInt("port").getOrElse(throw new Exception("Missing consumer port for auditing")),
-                  protocol = uri.getString("protocol").getOrElse("http")
-                )
-              }.getOrElse(throw new Exception("Missing consumer baseUri for auditing"))
-            )
-          }.getOrElse(throw new Exception("Missing consumer configuration for auditing")))
-        )
-      } else {
-        AuditingConfig(consumer = None, enabled = false, traceRequests = false)
-      }
-
-    }
-  }.getOrElse(throw new Exception("Missing auditing configuration"))
-}
+                          enabled: Boolean)

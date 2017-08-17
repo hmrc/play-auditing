@@ -17,8 +17,8 @@
 package uk.gov.hmrc.play.audit
 
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.http.logging.AkamaiReputation
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.logging.AkamaiReputation
 
 object AuditExtensions {
   class AuditHeaderCarrier(carrier: HeaderCarrier) {
@@ -37,15 +37,15 @@ object AuditExtensions {
       carrier.names.deviceID -> carrier.deviceID.getOrElse("-")
     )
 
-    def toAuditTags(transactionName: String, path: String) = {
+    def toAuditTags(transactionName: String, path: String): Map[String, String] = {
       auditTags ++ Map[String, String](
         TransactionName -> transactionName,
         Path -> path
       )
     }
 
-    def toAuditDetails(details: (String, String)*) = auditDetails ++ details
+    def toAuditDetails(details: (String, String)*): Map[String, String] = auditDetails ++ details
   }
 
-  implicit def auditHeaderCarrier(carrier: HeaderCarrier) = new AuditHeaderCarrier(carrier)
+  implicit def auditHeaderCarrier(carrier: HeaderCarrier): AuditHeaderCarrier = new AuditHeaderCarrier(carrier)
 }

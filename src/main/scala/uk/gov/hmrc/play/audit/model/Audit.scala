@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.model
 
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -89,7 +89,7 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
 
   def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
 
-  def sendLargeMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendLargeMergedEvent(_)
+  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent(_)
 
   private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier): Unit = {
     val requestId = hc.requestId.map(_.value).getOrElse("")

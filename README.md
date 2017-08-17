@@ -2,7 +2,9 @@
 
 [![Build Status](https://travis-ci.org/hmrc/play-auditing.svg?branch=master)](https://travis-ci.org/hmrc/play-auditing) [ ![Download](https://api.bintray.com/packages/hmrc/releases/play-auditing/images/download.svg) ](https://bintray.com/hmrc/releases/play-auditing/_latestVersion)
 
-play-auditing contains code to facilitate creation of audit events and their publication to datastream. This includes both explicit audit events, and implicit audit events via http-verbs.
+play-auditing contains code to facilitate creation of audit events and their publication to Datastream. This includes both explicit events and implicit events.
+
+Explicit events are where your code creates an audit event and asks for it to be sent. Implicit events are created automatically by via http-core when a service makes some HTTP request, and is based on configuration.
 
 ## Adding to your build
 
@@ -16,7 +18,7 @@ libraryDependencies += "uk.gov.hmrc" %% "play-auditing" % "x.x.x"
 
 ## Usage
 
-#### Implicit auditing in conjunction with http-verbs
+#### Implicit auditing of outgoing HTTP calls in conjunction with http-verbs and Play
 
 ```scala
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
@@ -39,39 +41,45 @@ protected object WSHttp extends WSGet with WSPut with WSPost with WSDelete with 
 
 #### Explicit auditing
 ```scala
-import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.config.RunMode
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.audit.http.config.AuditingConfig
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
-import uk.gov.hmrc.play.audit.model.{Audit, DataEvent, EventTypes}
+import uk.gov.hmrc.play.audit.model.DataEvent
+import scala.concurrent.ExecutionContext.Implicits.global
 
+// simplest default config (you will want to do something different)
+val config = AuditingConfig(consumer = None, enabled = true)
+
+// setup global objects
 val appName = "preferences"
-val audit = Audit(appName,
-  new AuditConnector with RunMode {
-    override lazy val auditingConfig = LoadAuditingConfig(s"$env.auditing")})
+val connector = AuditConnector(config)
 
-def sendDataEvent(
- transactionName: String, path: String = "N/A", tags: Map[String, String] = Map.empty, detail: Map[String, String])
-   (implicit hc: HeaderCarrier): Unit = {
+// get objects relating to the current request
+val carrier = HeaderCarrier()
 
-  audit.sendDataEvent(DataEvent(appName, EventTypes.Succeeded,
-    tags = hc.toAuditTags(transactionName, path) ++ tags,
-    detail = hc.toAuditDetails(detail.toSeq: _*)))
+// create the audit event
+val event = DataEvent(appName, "SomeEventHappened",
+  tags = carrier.toAuditTags(
+    transactionName = "some_series_of_events",
+    path = "/some/path"
+  ),
+  detail = carrier.toAuditDetails(
+    "someServiceSpecificKey" -> "someValue"
+  ))
 
-}
+connector.sendEvent(event)
 ```
 
 ## Configuration
 
 You'll also need to supply an [auditing configuration](#configuration).
 
-Request auditing is provided for all HTTP requests that are made using http-verbs that use the AuditingHook. Each request/response pair results in an audit message being created and sent to an external auditing service for processing.  To configure this service, your Play configuration file needs to include:
+Request auditing is provided for all HTTP requests that are made using http-core that use the AuditingHook. Each request/response pair results in an audit message being created and sent to an external auditing service for processing.  To use this service, your configuration needs to include:
 
 ```javascript
 auditing {
   enabled = true
-  traceRequests = true
   consumer {
     baseUri {
       host = ...
@@ -80,6 +88,8 @@ auditing {
   }
 }
 ```
+
+_NOTE:_ The ```traceRequests``` property is not used, so can be removed. The configuration remains backwards compatible, so will not fail if present.
 
 ```HttpAuditing``` provides ```def auditDisabledForPattern: Regex``` which client applications may chose to override when mixing in ```HttpAuditing```.
 

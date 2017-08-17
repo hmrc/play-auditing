@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.audit
+package uk.gov.hmrc.audit.handler
 
-object EventKeys {
-  val StatusCode = "statusCode"
-  val FailedRequestMessage = "failedRequestReason"
-  val ResponseMessage = "responseMessage"
-  val Path = "path"
-  val Method = "method"
-  val RequestBody = "requestBody"
-  val TransactionName = "transactionName"
+import uk.gov.hmrc.audit.HandlerResult
+
+trait AuditHandler {
+  def sendEvent(event: String): HandlerResult
 }
