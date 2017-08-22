@@ -44,13 +44,12 @@ object AuditResult {
   }
 }
 
-class AuditConnector(
-  auditingConfig: AuditingConfig,
-  simpleDatastreamHandler: AuditHandler,
-  mergedDatastreamHandler: AuditHandler,
-  loggingConnector: AuditHandler,
-  auditSerialiser: AuditSerialiserLike
-) {
+trait AuditConnector {
+  def auditingConfig: AuditingConfig
+  def simpleDatastreamHandler: AuditHandler
+  def mergedDatastreamHandler: AuditHandler
+  def loggingConnector: AuditHandler
+  def auditSerialiser: AuditSerialiserLike
 
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -94,26 +93,22 @@ class AuditConnector(
   }
 }
 
-object AuditConnector {
+trait DefaultAuditConnector extends AuditConnector {
   val defaultConnectionTimeout = 5000
   val defaultRequestTimeout = 5000
   val defaultBaseUri = BaseUri("datstream.protected.mdtp", 90, "http")
 
-  def apply(config: AuditingConfig): AuditConnector = {
-    val consumer = config.consumer.getOrElse(Consumer(defaultBaseUri))
-    val baseUri = consumer.baseUri
+  def auditingConfig: AuditingConfig
 
-    val simpleDatastreamHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
-      baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
+  val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
+  val baseUri: BaseUri = consumer.baseUri
 
-    val mergedDatastreamHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
-      baseUri.port, s"/${consumer.mergedEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
+  val simpleDatastreamHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
+    baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
 
-    new AuditConnector(config, simpleDatastreamHandler, mergedDatastreamHandler, LoggingHandler, AuditSerialiser)
-  }
+  val mergedDatastreamHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
+    baseUri.port, s"/${consumer.mergedEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
 
-  def apply(config: AuditingConfig, simpleDatastreamHandler: AuditHandler, mergedDatastreamHandler: AuditHandler,
-      loggingHandler: AuditHandler, auditSerialiser: AuditSerialiserLike): AuditConnector = {
-    new AuditConnector(config, simpleDatastreamHandler, mergedDatastreamHandler, loggingHandler, auditSerialiser)
-  }
+  val loggingConnector = LoggingHandler
+  val auditSerialiser = AuditSerialiser
 }

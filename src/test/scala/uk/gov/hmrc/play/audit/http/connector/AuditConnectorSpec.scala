@@ -18,7 +18,7 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlPathEqualTo, containing}
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, containing, post, postRequestedFor, urlPathEqualTo}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Matchers._
 import org.mockito.Mockito._
@@ -28,7 +28,7 @@ import org.scalatest.mock.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.AuditHandler
-import uk.gov.hmrc.audit.serialiser.AuditSerialiser
+import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
@@ -47,15 +47,22 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
   val mockFlumeHandler: AuditHandler = mock[AuditHandler]
   val mockLoggingHandler: AuditHandler = mock[AuditHandler]
 
-  def mockConnector(config: AuditingConfig) = AuditConnector(config, mockSimpleDatastreamHandler,
-    mockMergedDatastreamHandler, mockLoggingHandler, AuditSerialiser)
+  def mockConnector(config: AuditingConfig) = new AuditConnector {
+    override def auditingConfig: AuditingConfig = config
+    override def simpleDatastreamHandler: AuditHandler = mockSimpleDatastreamHandler
+    override def mergedDatastreamHandler: AuditHandler = mockMergedDatastreamHandler
+    override def loggingConnector: AuditHandler = mockLoggingHandler
+    override def auditSerialiser: AuditSerialiserLike = AuditSerialiser
+  }
 
   "creating an AuditConnector" should {
     "allow the configuration to be specified" in {
       val testPort = 9876
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
       val config = AuditingConfig(consumer = Some(consumer), enabled = true)
-      val connector = AuditConnector(config)
+      val connector = new DefaultAuditConnector {
+        override def auditingConfig: AuditingConfig = config
+      }
       val dataCall = DataCall(Map(), Map(), DateTime.now())
 
       val wireMock = new WireMockServer(testPort)
