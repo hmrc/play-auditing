@@ -24,8 +24,8 @@ import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.logging.RequestId
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class AuditSpec extends WordSpecLike with Matchers with Eventually {
@@ -58,9 +58,11 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
   val exampleRequestId = "12345"
   implicit val hc = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
-  val auditConnector = AuditConnector(AuditingConfig(
-    consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
-    enabled = true))
+  val auditConnector = new AuditConnector {
+    override def auditingConfig: AuditingConfig = AuditingConfig(
+      consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
+      enabled = true)
+  }
 
   "An Audit object" should {
     "be represented as an DataEvent when only passed an input" in {

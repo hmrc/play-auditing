@@ -31,7 +31,9 @@ class ReadmeExamples {
 
     // setup global objects
     val appName = "preferences"
-    val connector = AuditConnector(config)
+    val connector = new AuditConnector {
+      override def auditingConfig: AuditingConfig = config
+    }
 
     // get objects relating to the current request
     val carrier = HeaderCarrier()
