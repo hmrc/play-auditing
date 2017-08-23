@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{HandlerResult, handler, serialiser}
 import uk.gov.hmrc.audit.handler.{AuditHandler, DatastreamHandler, LoggingHandler}
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
@@ -46,10 +46,22 @@ object AuditResult {
 
 trait AuditConnector {
   def auditingConfig: AuditingConfig
-  def simpleDatastreamHandler: AuditHandler
-  def mergedDatastreamHandler: AuditHandler
-  def loggingConnector: AuditHandler
-  def auditSerialiser: AuditSerialiserLike
+
+  val defaultConnectionTimeout = 5000
+  val defaultRequestTimeout = 5000
+  val defaultBaseUri = BaseUri("datstream.protected.mdtp", 90, "http")
+
+  val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
+  val baseUri: BaseUri = consumer.baseUri
+
+  def simpleDatastreamHandler: AuditHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
+    baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
+
+  def mergedDatastreamHandler: AuditHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
+    baseUri.port, s"/${consumer.mergedEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
+
+  def loggingConnector: AuditHandler = LoggingHandler
+  def auditSerialiser: AuditSerialiserLike = AuditSerialiser
 
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -91,24 +103,4 @@ trait AuditConnector {
         HandlerResult.Failure
     }
   }
-}
-
-trait DefaultAuditConnector extends AuditConnector {
-  val defaultConnectionTimeout = 5000
-  val defaultRequestTimeout = 5000
-  val defaultBaseUri = BaseUri("datstream.protected.mdtp", 90, "http")
-
-  def auditingConfig: AuditingConfig
-
-  val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
-  val baseUri: BaseUri = consumer.baseUri
-
-  val simpleDatastreamHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
-    baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
-
-  val mergedDatastreamHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
-    baseUri.port, s"/${consumer.mergedEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
-
-  val loggingConnector = LoggingHandler
-  val auditSerialiser = AuditSerialiser
 }

@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.audit
 
-import uk.gov.hmrc.play.audit.http.connector.DefaultAuditConnector
-
 class ReadmeExamples {
   def explicitAuditing(): Unit = {
     import uk.gov.hmrc.http.HeaderCarrier
@@ -33,7 +31,7 @@ class ReadmeExamples {
 
     // setup global objects
     val appName = "preferences"
-    val connector = new DefaultAuditConnector {
+    val connector = new AuditConnector {
       override def auditingConfig: AuditingConfig = config
     }
 

@@ -60,7 +60,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       val testPort = 9876
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
       val config = AuditingConfig(consumer = Some(consumer), enabled = true)
-      val connector = new DefaultAuditConnector {
+      val connector = new AuditConnector {
         override def auditingConfig: AuditingConfig = config
       }
       val dataCall = DataCall(Map(), Map(), DateTime.now())
