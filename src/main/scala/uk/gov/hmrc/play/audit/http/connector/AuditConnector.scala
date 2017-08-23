@@ -51,8 +51,8 @@ trait AuditConnector {
   val defaultRequestTimeout = 5000
   val defaultBaseUri = BaseUri("datstream.protected.mdtp", 90, "http")
 
-  val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
-  val baseUri: BaseUri = consumer.baseUri
+  lazy val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
+  lazy val baseUri: BaseUri = consumer.baseUri
 
   def simpleDatastreamHandler: AuditHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
     baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
