@@ -43,7 +43,7 @@ abstract class HttpHandler(endpointUrl: URL, connectTimeout: Integer = 5000,
         logger.debug(s"Sending request to URL ${endpointUrl.toString} : $event")
 
         try {
-          val connection = getConnection
+          val connection = getConnection(event.getBytes.length)
           outputStream = connection.getOutputStream
           outputStream.write(event.getBytes)
           outputStream.flush()
@@ -94,11 +94,12 @@ abstract class HttpHandler(endpointUrl: URL, connectTimeout: Integer = 5000,
   }
 
   @throws[IOException]
-  def getConnection: HttpURLConnection = {
+  def getConnection(contentLength: Int): HttpURLConnection = {
     val connection = endpointUrl.openConnection.asInstanceOf[HttpURLConnection]
     connection.setRequestMethod("POST")
     connection.setRequestProperty("Content-Type", contentTypeHeader)
     connection.setRequestProperty("Accept", acceptHeader)
+    connection.setRequestProperty("Content-Length", contentLength.toString)
     connection.setConnectTimeout(connectTimeout)
     connection.setReadTimeout(requestTimeout)
     connection.setDoOutput(true)
