@@ -37,7 +37,7 @@ val benchDeps = Seq(
   "com.storm-enroute" %% "scalameter" % "0.8.2" % Benchmark
 )
 
-lazy val microservice = (project in file("."))
+lazy val `play-auditing` = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
   .configs(Benchmark)
   .settings(
