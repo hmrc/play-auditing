@@ -18,7 +18,6 @@ package uk.gov.hmrc.audit.serialiser
 
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
-import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.{JsString, JsValue, Json, Writes}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
 
@@ -38,8 +37,6 @@ trait AuditSerialiserLike {
 
 class AuditSerialiser extends AuditSerialiserLike {
 
-  private val log: Logger = LoggerFactory.getLogger(getClass)
-
   implicit val dateWriter: Writes[DateTime] = DateWriter.dateTimeWrites
   implicit val dataEventWriter: Writes[DataEvent] = Json.writes[DataEvent]
   implicit val dataCallWriter: Writes[DataCall] = Json.writes[DataCall]
@@ -47,17 +44,14 @@ class AuditSerialiser extends AuditSerialiserLike {
   implicit val mergedDataEventWriter: Writes[MergedDataEvent] = Json.writes[MergedDataEvent]
 
   override def serialise(event: DataEvent): String = {
-    log.info(s"Serialise a DataEvent")
     Json.toJson(event).toString()
   }
 
   override def serialise(event: ExtendedDataEvent): String = {
-    log.info(s"Serialise a ExtendedDataEvent")
     Json.toJson(event).toString()
   }
 
   override def serialise(event: MergedDataEvent): String = {
-    log.info(s"Serialise a MergedDataEvent")
     Json.toJson(event).toString()
   }
 }
