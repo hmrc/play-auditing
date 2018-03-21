@@ -17,12 +17,12 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.hmrc.audit.{HandlerResult, handler, serialiser}
+import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.{AuditHandler, DatastreamHandler, LoggingHandler}
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataEvent, ExtendedDataEvent, MergedDataEvent}
-import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -27,6 +27,7 @@ import uk.gov.hmrc.http.logging.RequestId
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
