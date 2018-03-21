@@ -40,7 +40,7 @@ abstract class HttpHandler(endpointUrl: URL, connectTimeout: Integer = 5000,
 
     try {
       if (event != null && event.length > 0) {
-        logger.debug(s"Sending request to URL ${endpointUrl.toString} : $event")
+        logger.debug(s"Sending audit request to URL ${endpointUrl.toString}")
 
         try {
           val connection = getConnection(event.getBytes.length)
