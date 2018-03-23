@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ object AuditExtensions {
       carrier.names.deviceID -> carrier.deviceID.getOrElse("-")
     )
 
+    @deprecated
     def toAuditTags(transactionName: String, path: String): Map[String, String] = {
       auditTags ++ Map[String, String](
         TransactionName -> transactionName,
@@ -44,6 +45,7 @@ object AuditExtensions {
       )
     }
 
+    @deprecated
     def toAuditDetails(details: (String, String)*): Map[String, String] = auditDetails ++ details
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package uk.gov.hmrc.play.audit.model
 import java.util.UUID
 
 import org.joda.time.DateTime
-import play.api.libs.json._
 import uk.gov.hmrc.time.DateTimeUtils
 
+@deprecated("Use uk.gov.hmrc.audit.model.AuditEvent for new code.", "3.4.0")
 case class DataEvent(auditSource: String,
                      auditType: String,
                      eventId: String = UUID.randomUUID().toString,
@@ -29,19 +29,12 @@ case class DataEvent(auditSource: String,
                      detail: Map[String, String] = Map.empty,
                      generatedAt: DateTime = DateTimeUtils.now)
 
-@deprecated("This class will be removed soon. All audit event classes will be " +
-  "merged, and this merged class will support all use cases (including nested details).", "3.0.0")
-case class ExtendedDataEvent(auditSource: String,
-                             auditType: String,
-                             eventId: String = UUID.randomUUID().toString,
-                             tags: Map[String, String] = Map.empty,
-                             detail: JsValue = JsString(""),
-                             generatedAt: DateTime = DateTimeUtils.now)
-
+@deprecated("Use uk.gov.hmrc.audit.model.AuditEvent for new code.", "3.4.0")
 case class DataCall(tags: Map[String, String],
                     detail: Map[String, String],
                     generatedAt: DateTime)
 
+@deprecated("Use uk.gov.hmrc.audit.model.AuditEvent for new code.", "3.4.0")
 case class MergedDataEvent(auditSource: String,
                            auditType: String,
                            eventId: String = UUID.randomUUID().toString,
