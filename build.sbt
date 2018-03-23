@@ -22,19 +22,23 @@ val appName = "play-auditing"
 val Benchmark = config("bench") extend Test
 
 val compileDeps = Seq(
-  "uk.gov.hmrc" %% "http-core" % "0.5.0",
-  "org.slf4j" % "slf4j-api" % "1.7.25"
+  "uk.gov.hmrc" %% "http-core" % "0.7.0",
+  "org.slf4j" % "slf4j-api" % "1.7.25",
+  "org.json4s" %% "json4s-native" % "3.5.3",
+  "org.json4s" %% "json4s-ext" % "3.5.3"
 )
 
 val testDeps = Seq(
-  "org.scalatest" %% "scalatest" % "2.2.6" % Test,
-  "org.pegdown" % "pegdown" % "1.5.0" % Test,
-  "com.github.tomakehurst" % "wiremock" % "1.52" % Test,
-  "org.mockito" % "mockito-all" % "1.10.19" % Test
+  "org.scalatest" %% "scalatest" % "3.0.5" % Test,
+  "org.pegdown" % "pegdown" % "1.6.0" % Test,
+  "com.github.tomakehurst" % "wiremock" % "1.52" % Test, //2.15.0
+  "org.specs2" %% "specs2-core" % "4.0.3" % Test,
+  "org.specs2" %% "specs2-mock" % "4.0.3" % Test,
+  "ch.qos.logback" % "logback-classic" % "1.2.3" % Test
 )
 
 val benchDeps = Seq(
-  "com.storm-enroute" %% "scalameter" % "0.8.2" % Benchmark
+  "com.storm-enroute" %% "scalameter" % "0.9" % Benchmark
 )
 
 lazy val `play-auditing` = (project in file("."))
