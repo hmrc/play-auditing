@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,10 +53,10 @@ trait HttpAuditing extends DateTimeUtils {
   def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier): Unit = audit(HttpRequest(url, "", None, now), response)(hc)
 
   private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier): Unit =
-    if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
+    if (isAuditable(request.url)) auditConnector.sendEvent(dataEventFor(request, responseToAudit))
 
   private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier): Unit =
-    if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
+    if (isAuditable(request.url)) auditConnector.sendEvent(dataEventFor(request, errorMessage))
 
   private def dataEventFor(request: HttpRequest, errorMesssage: String)(implicit hc: HeaderCarrier) = {
     val responseDetails = Map(FailedRequestMessage -> errorMesssage)

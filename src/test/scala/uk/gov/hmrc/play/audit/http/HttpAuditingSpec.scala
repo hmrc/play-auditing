@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ package uk.gov.hmrc.play.audit.http
 
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
+import uk.gov.hmrc.audit.AuditResult.Success
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
 import uk.gov.hmrc.play.audit.model.MergedDataEvent
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
@@ -79,7 +79,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true")
+      implicit val hcWithHeaders: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true")
       httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
 
       eventually(timeout(Span(1, Seconds))) {
@@ -99,7 +99,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     }
 
     "handle the case of an exception being raised inside the future and still send an audit message" in {
-      implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
+      implicit val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
@@ -129,7 +129,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     }
 
     "not do anything if the datastream service is throwing an error as in this specific case datastream is logging the event" in {
-      implicit val hc = HeaderCarrier()
+      implicit val hc: HeaderCarrier = HeaderCarrier()
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
@@ -138,13 +138,13 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       val errorMessage = "FOO bar"
       val response = Future.failed(new Exception(errorMessage))
 
-      when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
+      when(connector.sendEvent(any[MergedDataEvent])(any[ExecutionContext]))
         .thenThrow(new IllegalArgumentException("any exception"))
 
       httpWithAudit.auditRequestWithResponseF(serviceUri, postVerb, Some(requestBody), response)
 
       eventually(timeout(Span(1, Seconds))) {
-        verify(connector, times(1)).sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext])
+        verify(connector, times(1)).sendEvent(any[MergedDataEvent])(any[ExecutionContext])
         verifyNoMoreInteractions(connector)
       }
     }
@@ -154,7 +154,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     val serviceUri = "/service/path"
     val deviceID = "A_DEVICE_ID"
 
-    implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
+    implicit val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))
 
     "send unique event of type OutboundCall" in {
       val connector = mock[AuditConnector]
@@ -165,7 +165,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       val request = httpWithAudit.buildRequest(serviceUri, getVerb, requestBody)
       val response = new DummyHttpResponse("the response body", 200)
 
-      implicit val hc = HeaderCarrier(deviceID = Some(deviceID), trueClientIp = Some("192.168.1.2"), trueClientPort = Some("12000")).withExtraHeaders("Surrogate" -> "true")
+      implicit val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID), trueClientIp = Some("192.168.1.2"), trueClientPort = Some("12000")).withExtraHeaders("Surrogate" -> "true")
 
       whenAuditSuccess(connector)
 
@@ -221,7 +221,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     }
     val getVerb = "GET"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "not generate an audit event" in {
       forAll(auditUris) { auditUri =>
@@ -255,7 +255,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     val AuditUri = "http://some.service.gov.uk:80/self-assessment/data"
     val getVerb = "GET"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "generate an audit event" in {
       val connector = mock[AuditConnector]
@@ -279,7 +279,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     val AuditUri = "/write/audit"
     val getVerb = "GET"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "not generate an audit event" in {
       val connector = mock[AuditConnector]
@@ -309,7 +309,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     val AuditUri = "/write/audit/merged"
     val getVerb = "GET"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "not generate an audit event" in {
       val connector = mock[AuditConnector]
@@ -336,12 +336,12 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
   }
 
   def whenAuditSuccess(connector: AuditConnector): Unit = {
-    when(connector.sendMergedEvent(any[MergedDataEvent])).thenReturn(Future.successful(Success))
+    when(connector.sendEvent(any[MergedDataEvent])(anyObject[ExecutionContext])).thenReturn(Future.successful(Success))
   }
 
   def verifyAndRetrieveEvent(connector: AuditConnector): MergedDataEvent = {
-    val captor = ArgumentCaptor.forClass(classOf[MergedDataEvent])
-    verify(connector).sendMergedEvent(captor.capture)(any[HeaderCarrier], any[ExecutionContext])
+    val captor: ArgumentCaptor[MergedDataEvent] = ArgumentCaptor.forClass(classOf[MergedDataEvent])
+    verify(connector).sendEvent(captor.capture)(any[ExecutionContext])
     captor.getValue
   }
 }

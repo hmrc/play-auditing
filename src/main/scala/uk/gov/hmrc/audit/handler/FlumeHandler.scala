@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package uk.gov.hmrc.audit.handler
 import java.net.URL
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.hmrc.audit.HandlerResult
-import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
+import uk.gov.hmrc.audit.AuditResult
+import uk.gov.hmrc.audit.AuditResult.{Failure, Rejected, Success}
 
 class FlumeHandler(url: URL, connectTimeout: Integer, requestTimeout: Integer)
   extends HttpHandler(url, connectTimeout, requestTimeout)
@@ -28,11 +28,11 @@ class FlumeHandler(url: URL, connectTimeout: Integer, requestTimeout: Integer)
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  override def sendEvent(event: String): HandlerResult = {
+  override def sendEvent(event: String): AuditResult = {
     sendEvent(event, retryIfMalformed = true)
   }
 
-  private def sendEvent(event: String, retryIfMalformed: Boolean): HandlerResult = {
+  private def sendEvent(event: String, retryIfMalformed: Boolean): AuditResult = {
     val result = sendHttpRequest(event)
     result match {
       case HttpResult.Response(status) =>

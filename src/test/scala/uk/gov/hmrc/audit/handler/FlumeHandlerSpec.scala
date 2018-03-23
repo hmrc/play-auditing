@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import org.scalatest._
-import uk.gov.hmrc.audit.HandlerResult
-import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
+import uk.gov.hmrc.audit.AuditResult
+import uk.gov.hmrc.audit.AuditResult.{Failure, Rejected, Success}
 
 class FlumeHandlerUnitSpec extends WordSpecLike with Inspectors with Matchers {
 
   val flumeUrl = new URL(s"http://localhost:1234/")
-  val flumeHandler = new FlumeHandler(flumeUrl, 2000, 2000) {
+  val flumeHandler: FlumeHandler = new FlumeHandler(flumeUrl, 2000, 2000) {
     override def sendHttpRequest(event: String): HttpResult = {
       HttpResult.Response(event.toInt)
     }
@@ -140,7 +140,7 @@ class FlumeHandlerWireSpec extends WordSpecLike with Matchers with WireMockTestS
         .willSetStateTo(toScenario))
   }
 
-  def verifyErrorRetry(event: String, fault: Fault, retriedResponse: Integer, expectedResult: HandlerResult): Unit = {
+  def verifyErrorRetry(event: String, fault: Fault, retriedResponse: Integer, expectedResult: AuditResult): Unit = {
     stub(event, fault, Scenario.STARTED, "RETRYING")
     stub(event, retriedResponse, "RETRYING", "FINISHED")
 
@@ -150,7 +150,7 @@ class FlumeHandlerWireSpec extends WordSpecLike with Matchers with WireMockTestS
     result shouldBe expectedResult
   }
 
-  def verifySingleCall(event: String, responseStatus: Integer, expectedResult: HandlerResult): Unit = {
+  def verifySingleCall(event: String, responseStatus: Integer, expectedResult: AuditResult): Unit = {
     stub(event, responseStatus)
 
     val result = flumeHandler.sendEvent(event)

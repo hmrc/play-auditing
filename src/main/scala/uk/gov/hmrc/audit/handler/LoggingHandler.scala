@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package uk.gov.hmrc.audit.handler
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.AuditResult
 
 class LoggingHandler(log: Logger) extends AuditHandler {
 
@@ -25,10 +25,10 @@ class LoggingHandler(log: Logger) extends AuditHandler {
 
   def makeFailureMessage(event: String): String = s"$ErrorKey : audit item : $event"
 
-  def sendEvent(event: String): HandlerResult = {
+  def sendEvent(event: String): AuditResult = {
     val message = makeFailureMessage(event)
     log.warn(message)
-    HandlerResult.Success
+    AuditResult.Success
   }
 }
 
