@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
   "Audit TAGS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId), akamaiReputation = Some(akamaiReputation))
+      val hc = HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId), akamaiReputation = Some(akamaiReputation))
 
       val tags = hc.toAuditTags("theTransactionName", "/the/request/path")
 
@@ -82,7 +82,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
   "Audit DETAILS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId))
+      val hc = HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId))
 
       val details = hc.toAuditDetails()
 
