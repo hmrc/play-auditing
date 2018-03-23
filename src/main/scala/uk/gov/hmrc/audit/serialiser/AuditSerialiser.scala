@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,43 +16,57 @@
 
 package uk.gov.hmrc.audit.serialiser
 
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
-import play.api.libs.json.{JsString, JsValue, Json, Writes}
-import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
-
-object DateWriter {
-  implicit def dateTimeWrites = new Writes[DateTime] {
-    private val dateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-
-    def writes(dt: DateTime): JsValue = JsString(dateFormat.withZone(DateTimeZone.UTC).print(dt.getMillis))
-  }
-}
+import org.json4s.ext.JodaTimeSerializers
+import org.json4s.{CustomSerializer, Extraction, Formats, JField, JNothing, JObject, JString, JValue, NoTypeHints}
+import org.json4s.native.Serialization
+import org.json4s.native.Serialization.write
+import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.hmrc.audit.model.AuditEvent
+import uk.gov.hmrc.play.audit.model.{DataEvent, MergedDataEvent}
 
 trait AuditSerialiserLike {
   def serialise(event: DataEvent): String
-  def serialise(event: ExtendedDataEvent): String
   def serialise(event: MergedDataEvent): String
+  def serialise(event: AuditEvent): String
 }
+
+class EmptyStringPropertyTrimmingSerialiser extends CustomSerializer[String](_ => ({
+  // we don't support deserialisation
+  case _: JValue => ""
+},{
+  case x: String =>
+    if (x == null || x.trim.isEmpty) JNothing else new JString(x)
+}))
+
+class EmptyMapPropertyTrimmingSerialiser extends CustomSerializer[Map[String, Any]](ser => ({
+  // we don't support deserialisation
+  case _: JObject => Map()
+},{
+  case x: Map[String, Any] =>
+    val properties = x.filterNot(p => { p._1.isEmpty || p._2 == null || p._2 == "" }).map(p => new JField(p._1, Extraction.decompose(p._2)(ser))).toList
+    if (properties.isEmpty) JNothing else new JObject(properties)
+}))
 
 class AuditSerialiser extends AuditSerialiserLike {
 
-  implicit val dateWriter: Writes[DateTime] = DateWriter.dateTimeWrites
-  implicit val dataEventWriter: Writes[DataEvent] = Json.writes[DataEvent]
-  implicit val dataCallWriter: Writes[DataCall] = Json.writes[DataCall]
-  implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] = Json.writes[ExtendedDataEvent]
-  implicit val mergedDataEventWriter: Writes[MergedDataEvent] = Json.writes[MergedDataEvent]
+  private val log: Logger = LoggerFactory.getLogger(getClass)
+
+  implicit val formats: Formats = Serialization.formats(NoTypeHints).skippingEmptyValues ++
+    JodaTimeSerializers.all + new EmptyMapPropertyTrimmingSerialiser + new EmptyStringPropertyTrimmingSerialiser
 
   override def serialise(event: DataEvent): String = {
-    Json.toJson(event).toString()
-  }
-
-  override def serialise(event: ExtendedDataEvent): String = {
-    Json.toJson(event).toString()
+    log.info(s"Serialise a DataEvent")
+    write(event)(formats)
   }
 
   override def serialise(event: MergedDataEvent): String = {
-    Json.toJson(event).toString()
+    log.info(s"Serialise a MergedDataEvent")
+    write(event)(formats)
+  }
+
+  override def serialise(event: AuditEvent): String = {
+    log.info(s"Serialise an AuditEvent")
+    write(event)(formats)
   }
 }
 
