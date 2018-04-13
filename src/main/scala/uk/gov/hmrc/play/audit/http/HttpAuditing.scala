@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,9 @@ import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.time.DateTimeUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
-
 
 trait HttpAuditing extends DateTimeUtils {
 
@@ -44,9 +43,10 @@ trait HttpAuditing extends DateTimeUtils {
       responseF.map {
         response =>
           audit(request, response)
-      }.recover {
+      }(ec).recover {
         case e: Throwable => auditRequestWithException(request, e.getMessage)
-      }
+      }(ec)
+
     }
   }
 
