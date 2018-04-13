@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +85,8 @@ trait AuditTags {
 class Audit(applicationName: String, auditConnector: AuditConnector) extends AuditTags {
 
   import Audit._
-  import scala.concurrent.ExecutionContext.Implicits.global
+  import play.api.libs.concurrent.Execution.Implicits._
+
 
   def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
 
