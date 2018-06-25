@@ -17,7 +17,6 @@
 import sbt._
 import sbt.Keys._
 import uk.gov.hmrc.versioning.SbtGitVersioning
-import uk.gov.hmrc._
 
 lazy val microservice: Project = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
