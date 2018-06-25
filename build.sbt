@@ -26,8 +26,8 @@ lazy val microservice: Project = (project in file("."))
     scalacOptions += "-language:implicitConversions",
     libraryDependencies ++= Seq(
       "uk.gov.hmrc" %% "http-core" % "0.5.0",
-      "com.ning" % "async-http-client" % "1.8.15",
-      "com.typesafe.play" %% "play" % "2.6.15",
+      //"com.ning" % "async-http-client" % "1.8.15",
+      // "com.typesafe.play" %% "play" % "2.6.15",
       "commons-codec" % "commons-codec" % "1.7" % Test,
       "org.scalatest" %% "scalatest" % "2.2.6" % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test,
@@ -36,7 +36,7 @@ lazy val microservice: Project = (project in file("."))
       "com.github.tomakehurst" % "wiremock" % "1.52" % Test,
       "org.mockito" % "mockito-all" % "1.10.19" % Test
     ),
-    scalaVersion := "2.11.11",
+    scalaVersion := "2.11.12",
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
       Resolver.typesafeRepo("releases")

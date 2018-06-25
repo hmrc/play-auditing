@@ -54,8 +54,8 @@ object AuditAsMagnet {
     et: EventTypeFlowDescriptions,
     ot: OutputTransformer[A]
   ): AuditAsMagnet[A] = new AuditAsMagnet[A] {
-    override val txName = txN
-    override val inputs = ins
+    override val txName: String = txN
+    override val inputs: Map[String, String] = ins
     override val outputTransformer = ot
     override val eventTypes = et
   }
@@ -90,11 +90,15 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
   import play.api.libs.concurrent.Execution.Implicits._
 
 
-  def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
+  def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent
 
-  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent(_)
+  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent
 
-  private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier): Unit = {
+  private def sendEvent[A](
+    auditMagnet: AuditAsMagnet[A],
+    eventType: String,
+    outputs: Map[String, String]
+  )(implicit hc: HeaderCarrier): Unit = {
     val requestId = hc.requestId.map(_.value).getOrElse("")
     sendDataEvent(DataEvent(
       auditSource = applicationName,
@@ -103,9 +107,18 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
       detail = auditMagnet.inputs.map(inputKeys) ++ outputs))
   }
 
-  private def givenResultSendAuditEvent[A](auditMagnet: AuditAsMagnet[A])(implicit hc: HeaderCarrier): PartialFunction[TransactionResult, Unit] = {
-    case TransactionSuccess(m) => sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
-    case TransactionFailure(r, m) => sendEvent(auditMagnet, auditMagnet.eventTypes._2, r.map(reason => Map("transactionFailureReason" -> reason)).getOrElse(Map.empty) ++ m.map(outputKeys))
+  private def givenResultSendAuditEvent[A](
+    auditMagnet: AuditAsMagnet[A]
+  )(implicit hc: HeaderCarrier): PartialFunction[TransactionResult, Unit] = {
+    case TransactionSuccess(m) =>
+      sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
+    case TransactionFailure(r, m) =>
+      sendEvent(
+        auditMagnet,
+        auditMagnet.eventTypes._2,
+        r.map(
+          reason => Map("transactionFailureReason" -> reason)
+        ).getOrElse(Map.empty) ++ m.map(outputKeys))
   }
 
   def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier): Future[A] = {
