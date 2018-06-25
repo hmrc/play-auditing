@@ -32,8 +32,10 @@ lazy val microservice: Project = (project in file("."))
     moduleName := "play-auditing",
     libraryDependencies ++= Seq(
       "uk.gov.hmrc" %% "http-core" % "0.5.0",
+      "commons-codec" % "commons-codec" % "1.7" % Test,
       "org.scalatest" %% "scalatest" % "3.0.4" % Test,
       "org.scalacheck" %% "scalacheck" % "1.13.4" % Test,
+      "org.pegdown" % "pegdown" % "1.5.0" % Test,
       "com.github.tomakehurst" % "wiremock" % "1.52" % Test,
       "org.mockito" % "mockito-all" % "1.10.19" % Test
     ),
