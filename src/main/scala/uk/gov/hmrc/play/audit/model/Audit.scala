@@ -87,7 +87,7 @@ trait AuditTags {
 class Audit(applicationName: String, auditConnector: AuditConnector) extends AuditTags {
 
   import Audit._
-  import play.api.libs.concurrent.Execution.Implicits._
+  import scala.concurrent.ExecutionContext.Implicits.global
 
 
   def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent

@@ -18,21 +18,22 @@ import sbt._
 import sbt.Keys._
 import uk.gov.hmrc.versioning.SbtGitVersioning
 
+scalacOptions in ThisBuild ++= Seq(
+  "-feature",
+  "-deprecation",
+  "-language:postfixOps",
+  "-language:implicitConversions"
+)
+
 lazy val microservice: Project = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
   .settings(
     name := "play-auditing",
     moduleName := "play-auditing",
-    scalacOptions += "-language:implicitConversions",
     libraryDependencies ++= Seq(
       "uk.gov.hmrc" %% "http-core" % "0.5.0",
-      //"com.ning" % "async-http-client" % "1.8.15",
-      // "com.typesafe.play" %% "play" % "2.6.15",
-      "commons-codec" % "commons-codec" % "1.7" % Test,
-      "org.scalatest" %% "scalatest" % "2.2.6" % Test,
-      "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test,
-      "org.scalacheck" %% "scalacheck" % "1.13.1" % Test,
-      "org.pegdown" % "pegdown" % "1.5.0" % Test,
+      "org.scalatest" %% "scalatest" % "3.0.4" % Test,
+      "org.scalacheck" %% "scalacheck" % "1.13.4" % Test,
       "com.github.tomakehurst" % "wiremock" % "1.52" % Test,
       "org.mockito" % "mockito-all" % "1.10.19" % Test
     ),
