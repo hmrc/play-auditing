@@ -27,10 +27,10 @@ sealed trait AuditAsMagnet[A] {
 
   import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
-  val txName: String
-  val inputs: Map[String, String]
-  val outputTransformer: OutputTransformer[A]
-  val eventTypes: (String, String)
+  def txName: String
+  def inputs: Map[String, String]
+  def outputTransformer: OutputTransformer[A]
+  def eventTypes: (String, String)
 
   def apply(f: (String, Map[String, String], OutputTransformer[A], (String, String)) => A): A = f(txName, inputs, outputTransformer, eventTypes)
 
@@ -48,14 +48,16 @@ object AuditAsMagnet {
 
   implicit def inputAsMap[A](parms: (String, Map[String, String], EventTypeFlowDescriptions, OutputTransformer[A])): AuditAsMagnet[A] = auditAsMagnet(parms._1, parms._2, parms._3, parms._4)
 
-  private def auditAsMagnet[A](txN: String,
-                               ins: Map[String, String],
-                               et: EventTypeFlowDescriptions,
-                               ot: OutputTransformer[A]): AuditAsMagnet[A] = new AuditAsMagnet[A] {
-    val txName = txN
-    val inputs = ins
-    val outputTransformer = ot
-    val eventTypes = et
+  private def auditAsMagnet[A](
+    txN: String,
+    ins: Map[String, String],
+    et: EventTypeFlowDescriptions,
+    ot: OutputTransformer[A]
+  ): AuditAsMagnet[A] = new AuditAsMagnet[A] {
+    override val txName = txN
+    override val inputs = ins
+    override val outputTransformer = ot
+    override val eventTypes = et
   }
 
 }

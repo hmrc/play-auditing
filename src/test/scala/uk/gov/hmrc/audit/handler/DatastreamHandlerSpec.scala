@@ -30,8 +30,14 @@ import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
 
 class DatastreamHandlerUnitSpec extends WordSpecLike with Inspectors with Matchers {
 
-  val datastreamHandler = new DatastreamHandler("http", "localhost", 1234,
-    "/some/path", 2000, 2000) {
+  val datastreamHandler = new DatastreamHandler(
+    "http",
+    "localhost",
+    1234,
+    "/some/path",
+    2000,
+    2000
+  ) {
     override def sendHttpRequest(event: String): HttpResult = {
       HttpResult.Response(event.toInt)
     }
