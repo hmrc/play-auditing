@@ -28,8 +28,8 @@ scalacOptions in ThisBuild ++= Seq(
 lazy val microservice: Project = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
   .settings(
-    name := "play-auditing",
-    moduleName := "play-auditing",
+    name := "auditing",
+    moduleName := "auditing",
     libraryDependencies ++= Seq(
       "uk.gov.hmrc" %% "http-core" % "0.5.0",
       "commons-codec" % "commons-codec" % "1.7" % Test,
