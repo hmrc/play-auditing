@@ -22,28 +22,36 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import uk.gov.hmrc.time.DateTimeUtils
 
-case class DataEvent(auditSource: String,
-                     auditType: String,
-                     eventId: String = UUID.randomUUID().toString,
-                     tags: Map[String, String] = Map.empty,
-                     detail: Map[String, String] = Map.empty,
-                     generatedAt: DateTime = DateTimeUtils.now)
+case class DataEvent(
+  auditSource: String,
+  auditType: String,
+  eventId: String = UUID.randomUUID().toString,
+  tags: Map[String, String] = Map.empty,
+  detail: Map[String, String] = Map.empty,
+  generatedAt: DateTime = DateTimeUtils.now
+)
 
 @deprecated("This class will be removed soon. All audit event classes will be " +
   "merged, and this merged class will support all use cases (including nested details).")
-case class ExtendedDataEvent(auditSource: String,
-                             auditType: String,
-                             eventId: String = UUID.randomUUID().toString,
-                             tags: Map[String, String] = Map.empty,
-                             detail: JsValue = JsString(""),
-                             generatedAt: DateTime = DateTimeUtils.now)
+case class ExtendedDataEvent(
+  auditSource: String,
+  auditType: String,
+  eventId: String = UUID.randomUUID().toString,
+  tags: Map[String, String] = Map.empty,
+  detail: JsValue = JsString(""),
+  generatedAt: DateTime = DateTimeUtils.now
+)
 
-case class DataCall(tags: Map[String, String],
-                    detail: Map[String, String],
-                    generatedAt: DateTime)
+case class DataCall(
+  tags: Map[String, String],
+  detail: Map[String, String],
+  generatedAt: DateTime
+)
 
-case class MergedDataEvent(auditSource: String,
-                           auditType: String,
-                           eventId: String = UUID.randomUUID().toString,
-                           request: DataCall,
-                           response: DataCall)
+case class MergedDataEvent(
+  auditSource: String,
+  auditType: String,
+  eventId: String = UUID.randomUUID().toString,
+  request: DataCall,
+  response: DataCall
+)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,14 @@ import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
 
 class DatastreamHandlerUnitSpec extends WordSpecLike with Inspectors with Matchers {
 
-  val datastreamHandler = new DatastreamHandler("http", "localhost", 1234,
-    "/some/path", 2000, 2000) {
+  val datastreamHandler = new DatastreamHandler(
+    "http",
+    "localhost",
+    1234,
+    "/some/path",
+    2000,
+    2000
+  ) {
     override def sendHttpRequest(event: String): HttpResult = {
       HttpResult.Response(event.toInt)
     }

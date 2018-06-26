@@ -86,7 +86,11 @@ trait AuditConnector {
     }
   }
 
-  private def send(event: String, datastreamHandler: AuditHandler)(implicit ec: ExecutionContext): Future[HandlerResult] = Future {
+  private def send(
+    event: String,
+    datastreamHandler: AuditHandler
+  )(implicit ec: ExecutionContext): Future[HandlerResult] = Future {
+
     try {
       val result: HandlerResult = datastreamHandler.sendEvent(event)
       result match {

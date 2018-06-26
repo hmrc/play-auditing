@@ -27,10 +27,10 @@ sealed trait AuditAsMagnet[A] {
 
   import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
-  val txName: String
-  val inputs: Map[String, String]
-  val outputTransformer: OutputTransformer[A]
-  val eventTypes: (String, String)
+  def txName: String
+  def inputs: Map[String, String]
+  def outputTransformer: OutputTransformer[A]
+  def eventTypes: (String, String)
 
   def apply(f: (String, Map[String, String], OutputTransformer[A], (String, String)) => A): A = f(txName, inputs, outputTransformer, eventTypes)
 
@@ -48,14 +48,16 @@ object AuditAsMagnet {
 
   implicit def inputAsMap[A](parms: (String, Map[String, String], EventTypeFlowDescriptions, OutputTransformer[A])): AuditAsMagnet[A] = auditAsMagnet(parms._1, parms._2, parms._3, parms._4)
 
-  private def auditAsMagnet[A](txN: String,
-                               ins: Map[String, String],
-                               et: EventTypeFlowDescriptions,
-                               ot: OutputTransformer[A]): AuditAsMagnet[A] = new AuditAsMagnet[A] {
-    val txName = txN
-    val inputs = ins
-    val outputTransformer = ot
-    val eventTypes = et
+  private def auditAsMagnet[A](
+    txN: String,
+    ins: Map[String, String],
+    et: EventTypeFlowDescriptions,
+    ot: OutputTransformer[A]
+  ): AuditAsMagnet[A] = new AuditAsMagnet[A] {
+    override val txName: String = txN
+    override val inputs: Map[String, String] = ins
+    override val outputTransformer = ot
+    override val eventTypes = et
   }
 
 }
@@ -85,14 +87,18 @@ trait AuditTags {
 class Audit(applicationName: String, auditConnector: AuditConnector) extends AuditTags {
 
   import Audit._
-  import play.api.libs.concurrent.Execution.Implicits._
+  import scala.concurrent.ExecutionContext.Implicits.global
 
 
-  def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
+  def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent
 
-  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent(_)
+  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent
 
-  private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier): Unit = {
+  private def sendEvent[A](
+    auditMagnet: AuditAsMagnet[A],
+    eventType: String,
+    outputs: Map[String, String]
+  )(implicit hc: HeaderCarrier): Unit = {
     val requestId = hc.requestId.map(_.value).getOrElse("")
     sendDataEvent(DataEvent(
       auditSource = applicationName,
@@ -101,9 +107,18 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
       detail = auditMagnet.inputs.map(inputKeys) ++ outputs))
   }
 
-  private def givenResultSendAuditEvent[A](auditMagnet: AuditAsMagnet[A])(implicit hc: HeaderCarrier): PartialFunction[TransactionResult, Unit] = {
-    case TransactionSuccess(m) => sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
-    case TransactionFailure(r, m) => sendEvent(auditMagnet, auditMagnet.eventTypes._2, r.map(reason => Map("transactionFailureReason" -> reason)).getOrElse(Map.empty) ++ m.map(outputKeys))
+  private def givenResultSendAuditEvent[A](
+    auditMagnet: AuditAsMagnet[A]
+  )(implicit hc: HeaderCarrier): PartialFunction[TransactionResult, Unit] = {
+    case TransactionSuccess(m) =>
+      sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
+    case TransactionFailure(r, m) =>
+      sendEvent(
+        auditMagnet,
+        auditMagnet.eventTypes._2,
+        r.map(
+          reason => Map("transactionFailureReason" -> reason)
+        ).getOrElse(Map.empty) ++ m.map(outputKeys))
   }
 
   def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier): Future[A] = {
