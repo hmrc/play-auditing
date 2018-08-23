@@ -29,8 +29,6 @@ case class DataEvent(auditSource: String,
                      detail: Map[String, String] = Map.empty,
                      generatedAt: DateTime = DateTimeUtils.now)
 
-@deprecated("This class will be removed soon. All audit event classes will be " +
-  "merged, and this merged class will support all use cases (including nested details).")
 case class ExtendedDataEvent(auditSource: String,
                              auditType: String,
                              eventId: String = UUID.randomUUID().toString,
