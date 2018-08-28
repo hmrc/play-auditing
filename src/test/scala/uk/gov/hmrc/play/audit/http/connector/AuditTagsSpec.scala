@@ -42,7 +42,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val tags = hc.toAuditTags("theTransactionName", "/the/request/path")
 
-      tags.size shouldBe 7
+      tags.size shouldBe 8
 
       tags(xSessionId) shouldBe sessionId.value
       tags(xRequestId) shouldBe requestId.value
@@ -51,6 +51,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
       tags("clientIP") shouldBe "-"
       tags("clientPort") shouldBe "-"
       tags("Akamai-Reputation") shouldBe akamaiReputation.value
+      tags("deviceID") shouldBe deviceId
     }
 
     "be defaulted" in {
@@ -58,7 +59,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val tags = hc.toAuditTags("defaultsWhenNothingSet", "/the/request/path")
 
-      tags.size shouldBe 7
+      tags.size shouldBe 8
 
       tags(xSessionId) shouldBe "-"
       tags(xRequestId) shouldBe "-"
@@ -67,6 +68,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
       tags("clientIP") shouldBe "-"
       tags("clientPort") shouldBe "-"
       tags("Akamai-Reputation") shouldBe "-"
+      tags("deviceID") shouldBe "-"
     }
 
     "have more tags.clientIP and tags.clientPort" in {
@@ -86,12 +88,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val details = hc.toAuditDetails()
 
-      details.size shouldBe 4
-
-      details("ipAddress") shouldBe forwarded.value
-      details(authorisation) shouldBe authorization.value
-      details(HeaderNames.token) shouldBe token.value
-      details(HeaderNames.deviceID) shouldBe deviceId
+      details.size shouldBe 0
     }
 
     "be defaulted" in {
@@ -99,12 +96,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val details = hc.toAuditDetails()
 
-      details.size shouldBe 4
-
-      details("ipAddress") shouldBe "-"
-      details(authorisation) shouldBe "-"
-      details(HeaderNames.token) shouldBe "-"
-      details(HeaderNames.deviceID) shouldBe "-"
+      details.size shouldBe 0
     }
 
     "have more details only" in {
@@ -112,7 +104,7 @@ class AuditTagsSpec extends WordSpecLike with Matchers {
 
       val details = hc.toAuditDetails("more-details" -> "the details", "lots-of-details" -> "interesting info")
 
-      details.size shouldBe 6
+      details.size shouldBe 2
 
       details("more-details") shouldBe "the details"
       details("lots-of-details") shouldBe "interesting info"

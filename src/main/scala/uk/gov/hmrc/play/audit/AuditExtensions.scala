@@ -27,13 +27,7 @@ object AuditExtensions {
       carrier.names.xSessionId -> carrier.sessionId.map(_.value).getOrElse("-"),
       "clientIP" -> carrier.trueClientIp.getOrElse("-"),
       "clientPort" -> carrier.trueClientPort.getOrElse("-"),
-      "Akamai-Reputation" -> carrier.akamaiReputation.getOrElse(AkamaiReputation("-")).value
-    )
-
-    private lazy val auditDetails = Map[String, String](
-      "ipAddress" -> carrier.forwarded.map(_.value).getOrElse("-"),
-      carrier.names.authorisation -> carrier.authorization.map(_.value).getOrElse("-"),
-      carrier.names.token -> carrier.token.map(_.value).getOrElse("-"),
+      "Akamai-Reputation" -> carrier.akamaiReputation.getOrElse(AkamaiReputation("-")).value,
       carrier.names.deviceID -> carrier.deviceID.getOrElse("-")
     )
 
@@ -44,7 +38,9 @@ object AuditExtensions {
       )
     }
 
-    def toAuditDetails(details: (String, String)*): Map[String, String] = auditDetails ++ details
+    def toAuditTags(path: String): Map[String, String] = auditTags ++ Map[String, String](Path -> path)
+
+    def toAuditDetails(details: (String, String)*): Map[String, String] = details.toMap
   }
 
   implicit def auditHeaderCarrier(carrier: HeaderCarrier): AuditHeaderCarrier = new AuditHeaderCarrier(carrier)

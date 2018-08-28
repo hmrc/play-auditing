@@ -88,8 +88,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
         dataEvent.auditSource shouldBe httpWithAudit.appName
         dataEvent.auditType shouldBe outboundCallAuditType
 
-        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
+        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
@@ -118,8 +118,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
         dataEvent.auditSource shouldBe httpWithAudit.appName
         dataEvent.auditType shouldBe outboundCallAuditType
 
-        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody, HeaderNames.deviceID -> deviceID)
+        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
@@ -176,8 +176,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       dataEvent.auditSource shouldBe httpWithAudit.appName
       dataEvent.auditType shouldBe outboundCallAuditType
 
-      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000", "Akamai-Reputation" -> "-")
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", HeaderNames.deviceID -> deviceID)
+      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
+      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
@@ -204,8 +204,8 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       dataEvent.auditSource shouldBe httpWithAudit.appName
       dataEvent.auditType shouldBe outboundCallAuditType
 
-      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", TransactionName -> serviceUri, Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-")
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody.get, HeaderNames.deviceID -> deviceID)
+      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
+      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody.get)
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
