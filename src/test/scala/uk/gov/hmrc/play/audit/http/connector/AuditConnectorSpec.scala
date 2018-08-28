@@ -27,6 +27,7 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
 import play.api.libs.json.{JsObject, Json}
+import play.api.test.FakeRequest
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.AuditHandler
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
@@ -36,13 +37,15 @@ import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
 
+case class MyExampleAudit(userType:String, vrn:String)
+
 class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val consumer = Consumer(BaseUri("datastream-base-url", 8080, "http"))
-  val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true)
-  val disabledConfig = AuditingConfig(consumer = Some(consumer), enabled = false)
+  val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name")
+  val disabledConfig = AuditingConfig(consumer = Some(consumer), enabled = false, auditSource = "the-project-name")
 
   val mockSimpleDatastreamHandler: AuditHandler = mock[AuditHandler]
   val mockMergedDatastreamHandler: AuditHandler = mock[AuditHandler]
@@ -62,7 +65,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
     "allow the configuration to be specified" in {
       val testPort = 9876
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
-      val config = AuditingConfig(consumer = Some(consumer), enabled = true)
+      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name")
       val connector = new AuditConnector {
         override def auditingConfig: AuditingConfig = config
       }
@@ -136,7 +139,7 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
     }
 
     "return Disabled if auditing is not enabled" in {
-      val disabledConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))), enabled = false)
+      val disabledConfig = AuditingConfig(consumer = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))), enabled = false, auditSource = "the-project-name")
 
       mockConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)
 
@@ -159,5 +162,63 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       verifyZeroInteractions(mockFlumeHandler)
       verifyZeroInteractions(mockLoggingHandler)
     }
+
+    "sendExplicitEvent Map[String,String]" should {
+      "call Datastream with tags read from headerCarrier" in {
+        when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+
+        val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
+        mockConnector(enabledConfig).sendExplicitAudit("theAuditType", Map("a" -> "1"))(headerCarrier, RunInlineExecutionContext)
+
+        val captor = ArgumentCaptor.forClass(classOf[String])
+        verify(mockSimpleDatastreamHandler).sendEvent(captor.capture())
+        (Json.parse(captor.getValue) \ "auditSource").as[String] mustBe "the-project-name"
+        val tags = (Json.parse(captor.getValue) \ "tags").as[JsObject]
+        (tags \ "X-Session-ID").as[String] mustBe "session-123"
+        (tags \ "path").as[String] mustBe "/a/b/c"
+        (Json.parse(captor.getValue) \ "detail").as[Map[String,String]] mustBe Map("a" -> "1")
+      }
+    }
+
+    "sendExplicitEvent [T]" should {
+      "call Datastream with tags read from headerCarrier and serialize T" in {
+        when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+
+        val writes = Json.writes[MyExampleAudit]
+
+        val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
+        mockConnector(enabledConfig).sendExplicitAudit("theAuditType", MyExampleAudit("Agent","123"))(headerCarrier, RunInlineExecutionContext, writes)
+
+        val captor = ArgumentCaptor.forClass(classOf[String])
+        verify(mockSimpleDatastreamHandler).sendEvent(captor.capture())
+        (Json.parse(captor.getValue) \ "auditSource").as[String] mustBe "the-project-name"
+        val tags = (Json.parse(captor.getValue) \ "tags").as[JsObject]
+        (tags \ "X-Session-ID").as[String] mustBe "session-123"
+        (tags \ "path").as[String] mustBe "/a/b/c"
+        val detail = (Json.parse(captor.getValue) \ "detail").as[JsObject]
+        (detail \ "userType").as[String] mustBe "Agent"
+        (detail \ "vrn").as[String] mustBe "123"
+      }
+    }
   }
+
+  "sendExplicitEvent JsObject" should {
+    "call Datastream with tags read from headerCarrier and pass through detail" in {
+      when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+
+      val expectedDetail = Json.obj("Address" -> Json.obj("line1" -> "Road", "postCode" -> "123"))
+      val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
+      mockConnector(enabledConfig).sendExplicitAudit("theAuditType", expectedDetail)(headerCarrier, RunInlineExecutionContext)
+
+      val captor = ArgumentCaptor.forClass(classOf[String])
+      verify(mockSimpleDatastreamHandler).sendEvent(captor.capture())
+      (Json.parse(captor.getValue) \ "auditSource").as[String] mustBe "the-project-name"
+      val tags = (Json.parse(captor.getValue) \ "tags").as[JsObject]
+      (tags \ "X-Session-ID").as[String] mustBe "session-123"
+      (tags \ "path").as[String] mustBe "/a/b/c"
+      val detail = (Json.parse(captor.getValue) \ "detail").as[JsObject]
+      detail mustBe expectedDetail
+    }
+  }
+
 }
