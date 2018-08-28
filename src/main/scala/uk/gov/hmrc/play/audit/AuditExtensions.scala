@@ -41,6 +41,8 @@ object AuditExtensions {
     def toAuditTags(path: String): Map[String, String] = auditTags ++ Map[String, String](Path -> path)
 
     def toAuditDetails(details: (String, String)*): Map[String, String] = details.toMap
+
+    def appendToDefaultTags(existing: Map[String, String]) = auditTags ++ existing
   }
 
   implicit def auditHeaderCarrier(carrier: HeaderCarrier): AuditHeaderCarrier = new AuditHeaderCarrier(carrier)

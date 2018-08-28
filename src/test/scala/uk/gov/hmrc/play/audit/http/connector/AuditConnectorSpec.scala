@@ -20,15 +20,18 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, containing, post, postRequestedFor, urlPathEqualTo}
 import org.joda.time.{DateTime, DateTimeZone}
+import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.AuditHandler
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.logging.SessionId
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
@@ -118,6 +121,18 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       verify(mockSimpleDatastreamHandler).sendEvent(anyString())
       verifyZeroInteractions(mockFlumeHandler)
       verifyZeroInteractions(mockLoggingHandler)
+    }
+
+    "add tags if not specified" in {
+      when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+      val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")))
+
+      mockConnector(enabledConfig).sendEvent(event)(headerCarrier, global).futureValue mustBe AuditResult.Success
+
+      val captor = ArgumentCaptor.forClass(classOf[String])
+      verify(mockSimpleDatastreamHandler).sendEvent(captor.capture())
+      val tags = (Json.parse(captor.getValue) \ "tags").as[JsObject]
+      (tags \ "X-Session-ID").as[String] mustBe "session-123"
     }
 
     "return Disabled if auditing is not enabled" in {

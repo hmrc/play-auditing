@@ -23,7 +23,7 @@ import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.model.{DataEvent, ExtendedDataEvent, MergedDataEvent}
 import uk.gov.hmrc.http.HeaderCarrier
-
+import uk.gov.hmrc.play.audit.AuditExtensions._
 import scala.concurrent.{ExecutionContext, Future}
 
 sealed trait AuditResult
@@ -66,11 +66,11 @@ trait AuditConnector {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def sendEvent(event: DataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] = {
-    ifEnabled(send, auditSerialiser.serialise(event), simpleDatastreamHandler)
+    ifEnabled(send, auditSerialiser.serialise(event.copy(tags=hc.appendToDefaultTags(event.tags))), simpleDatastreamHandler)
   }
 
   def sendExtendedEvent(event: ExtendedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] = {
-    ifEnabled(send, auditSerialiser.serialise(event), simpleDatastreamHandler)
+    ifEnabled(send, auditSerialiser.serialise(event.copy(tags=hc.appendToDefaultTags(event.tags))), simpleDatastreamHandler)
   }
 
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec : ExecutionContext): Future[AuditResult] = {
