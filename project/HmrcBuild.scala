@@ -41,7 +41,7 @@ private object AppDependencies {
 
   val compile = Seq(
     "uk.gov.hmrc" %% "http-core" % "0.5.0",
-    "com.ning" % "async-http-client" % "1.8.15"
+    "org.slf4j" % "slf4j-api" % "1.7.5"
   )
 
   trait TestDependencies {
