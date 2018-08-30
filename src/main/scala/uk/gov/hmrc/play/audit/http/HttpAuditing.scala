@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.time.DateTimeUtils
 
-import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
@@ -43,9 +43,9 @@ trait HttpAuditing extends DateTimeUtils {
       responseF.map {
         response =>
           audit(request, response)
-      }(ec).recover {
+      }.recover {
         case e: Throwable => auditRequestWithException(request, e.getMessage)
-      }(ec)
+      }
 
     }
   }
