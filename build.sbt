@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-import sbt._
 import sbt.Keys._
+import sbt._
+import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
 
 lazy val library: Project = (project in file("."))
-  .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
+  .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
+  .settings(
+    makePublicallyAvailableOnBintray := true,
+    majorVersion                     := 3
+  )
   .settings(
     name := "play-auditing",
     moduleName := "play-auditing",
