@@ -18,7 +18,7 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, containing, post, postRequestedFor, urlPathEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
@@ -27,7 +27,6 @@ import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import play.api.libs.json.{JsObject, Json}
-import play.api.test.FakeRequest
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.AuditHandler
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
