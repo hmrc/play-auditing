@@ -20,15 +20,15 @@ private object AppDependencies {
 
   val compile = Seq(
     "uk.gov.hmrc" %% "http-core" % "0.7.0",
-    "org.slf4j" % "slf4j-api" % "1.7.5"
+    "org.slf4j"   % "slf4j-api"  % "1.7.5"
   )
 
   val test = Seq(
-    "commons-codec" % "commons-codec" % "1.7" % Test,
-    "org.scalatest" %% "scalatest" % "2.2.6" % Test,
-    "org.scalacheck" %% "scalacheck" % "1.13.1" % Test,
-    "org.pegdown" % "pegdown" % "1.5.0" % Test,
-    "com.github.tomakehurst" % "wiremock" % "1.52" % Test,
-    "org.mockito" % "mockito-all" % "1.10.19" % Test
+    "commons-codec"          % "commons-codec" % "1.7"     % Test,
+    "org.scalatest"          %% "scalatest"    % "3.0.5"   % Test,
+    "org.scalacheck"         %% "scalacheck"   % "1.13.4"  % Test,
+    "org.pegdown"            % "pegdown"       % "1.5.0"   % Test,
+    "com.github.tomakehurst" % "wiremock"      % "1.52"    % Test,
+    "org.mockito"            % "mockito-all"   % "1.10.19" % Test
   )
 }
