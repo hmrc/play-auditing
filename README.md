@@ -40,36 +40,15 @@ protected object WSHttp extends WSGet with WSPut with WSPost with WSDelete with 
 [For more information on http-verbs, please see the docs here](http://github.com/hmrc/http-verbs)
 
 #### Explicit auditing
-```scala
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.http.config.AuditingConfig
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.AuditExtensions._
-import uk.gov.hmrc.play.audit.model.DataEvent
-import scala.concurrent.ExecutionContext.Implicits.global
-
-// simplest default config (you will want to do something different)
-val config = AuditingConfig(consumer = None, enabled = true)
-
-// setup global objects
-val appName = "preferences"
-val connector = AuditConnector(config)
-
-// get objects relating to the current request
-val carrier = HeaderCarrier()
-
-// create the audit event
-val event = DataEvent(appName, "SomeEventHappened",
-  tags = carrier.toAuditTags(
-    transactionName = "some_series_of_events",
-    path = "/some/path"
-  ),
-  detail = carrier.toAuditDetails(
-    "someServiceSpecificKey" -> "someValue"
-  ))
-
-connector.sendEvent(event)
+If you are using bootstrap-play-25 you should be able to inject AuditConnector.
+If you have an older project there should be an existing scala object which extends AuditConnector.
+AuditConnector has 3 methods for explicit audits. Use whichever you prefer.
+ ```scala
+ auditConnector.sendExplicitAudit("theAuditType", ExampleAuditData("123"))
+ auditConnector.sendExplicitAudit("theAuditType", Json.obj("vrn" -> "123", "some" -> Json.obj("nested" -> "value")))
+ auditConnector.sendExplicitAudit("theAuditType", Map("vrn" -> "123"))
 ```
+The sendExplicitAudit methods need the implicit parameter HeaderCarrier. You should be able to get this by extending BaseController.
 
 ## Configuration
 

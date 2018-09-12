@@ -38,4 +38,6 @@ object Consumer {
 }
 
 case class AuditingConfig(consumer: Option[Consumer],
-                          enabled: Boolean)
+                          enabled: Boolean,
+                          auditSource: String
+                         )

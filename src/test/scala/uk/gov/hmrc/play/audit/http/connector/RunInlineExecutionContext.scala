@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.test
+package uk.gov.hmrc.play.audit.http.connector
 
-import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.http.HttpResponse
+import scala.concurrent.ExecutionContext
 
-class DummyHttpResponse(override val body: String, override val status: Int, override val allHeaders: Map[String, Seq[String]] = Map.empty) extends HttpResponse {
-  override def json: JsValue = Json.parse(body)
+/**
+  * Ensures tasks are run on the thread creating the future
+  *
+  * This makes tests more deterministic
+  */
+object RunInlineExecutionContext extends ExecutionContext  {
+  override def execute(runnable: Runnable): Unit = runnable.run()
+  override def reportFailure(cause: Throwable): Unit = throw cause
 }

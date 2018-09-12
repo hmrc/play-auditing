@@ -74,12 +74,20 @@ trait HttpAuditing extends DateTimeUtils {
     MergedDataEvent(
       auditSource = appName,
       auditType = outboundCallAuditType,
-      request = DataCall(hc.toAuditTags(request.url, request.url), hc.toAuditDetails(requestDetails(request): _*), request.generatedAt),
+      request = DataCall(hc.toAuditTags(request.url), requestDetails(request), request.generatedAt),
       response = DataCall(Map.empty, responseDetails, now))
   }
 
-  private def requestDetails(request: HttpRequest)(implicit hc: HeaderCarrier): Seq[(String, String)] =
-    Seq(Path -> request.url, Method -> request.verb) ++ request.body.map(b => Seq(RequestBody -> b.toString)).getOrElse(Seq.empty) ++ HeaderFieldsExtractor.optionalAuditFields(hc.extraHeaders.toMap)
+  private def requestDetails(request: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
+    Map(
+      "ipAddress" -> hc.forwarded.map(_.value).getOrElse("-"),
+      hc.names.authorisation -> hc.authorization.map(_.value).getOrElse("-"),
+      hc.names.token -> hc.token.map(_.value).getOrElse("-"),
+      Path -> request.url,
+      Method -> request.verb) ++
+      request.body.map(b => Seq(RequestBody -> b.toString)).getOrElse(Seq.empty) ++
+      HeaderFieldsExtractor.optionalAuditFields(hc.extraHeaders.toMap)
+  }
 
   private def isAuditable(url: String) = !url.contains("/write/audit") && auditDisabledForPattern.findFirstIn(url).isEmpty
 
