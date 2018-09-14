@@ -15,11 +15,11 @@
  */
 
 import sbt._
-import uk.gov.hmrc.Dependencies
+import uk.gov.hmrc.crossPlayDependencies
 
 private object AppDependencies {
 
-    val compile = Dependencies(
+    val compile = crossPlayDependencies(
       play25 = Seq(
         "org.slf4j"    % "slf4j-api"   % "1.7.5",
         "uk.gov.hmrc"  %% "http-core"  % "0.7.0"
