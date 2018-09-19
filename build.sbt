@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+import PlayCrossCompilation._
 import sbt.Keys._
 import sbt._
-import uk.gov.hmrc.{PlayCrossCompilation, SbtArtifactory}
+import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
 
 lazy val library: Project = (project in file("."))
@@ -35,5 +36,5 @@ lazy val library: Project = (project in file("."))
       Resolver.bintrayRepo("hmrc", "releases"),
       Resolver.typesafeRepo("releases")
     ),
-    PlayCrossCompilation()
+    playCrossCompilationSettings
   )

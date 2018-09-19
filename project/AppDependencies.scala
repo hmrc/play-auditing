@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
+import PlayCrossCompilation._
 import sbt._
-import uk.gov.hmrc.crossPlayDependencies
+import uk.gov.hmrc.playcrosscompilation.PlayVersion._
 
 private object AppDependencies {
 
-    val compile = crossPlayDependencies(
-      play25 = Seq(
-        "org.slf4j"    % "slf4j-api"   % "1.7.5",
-        "uk.gov.hmrc"  %% "http-core"  % "0.7.0"
-      ),
-      play26 = Seq(
-        "org.slf4j"    % "slf4j-api"   % "1.7.25",
-        "uk.gov.hmrc"  %% "http-core"  % "1.2.0",
-        "uk.gov.hmrc"  %% "time"       % "3.1.0"
-      )
-    )
+  val compile = DependenciesSeq(
+    "org.slf4j"   % "slf4j-api"  % "1.7.5"  crossPlay Play25,
+    "uk.gov.hmrc" %% "http-core" % "0.7.0"  crossPlay Play25,
+    "org.slf4j"   % "slf4j-api"  % "1.7.25" crossPlay Play26,
+    "uk.gov.hmrc" %% "http-core" % "1.2.0"  crossPlay Play26,
+    "uk.gov.hmrc" %% "time"      % "3.1.0"  crossPlay Play26
+  )
 
   val test = Seq(
     "commons-codec"          % "commons-codec" % "1.7"     % Test,
