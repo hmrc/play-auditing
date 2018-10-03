@@ -28,7 +28,7 @@ object HttpResult {
   case class Failure(msg: String, nested: Option[Throwable] = None) extends Exception(msg, nested.orNull) with HttpResult
 }
 
-abstract class HttpHandler(endpointUrl: URL, connectTimeout: Integer = 5000,
+abstract class HttpHandler(endpointUrl: URL, userAgent:String, connectTimeout: Integer = 5000,
     requestTimeout: Integer = 5000, contentTypeHeader: String = "application/json",
     acceptHeader: String = "application/json") {
   
@@ -99,6 +99,7 @@ abstract class HttpHandler(endpointUrl: URL, connectTimeout: Integer = 5000,
     connection.setRequestMethod("POST")
     connection.setRequestProperty("Content-Type", contentTypeHeader)
     connection.setRequestProperty("Accept", acceptHeader)
+    connection.setRequestProperty("User-Agent", userAgent)
     connection.setConnectTimeout(connectTimeout)
     connection.setReadTimeout(requestTimeout)
     connection.setDoOutput(true)

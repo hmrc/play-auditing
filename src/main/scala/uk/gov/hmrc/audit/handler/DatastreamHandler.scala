@@ -22,8 +22,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
 
-class DatastreamHandler(scheme: String, host: String, port: Integer, path: String, connectTimeout: Integer, requestTimeout: Integer)
-  extends HttpHandler(new URL(s"$scheme://$host:$port$path"), connectTimeout, requestTimeout)
+class DatastreamHandler(scheme: String, host: String, port: Integer, path: String, connectTimeout: Integer, requestTimeout: Integer, userAgent:String)
+  extends HttpHandler(new URL(s"$scheme://$host:$port$path"), userAgent, connectTimeout, requestTimeout)
     with AuditHandler {
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)

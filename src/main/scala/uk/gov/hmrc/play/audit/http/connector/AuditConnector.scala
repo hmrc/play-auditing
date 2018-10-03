@@ -59,10 +59,10 @@ trait AuditConnector {
   lazy val baseUri: BaseUri = consumer.baseUri
 
   def simpleDatastreamHandler: AuditHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
-    baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
+    baseUri.port, s"/${consumer.singleEventUri}", defaultConnectionTimeout, defaultRequestTimeout, auditingConfig.auditSource)
 
   def mergedDatastreamHandler: AuditHandler = new DatastreamHandler(baseUri.protocol, baseUri.host,
-    baseUri.port, s"/${consumer.mergedEventUri}", defaultConnectionTimeout, defaultRequestTimeout)
+    baseUri.port, s"/${consumer.mergedEventUri}", defaultConnectionTimeout, defaultRequestTimeout, auditingConfig.auditSource)
 
   def loggingConnector: AuditHandler = LoggingHandler
   def auditSerialiser: AuditSerialiserLike = AuditSerialiser
