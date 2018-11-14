@@ -20,14 +20,16 @@ import sbt._
 private object AppDependencies {
 
   val compile = dependencies(
+    shared = Seq(
+      "uk.gov.hmrc" %% "time"       % "3.2.0"
+    ),
     play25 = Seq(
-      "org.slf4j"   % "slf4j-api"  % "1.7.5",
-      "uk.gov.hmrc" %% "http-core" % "0.7.0"
+      "org.slf4j"   % "slf4j-api"   % "1.7.5",
+      "uk.gov.hmrc" %% "http-verbs" % "8.8.0-play-25"
     ),
     play26 = Seq(
-      "org.slf4j"   % "slf4j-api"  % "1.7.25",
-      "uk.gov.hmrc" %% "http-core" % "1.2.0" ,
-      "uk.gov.hmrc" %% "time"      % "3.1.0"
+      "org.slf4j"   % "slf4j-api"   % "1.7.25",
+      "uk.gov.hmrc" %% "http-verbs" % "8.8.0-play-26"
     )
   )
 
