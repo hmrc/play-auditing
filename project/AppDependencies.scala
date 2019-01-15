@@ -25,7 +25,7 @@ private object AppDependencies {
     ),
     play25 = Seq(
       "org.slf4j"   % "slf4j-api"   % "1.7.5",
-      "uk.gov.hmrc" %% "http-verbs" % "8.10.0-play-25"
+      "uk.gov.hmrc" %% "http-verbs" % "9.0.0-play-25"
     ),
     play26 = Seq(
       "org.slf4j"   % "slf4j-api"   % "1.7.25",
