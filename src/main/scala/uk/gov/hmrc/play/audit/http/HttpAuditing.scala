@@ -25,7 +25,6 @@ import uk.gov.hmrc.http.hooks.HttpHook
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.time.DateTimeUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
@@ -50,12 +49,12 @@ trait HttpAuditing extends DateTimeUtils {
     }
   }
 
-  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier): Unit = audit(HttpRequest(url, "", None, now), response)(hc)
+  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier)(implicit ec: ExecutionContext): Unit = audit(HttpRequest(url, "", None, now), response)(hc, ec)
 
-  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier): Unit =
+  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
 
-  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier): Unit =
+  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
 
   private def dataEventFor(request: HttpRequest, errorMesssage: String)(implicit hc: HeaderCarrier) = {

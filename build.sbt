@@ -24,7 +24,7 @@ lazy val library: Project = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
   .settings(
     makePublicallyAvailableOnBintray := true,
-    majorVersion                     := 3
+    majorVersion                     := 4
   )
   .settings(
     name := "play-auditing",
@@ -32,6 +32,7 @@ lazy val library: Project = (project in file("."))
     scalacOptions ++= Seq("-language:implicitConversions"),
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     scalaVersion := "2.11.12",
+    crossScalaVersions := List("2.11.12", "2.12.8"),
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
       Resolver.typesafeRepo("releases")
