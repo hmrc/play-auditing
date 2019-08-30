@@ -24,6 +24,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{Inspectors, Matchers, WordSpecLike}
+import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
@@ -212,6 +213,108 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
       dataEvent.response.detail shouldBe Map(ResponseMessage -> response.body, StatusCode -> response.status.toString)
       dataEvent.response.generatedAt shouldBe responseDateTime
 
+    }
+
+    "mask passwords in an OutboundCall using form values" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = Map("ok" -> "a", "password" -> "hide-me", "passwordConfirmation" -> "hide-me")
+      val response = new DummyHttpResponse(Json.obj("password" -> "hide-me").toString, 200)
+
+      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(requestBody))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody) shouldBe requestBody.toString.replaceAllLiterally("hide-me", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe response.body.replaceAllLiterally("hide-me", "########")
+    }
+
+    "mask passwords in an OutboundCall using json" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val sampleJson = Json.obj("a" -> Json.arr(Json.obj("ok" -> 1, "password" -> "hide-me", "PASSWD" -> "hide-me")))
+      val response = new DummyHttpResponse(Json.stringify(sampleJson), 200)
+
+      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(Json.stringify(sampleJson)))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody) shouldBe sampleJson.toString.replaceAllLiterally("hide-me", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe response.body.replaceAllLiterally("hide-me", "########")
+    }
+
+    "mask passwords in an OutboundCall using xml" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val sampleXml =
+        """<abc>
+          |    <foo>
+          |        <Password>hide-me</Password>
+          |        <prefix:password>hide-me</prefix:password>
+          |    </foo>
+          |    <bar PassWord="hide-me" prefix:PASSWORD="hide-me"/>
+          |</abc>""".stripMargin
+      val response = new DummyHttpResponse(sampleXml, 200)
+
+      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(sampleXml))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody) shouldBe sampleXml.toString.replaceAllLiterally("hide-me", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe response.body.replaceAllLiterally("hide-me", "########")
+    }
+
+    "handle an invalid xml request and response body" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = "< this is not xml"
+      val response = new DummyHttpResponse("< this is not xml", 200)
+
+      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(requestBody))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody) shouldBe requestBody
+      dataEvent.response.detail(ResponseMessage) shouldBe response.body
+    }
+
+    "handle an invalid json request and response body" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = "{ not json"
+      val response = new DummyHttpResponse("{ not json", 200)
+
+      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(requestBody))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody) shouldBe requestBody
+      dataEvent.response.detail(ResponseMessage) shouldBe response.body
     }
   }
 

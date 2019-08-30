@@ -21,7 +21,8 @@ private object AppDependencies {
 
   val compile = dependencies(
     shared = Seq(
-      "uk.gov.hmrc" %% "time"       % "3.3.0"
+      "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
+      "uk.gov.hmrc"            %% "time"      % "3.3.0"
     ),
     play25 = Seq(
       "org.slf4j"   % "slf4j-api"   % "1.7.5",
