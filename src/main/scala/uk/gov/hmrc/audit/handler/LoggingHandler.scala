@@ -19,7 +19,7 @@ package uk.gov.hmrc.audit.handler
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.hmrc.audit.HandlerResult
 
-class LoggingHandler(log: Logger) extends AuditHandler {
+class LoggingHandler(logger: Logger) extends AuditHandler {
 
   private val ErrorKey = "DS_EventMissed_AuditRequestFailure"
 
@@ -27,7 +27,7 @@ class LoggingHandler(log: Logger) extends AuditHandler {
 
   def sendEvent(event: String): HandlerResult = {
     val message = makeFailureMessage(event)
-    log.warn(message)
+    logger.warn(message)
     HandlerResult.Success
   }
 }

@@ -17,31 +17,38 @@
 package uk.gov.hmrc.play.audit.model
 
 import java.util.UUID
+import java.time.Instant
 
-import org.joda.time.DateTime
 import play.api.libs.json._
-import uk.gov.hmrc.time.DateTimeUtils
 
-case class DataEvent(auditSource: String,
-                     auditType: String,
-                     eventId: String = UUID.randomUUID().toString,
-                     tags: Map[String, String] = Map.empty,
-                     detail: Map[String, String] = Map.empty,
-                     generatedAt: DateTime = DateTimeUtils.now)
+case class DataEvent(
+  auditSource: String,
+  auditType  : String,
+  eventId    : String              = UUID.randomUUID().toString,
+  tags       : Map[String, String] = Map.empty,
+  detail     : Map[String, String] = Map.empty,
+  generatedAt: Instant             = Instant.now
+)
 
-case class ExtendedDataEvent(auditSource: String,
-                             auditType: String,
-                             eventId: String = UUID.randomUUID().toString,
-                             tags: Map[String, String] = Map.empty,
-                             detail: JsValue = JsString(""),
-                             generatedAt: DateTime = DateTimeUtils.now)
+case class ExtendedDataEvent(
+  auditSource: String,
+  auditType  : String,
+  eventId    : String              = UUID.randomUUID().toString,
+  tags       : Map[String, String] = Map.empty,
+  detail     : JsValue             = JsString(""),
+  generatedAt: Instant             = Instant.now
+)
 
-case class DataCall(tags: Map[String, String],
-                    detail: Map[String, String],
-                    generatedAt: DateTime)
+case class DataCall(
+  tags       : Map[String, String],
+  detail     : Map[String, String],
+  generatedAt: Instant
+)
 
-case class MergedDataEvent(auditSource: String,
-                           auditType: String,
-                           eventId: String = UUID.randomUUID().toString,
-                           request: DataCall,
-                           response: DataCall)
+case class MergedDataEvent(
+  auditSource: String,
+  auditType  : String,
+  eventId    : String = UUID.randomUUID().toString,
+  request    : DataCall,
+  response   : DataCall
+)

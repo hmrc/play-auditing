@@ -16,19 +16,26 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-case class BaseUri(host: String, port: Int, protocol: String) {
-  val uri: String = s"$protocol://$host:$port".stripSuffix("/") + "/"
+case class BaseUri(
+  host    : String,
+  port    : Int,
+  protocol: String
+) {
+  val uri: String =
+    s"$protocol://$host:$port".stripSuffix("/") + "/"
 
-  def addEndpoint(endpoint: String): String = s"$uri${endpoint.stripPrefix("/")}"
+  def addEndpoint(endpoint: String): String =
+    s"$uri${endpoint.stripPrefix("/")}"
 }
 
-case class Consumer(baseUri: BaseUri,
-                    singleEventUri: String = "write/audit",
-                    mergedEventUri: String = "write/audit/merged",
-                    largeMergedEventUri: String = "write/audit/merged/large") {
-
-  val singleEventUrl: String = baseUri.addEndpoint(singleEventUri)
-  val mergedEventUrl: String = baseUri.addEndpoint(mergedEventUri)
+case class Consumer(
+  baseUri            : BaseUri,
+  singleEventUri     : String  = "write/audit",
+  mergedEventUri     : String  = "write/audit/merged",
+  largeMergedEventUri: String  = "write/audit/merged/large"
+) {
+  val singleEventUrl     : String = baseUri.addEndpoint(singleEventUri)
+  val mergedEventUrl     : String = baseUri.addEndpoint(mergedEventUri)
   val largeMergedEventUrl: String = baseUri.addEndpoint(largeMergedEventUri)
 
 }
@@ -37,7 +44,8 @@ object Consumer {
   implicit def baseUriToConsumer(b: BaseUri): Consumer = Consumer(b)
 }
 
-case class AuditingConfig(consumer: Option[Consumer],
-                          enabled: Boolean,
-                          auditSource: String
-                         )
+case class AuditingConfig(
+  consumer   : Option[Consumer],
+  enabled    : Boolean,
+  auditSource: String
+)

@@ -114,7 +114,7 @@ class DatastreamHandlerWireSpec extends WordSpecLike with Inspectors with Matche
   "All calls to Datastream" should {
     "set the user-agent" in {
       stub("EVENT", 204)
-      val result = datastreamHandler.sendEvent("EVENT")
+      datastreamHandler.sendEvent("EVENT")
       WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)).withHeader("User-Agent", equalTo("the-micro-service-name")))
     }
   }

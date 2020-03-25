@@ -22,32 +22,34 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
 
-class DatastreamHandler(scheme: String, host: String, port: Integer, path: String, connectTimeout: Integer, requestTimeout: Integer, userAgent:String)
-  extends HttpHandler(new URL(s"$scheme://$host:$port$path"), userAgent, connectTimeout, requestTimeout)
+class DatastreamHandler(
+  scheme        : String,
+  host          : String,
+  port          : Integer,
+  path          : String,
+  connectTimeout: Integer,
+  requestTimeout: Integer,
+  userAgent     : String
+) extends HttpHandler(new URL(s"$scheme://$host:$port$path"), userAgent, connectTimeout, requestTimeout)
     with AuditHandler {
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  override def sendEvent(event: String): HandlerResult = {
+  override def sendEvent(event: String): HandlerResult =
     sendEvent(event, retryIfMalformed = true)
-  }
 
   private def sendEvent(event: String, retryIfMalformed: Boolean): HandlerResult = {
     val result = sendHttpRequest(event)
     result match {
       case HttpResult.Response(status) =>
         status match {
-          case 204 =>
-            Success
-          case 400 =>
-            logger.warn("Malformed request rejected by Datastream")
-            Rejected
-          case 413 =>
-            logger.warn("Too large request rejected by Datastream")
-            Rejected
-          case _ =>
-            logger.error(s"Unknown return value $status")
-            Failure
+          case 204 => Success
+          case 400 => logger.warn("Malformed request rejected by Datastream")
+                      Rejected
+          case 413 => logger.warn("Too large request rejected by Datastream")
+                      Rejected
+          case _   => logger.error(s"Unknown return value $status")
+                      Failure
         }
       case HttpResult.Malformed =>
         if (retryIfMalformed) {
@@ -59,10 +61,8 @@ class DatastreamHandler(scheme: String, host: String, port: Integer, path: Strin
         }
       case HttpResult.Failure(msg, exceptionOption) =>
         exceptionOption match {
-          case None =>
-            logger.error(msg)
-          case Some(ex) =>
-            logger.error(msg, ex)
+          case None     => logger.error(msg)
+          case Some(ex) => logger.error(msg, ex)
         }
         Failure
     }

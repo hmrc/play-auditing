@@ -18,7 +18,7 @@ package uk.gov.hmrc.audit
 
 sealed trait HandlerResult
 object HandlerResult {
-  case object Success extends HandlerResult
+  case object Success  extends HandlerResult
   case object Rejected extends HandlerResult
-  case object Failure extends HandlerResult
+  case object Failure  extends HandlerResult
 }

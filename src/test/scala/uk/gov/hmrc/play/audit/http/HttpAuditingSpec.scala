@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.play.audit.http
 
-import org.joda.time.DateTime
+import java.time.Instant
+
 import org.mockito.ArgumentCaptor
 import org.scalatest.matchers.should.Matchers
 import org.mockito.Mockito._
@@ -46,8 +47,8 @@ class HttpAuditingSpec
   with MockitoSugar {
 
   val outboundCallAuditType: String = "OutboundCall"
-  val requestDateTime = new DateTime()
-  val responseDateTime: DateTime = requestDateTime.plusSeconds(5)
+  val requestDateTime = Instant.now
+  val responseDateTime: Instant = requestDateTime.plusSeconds(5)
 
   class HttpWithAuditing(connector: AuditConnector) extends HttpAuditing {
     override val appName: String = "httpWithAuditSpec"
@@ -57,10 +58,10 @@ class HttpAuditingSpec
       AuditingHook(url, verb, requestBody, response)(hc, global)
 
     var now_call_count = 0
-    override def now: DateTime = {
+    override def now(): Instant = {
       now_call_count = now_call_count + 1
 
-      if(now_call_count == 1) requestDateTime
+      if (now_call_count == 1) requestDateTime
       else responseDateTime
     }
 
