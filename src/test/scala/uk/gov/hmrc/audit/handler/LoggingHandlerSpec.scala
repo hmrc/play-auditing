@@ -18,7 +18,7 @@ package uk.gov.hmrc.audit.handler
 
 import org.mockito.Mockito._
 import org.scalatest.WordSpecLike
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 
 class LoggingHandlerSpec extends WordSpecLike with MockitoSugar {

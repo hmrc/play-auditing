@@ -18,12 +18,14 @@ package uk.gov.hmrc.play.audit.http
 
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
+import org.scalatest.matchers.should.Matchers
 import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.any
 import org.scalatest.concurrent.Eventually
-import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{Inspectors, Matchers, WordSpecLike}
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.Inspectors
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -36,7 +38,12 @@ import uk.gov.hmrc.play.test.DummyHttpResponse
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with Eventually with MockitoSugar {
+class HttpAuditingSpec
+  extends AnyWordSpecLike
+  with Matchers
+  with Inspectors
+  with Eventually
+  with MockitoSugar {
 
   val outboundCallAuditType: String = "OutboundCall"
   val requestDateTime = new DateTime()
@@ -51,7 +58,7 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
 
     var now_call_count = 0
     override def now: DateTime = {
-      now_call_count=now_call_count+1
+      now_call_count = now_call_count + 1
 
       if(now_call_count == 1) requestDateTime
       else responseDateTime
@@ -438,9 +445,9 @@ class HttpAuditingSpec extends WordSpecLike with Matchers with Inspectors with E
     }
   }
 
-  def whenAuditSuccess(connector: AuditConnector): Unit = {
-    when(connector.sendMergedEvent(any[MergedDataEvent])).thenReturn(Future.successful(Success))
-  }
+  def whenAuditSuccess(connector: AuditConnector): Unit =
+    when(connector.sendMergedEvent(any[MergedDataEvent]))
+      .thenReturn(Future.successful(Success))
 
   def verifyAndRetrieveEvent(connector: AuditConnector): MergedDataEvent = {
     val captor = ArgumentCaptor.forClass(classOf[MergedDataEvent])
