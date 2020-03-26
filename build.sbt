@@ -22,6 +22,11 @@ import uk.gov.hmrc.versioning.SbtGitVersioning
 val scala2_11 = "2.11.12"
 val scala2_12 = "2.12.10"
 
+// Disable multiple project tests running at the same time: https://stackoverflow.com/questions/11899723/how-to-turn-off-parallel-execution-of-tests-for-multi-project-builds
+// TODO: restrict parallelExecution to tests only (the obvious way to do this using Test scope does not seem to work correctly)
+parallelExecution in Global := false
+
+
 lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
   majorVersion := 5,
@@ -42,12 +47,13 @@ lazy val library = (project in file("."))
     publish := {},
     publishAndDistribute := {},
     // by default this is Seq(scalaVersion) which doesn't play well and causes sbt
-    // to try an invalid cross-build for hmrcMongoMetrixPlay27
+    // to try an invalid cross-build for playAuditingPlay25
     crossScalaVersions := Seq.empty
   )
   .aggregate(
     playAuditingPlay25,
-    playAuditingPlay26
+    playAuditingPlay26,
+    playAuditingPlay27
   )
 
 lazy val playAuditingPlay25 = Project("play-auditing-play-25", file("play-auditing-play-25"))
@@ -67,4 +73,14 @@ lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditi
     Compile / scalaSource := baseDirectory.value / "../src/main/scala",
     Test    / scalaSource := baseDirectory.value / "../src/test/scala",
     libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay26 ++ AppDependencies.test
+  )
+
+lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditing-play-27"))
+  .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
+  .settings(
+    commonSettings,
+    Compile / scalaSource := baseDirectory.value / "../src/main/scala",
+    Test    / scalaSource := baseDirectory.value / "../src/test/scala",
+    libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay27 ++ AppDependencies.test,
+    crossScalaVersions := Seq(scala2_12)
   )

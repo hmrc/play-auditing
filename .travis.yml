@@ -3,10 +3,6 @@ sudo: false
 language: scala
 script: sbt +test
 jdk: openjdk8
-matrix:
-  include:
-    - env: PLAY_VERSION=2.5
-    - env: PLAY_VERSION=2.6
 cache:
   directories:
     - '$HOME/.ivy2/cache'

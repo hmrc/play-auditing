@@ -31,6 +31,10 @@ object AppDependencies {
       "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-26"
     )
 
+  val compilePlay27 = Seq(
+      "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-27"
+    )
+
   val test = Seq(
     "commons-codec"          %  "commons-codec"         % "1.14"     % Test,
     "org.scalatest"          %% "scalatest"             % "3.1.1"    % Test,
