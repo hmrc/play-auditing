@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-import PlayCrossCompilation._
 import sbt._
 
-private object AppDependencies {
+object AppDependencies {
 
-  val compile = dependencies(
-    shared = Seq(
+  val compileCommon = Seq(
       "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
       "org.slf4j"              %  "slf4j-api" % "1.7.30"
-    ),
-    play25 = Seq(
+    )
+
+  val compilePlay25 = Seq(
       "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-25"
-    ),
-    play26 = Seq(
+    )
+
+  val compilePlay26 = Seq(
       "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-26"
     )
-  )
 
   val test = Seq(
     "commons-codec"          %  "commons-codec"         % "1.14"     % Test,
