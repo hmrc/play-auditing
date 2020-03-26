@@ -18,7 +18,7 @@ libraryDependencies += "uk.gov.hmrc" %% "play-auditing-play-yy" % "x.x.x"
 
 ## Version Info
 
-Since version 4, play-auditing is no longer build with the `sbt-play-cross-compilation` plugin (where the version of play was embedded in the version of the library). Instead, multiple modules are produced for different versions of play:
+Since version 5, play-auditing is no longer build with the `sbt-play-cross-compilation` plugin (where the version of play was embedded in the version of the library). Instead, multiple modules are produced for different versions of play:
 
 | Version | Play Version | Scala Version |
 |---------|--------------|---------------|
@@ -26,7 +26,7 @@ Since version 4, play-auditing is no longer build with the `sbt-play-cross-compi
 | play-auditing-play-26  | Play 2.6.x | 2.11, 2.12
 | play-auditing-play-25  | Play 2.5.x | 2.11
 
-Also since version 4, joda time has been replaced with java time internally.
+Also since version 5, joda time has been replaced with java time internally.
 
 ## Usage
 
