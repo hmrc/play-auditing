@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,13 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito._
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.matchers.must.Matchers
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.AuditHandler
@@ -36,9 +38,9 @@ import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
 
-case class MyExampleAudit(userType:String, vrn:String)
+case class MyExampleAudit(userType: String, vrn: String)
 
-class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
+class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -97,7 +99,8 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
   "sendMergedEvent" should {
     "call merged Datastream with event converted to json" in {
-      when(mockMergedDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+      when(mockMergedDatastreamHandler.sendEvent(anyString()))
+        .thenReturn(HandlerResult.Success)
 
       val mergedEvent = MergedDataEvent("Test", "Test", "TestEventId",
           DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)),
@@ -106,9 +109,9 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       mockConnector(enabledConfig).sendMergedEvent(mergedEvent).futureValue mustBe Success
 
       verify(mockMergedDatastreamHandler).sendEvent(anyString())
-      verifyZeroInteractions(mockSimpleDatastreamHandler)
-      verifyZeroInteractions(mockFlumeHandler)
-      verifyZeroInteractions(mockLoggingHandler)
+      verifyNoInteractions(mockSimpleDatastreamHandler)
+      verifyNoInteractions(mockFlumeHandler)
+      verifyNoInteractions(mockLoggingHandler)
     }
   }
 
@@ -116,17 +119,19 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
     val event = DataEvent("source", "type")
 
     "call Datastream with the event converted to json" in {
-      when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+      when(mockSimpleDatastreamHandler.sendEvent(anyString()))
+        .thenReturn(HandlerResult.Success)
 
       mockConnector(enabledConfig).sendEvent(event).futureValue mustBe AuditResult.Success
 
       verify(mockSimpleDatastreamHandler).sendEvent(anyString())
-      verifyZeroInteractions(mockFlumeHandler)
-      verifyZeroInteractions(mockLoggingHandler)
+      verifyNoInteractions(mockFlumeHandler)
+      verifyNoInteractions(mockLoggingHandler)
     }
 
     "add tags if not specified" in {
-      when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+      when(mockSimpleDatastreamHandler.sendEvent(anyString()))
+        .thenReturn(HandlerResult.Success)
       val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")))
 
       mockConnector(enabledConfig).sendEvent(event)(headerCarrier, global).futureValue mustBe AuditResult.Success
@@ -142,15 +147,16 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
       mockConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)
 
-      verifyZeroInteractions(mockSimpleDatastreamHandler)
-      verifyZeroInteractions(mockFlumeHandler)
-      verifyZeroInteractions(mockLoggingHandler)
+      verifyNoInteractions(mockSimpleDatastreamHandler)
+      verifyNoInteractions(mockFlumeHandler)
+      verifyNoInteractions(mockLoggingHandler)
     }
   }
 
   "sendExtendedEvent" should {
     "call Datastream with extended event data converted to json" in {
-      when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+      when(mockSimpleDatastreamHandler.sendEvent(anyString()))
+        .thenReturn(HandlerResult.Success)
 
       val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
       val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", detail = detail)
@@ -158,13 +164,14 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       mockConnector(enabledConfig).sendExtendedEvent(event).futureValue mustBe AuditResult.Success
 
       verify(mockSimpleDatastreamHandler).sendEvent(anyString())
-      verifyZeroInteractions(mockFlumeHandler)
-      verifyZeroInteractions(mockLoggingHandler)
+      verifyNoInteractions(mockFlumeHandler)
+      verifyNoInteractions(mockLoggingHandler)
     }
 
     "sendExplicitEvent Map[String,String]" should {
       "call Datastream with tags read from headerCarrier" in {
-        when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+        when(mockSimpleDatastreamHandler.sendEvent(anyString()))
+          .thenReturn(HandlerResult.Success)
 
         val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
         mockConnector(enabledConfig).sendExplicitAudit("theAuditType", Map("a" -> "1"))(headerCarrier, RunInlineExecutionContext)
@@ -181,7 +188,8 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
     "sendExplicitEvent [T]" should {
       "call Datastream with tags read from headerCarrier and serialize T" in {
-        when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+        when(mockSimpleDatastreamHandler.sendEvent(anyString()))
+          .thenReturn(HandlerResult.Success)
 
         val writes = Json.writes[MyExampleAudit]
 
@@ -203,7 +211,8 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
 
   "sendExplicitEvent JsObject" should {
     "call Datastream with tags read from headerCarrier and pass through detail" in {
-      when(mockSimpleDatastreamHandler.sendEvent(anyString())).thenReturn(HandlerResult.Success)
+      when(mockSimpleDatastreamHandler.sendEvent(anyString()))
+        .thenReturn(HandlerResult.Success)
 
       val expectedDetail = Json.obj("Address" -> Json.obj("line1" -> "Road", "postCode" -> "123"))
       val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
@@ -219,5 +228,4 @@ class AuditConnectorSpec extends WordSpecLike with MustMatchers with ScalaFuture
       detail mustBe expectedDetail
     }
   }
-
 }

@@ -22,24 +22,24 @@ private object AppDependencies {
   val compile = dependencies(
     shared = Seq(
       "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
-      "uk.gov.hmrc"            %% "time"      % "3.3.0"
+      "uk.gov.hmrc"            %% "time"      % "3.9.0",
+      "org.slf4j"              %  "slf4j-api" % "1.7.30"
     ),
     play25 = Seq(
-      "org.slf4j"   % "slf4j-api"   % "1.7.5",
-      "uk.gov.hmrc" %% "http-verbs" % "9.3.0-play-25"
+      "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-25"
     ),
     play26 = Seq(
-      "org.slf4j"   % "slf4j-api"   % "1.7.25",
-      "uk.gov.hmrc" %% "http-verbs" % "9.3.0-play-26"
+      "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-26"
     )
   )
 
   val test = Seq(
-    "commons-codec"          % "commons-codec" % "1.7"     % Test,
-    "org.scalatest"          %% "scalatest"    % "3.0.5"   % Test,
-    "org.scalacheck"         %% "scalacheck"   % "1.13.4"  % Test,
-    "org.pegdown"            % "pegdown"       % "1.5.0"   % Test,
-    "com.github.tomakehurst" % "wiremock"      % "1.52"    % Test,
-    "org.mockito"            % "mockito-all"   % "1.10.19" % Test
+    "commons-codec"          %  "commons-codec"         % "1.14"    % Test,
+    "org.scalatest"          %% "scalatest"             % "3.1.1"   % Test,
+    "com.vladsch.flexmark"   %  "flexmark-all"          % "0.35.10" % Test,
+    "org.scalacheck"         %% "scalacheck"            % "1.14.3"  % Test,
+    "com.github.tomakehurst" %  "wiremock"              % "2.26.3"  % Test,
+    "org.scalatestplus"      %% "scalatestplus-mockito" % "1.0.0-M2" % Test,
+    "org.mockito"            %  "mockito-core"          % "3.3.3"    % Test,
   )
 }

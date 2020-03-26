@@ -32,7 +32,7 @@ lazy val library: Project = (project in file("."))
     scalacOptions ++= Seq("-language:implicitConversions"),
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     scalaVersion := "2.11.12",
-    crossScalaVersions := List("2.11.12", "2.12.8"),
+    crossScalaVersions := List("2.11.12", "2.12.10"),
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
       Resolver.typesafeRepo("releases")
