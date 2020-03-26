@@ -28,10 +28,15 @@ object HttpResult {
   case class Failure(msg: String, nested: Option[Throwable] = None) extends Exception(msg, nested.orNull) with HttpResult
 }
 
-abstract class HttpHandler(endpointUrl: URL, userAgent:String, connectTimeout: Integer = 5000,
-    requestTimeout: Integer = 5000, contentTypeHeader: String = "application/json",
-    acceptHeader: String = "application/json") {
-  
+abstract class HttpHandler(
+  endpointUrl      : URL,
+  userAgent        : String,
+  connectTimeout   : Integer = 5000,
+  requestTimeout   : Integer = 5000,
+  contentTypeHeader: String  = "application/json",
+  acceptHeader     : String  = "application/json"
+) {
+
   private val logger: Logger = LoggerFactory.getLogger(getClass)
   val HTTP_STATUS_CONTINUE = 100
 
@@ -39,7 +44,7 @@ abstract class HttpHandler(endpointUrl: URL, userAgent:String, connectTimeout: I
     var outputStream: OutputStream = null
 
     try {
-      if (event != null && event.length > 0) {
+      if (event != null && event.nonEmpty) {
         logger.debug(s"Sending audit request to URL ${endpointUrl.toString}")
 
         try {

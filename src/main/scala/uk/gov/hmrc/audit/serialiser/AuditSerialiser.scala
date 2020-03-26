@@ -16,18 +16,8 @@
 
 package uk.gov.hmrc.audit.serialiser
 
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
-import play.api.libs.json.{JsString, JsValue, Json, Writes}
+import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
-
-object DateWriter {
-  implicit def dateTimeWrites = new Writes[DateTime] {
-    private val dateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-
-    def writes(dt: DateTime): JsValue = JsString(dateFormat.withZone(DateTimeZone.UTC).print(dt.getMillis))
-  }
-}
 
 trait AuditSerialiserLike {
   def serialise(event: DataEvent): String
@@ -36,24 +26,19 @@ trait AuditSerialiserLike {
 }
 
 class AuditSerialiser extends AuditSerialiserLike {
+  private implicit val dataEventWriter: Writes[DataEvent] = Json.writes[DataEvent]
+  private implicit val dataCallWriter: Writes[DataCall] = Json.writes[DataCall]
+  private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] = Json.writes[ExtendedDataEvent]
+  private implicit val mergedDataEventWriter: Writes[MergedDataEvent] = Json.writes[MergedDataEvent]
 
-  implicit val dateWriter: Writes[DateTime] = DateWriter.dateTimeWrites
-  implicit val dataEventWriter: Writes[DataEvent] = Json.writes[DataEvent]
-  implicit val dataCallWriter: Writes[DataCall] = Json.writes[DataCall]
-  implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] = Json.writes[ExtendedDataEvent]
-  implicit val mergedDataEventWriter: Writes[MergedDataEvent] = Json.writes[MergedDataEvent]
-
-  override def serialise(event: DataEvent): String = {
+  override def serialise(event: DataEvent): String =
     Json.toJson(event).toString()
-  }
 
-  override def serialise(event: ExtendedDataEvent): String = {
+  override def serialise(event: ExtendedDataEvent): String =
     Json.toJson(event).toString()
-  }
 
-  override def serialise(event: MergedDataEvent): String = {
+  override def serialise(event: MergedDataEvent): String =
     Json.toJson(event).toString()
-  }
 }
 
 object AuditSerialiser extends AuditSerialiser

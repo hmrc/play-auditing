@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
+import java.time.Instant
+
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
-import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito._
@@ -70,7 +71,7 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
       val connector = new AuditConnector {
         override def auditingConfig: AuditingConfig = config
       }
-      val dataCall = DataCall(Map(), Map(), DateTime.now())
+      val dataCall = DataCall(Map(), Map(), Instant.now())
 
       val wireMock = new WireMockServer(testPort)
       WireMock.configureFor("localhost", testPort)
@@ -103,8 +104,8 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
         .thenReturn(HandlerResult.Success)
 
       val mergedEvent = MergedDataEvent("Test", "Test", "TestEventId",
-          DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)),
-          DataCall(Map.empty, Map.empty, DateTime.now(DateTimeZone.UTC)))
+          DataCall(Map.empty, Map.empty, Instant.now()),
+          DataCall(Map.empty, Map.empty, Instant.now()))
 
       mockConnector(enabledConfig).sendMergedEvent(mergedEvent).futureValue mustBe Success
 

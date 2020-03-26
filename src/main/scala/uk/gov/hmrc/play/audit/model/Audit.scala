@@ -24,7 +24,6 @@ import scala.util.Try
 
 
 sealed trait AuditAsMagnet[A] {
-
   import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
   val txName: String
@@ -32,32 +31,37 @@ sealed trait AuditAsMagnet[A] {
   val outputTransformer: OutputTransformer[A]
   val eventTypes: (String, String)
 
-  def apply(f: (String, Map[String, String], OutputTransformer[A], (String, String)) => A): A = f(txName, inputs, outputTransformer, eventTypes)
-
+  def apply(f: (String, Map[String, String], OutputTransformer[A], (String, String)) => A): A =
+    f(txName, inputs, outputTransformer, eventTypes)
 }
 
 object AuditAsMagnet {
 
   import uk.gov.hmrc.play.audit.model.Audit.{EventTypeFlowDescriptions, OutputTransformer, defaultEventTypes}
 
-  implicit def inputAsStringDefaultEventTypes[A](parms: (String, String, OutputTransformer[A])): AuditAsMagnet[A] = auditAsMagnet(parms._1, Map("" -> parms._2), defaultEventTypes, parms._3)
+  implicit def inputAsStringDefaultEventTypes[A](parms: (String, String, OutputTransformer[A])): AuditAsMagnet[A] =
+    auditAsMagnet(parms._1, Map("" -> parms._2), defaultEventTypes, parms._3)
 
-  implicit def inputAsString[A](parms: (String, String, EventTypeFlowDescriptions, OutputTransformer[A])): AuditAsMagnet[A] = auditAsMagnet(parms._1, Map("" -> parms._2), parms._3, parms._4)
+  implicit def inputAsString[A](parms: (String, String, EventTypeFlowDescriptions, OutputTransformer[A])): AuditAsMagnet[A] =
+    auditAsMagnet(parms._1, Map("" -> parms._2), parms._3, parms._4)
 
-  implicit def inputAsMapDefaultEventTypes[A](parms: (String, Map[String, String], OutputTransformer[A])): AuditAsMagnet[A] = auditAsMagnet(parms._1, parms._2, defaultEventTypes, parms._3)
+  implicit def inputAsMapDefaultEventTypes[A](parms: (String, Map[String, String], OutputTransformer[A])): AuditAsMagnet[A] =
+    auditAsMagnet(parms._1, parms._2, defaultEventTypes, parms._3)
 
-  implicit def inputAsMap[A](parms: (String, Map[String, String], EventTypeFlowDescriptions, OutputTransformer[A])): AuditAsMagnet[A] = auditAsMagnet(parms._1, parms._2, parms._3, parms._4)
+  implicit def inputAsMap[A](parms: (String, Map[String, String], EventTypeFlowDescriptions, OutputTransformer[A])): AuditAsMagnet[A] =
+    auditAsMagnet(parms._1, parms._2, parms._3, parms._4)
 
-  private def auditAsMagnet[A](txN: String,
-                               ins: Map[String, String],
-                               et: EventTypeFlowDescriptions,
-                               ot: OutputTransformer[A]): AuditAsMagnet[A] = new AuditAsMagnet[A] {
-    val txName = txN
-    val inputs = ins
-    val outputTransformer = ot
-    val eventTypes = et
-  }
-
+  private def auditAsMagnet[A](
+      txN: String,
+      ins: Map[String, String],
+      et: EventTypeFlowDescriptions,
+      ot: OutputTransformer[A]) =
+    new AuditAsMagnet[A] {
+      val txName = txN
+      val inputs = ins
+      val outputTransformer = ot
+      val eventTypes = et
+    }
 }
 
 object EventTypes {
