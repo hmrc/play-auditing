@@ -81,6 +81,5 @@ lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditi
     commonSettings,
     Compile / scalaSource := baseDirectory.value / "../src/main/scala",
     Test    / scalaSource := baseDirectory.value / "../src/test/scala",
-    libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay27 ++ AppDependencies.test,
-    crossScalaVersions := Seq(scala2_12)
+    libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay27 ++ AppDependencies.test
   )
