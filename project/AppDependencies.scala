@@ -8,15 +8,15 @@ object AppDependencies {
     )
 
   val compilePlay25 = Seq(
-      "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-25"
+      "uk.gov.hmrc" %% "http-verbs-play-25" % "10.14.0"
     )
 
   val compilePlay26 = Seq(
-      "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-26"
+      "uk.gov.hmrc" %% "http-verbs-play-26" % "10.14.0"
     )
 
   val compilePlay27 = Seq(
-      "uk.gov.hmrc" %% "http-verbs" % "10.6.0-play-27"
+      "uk.gov.hmrc" %% "http-verbs-play-27" % "10.14.0"
     )
 
   val test = Seq(
