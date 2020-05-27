@@ -16,8 +16,20 @@
 
 package uk.gov.hmrc.audit.serialiser
 
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{JsString, JsValue, Json, Writes}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
+import java.time.{Instant, ZoneId}
+import java.time.format.DateTimeFormatter
+
+object DateWriter {
+  // Datastream does not support default X offset (i.e. `Z` must be `+0000`)
+  implicit def instantWrites = new Writes[Instant] {
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+
+    def writes(instant: Instant): JsValue =
+      JsString(dateFormat.withZone(ZoneId.of("UTC")).format(instant))
+  }
+}
 
 trait AuditSerialiserLike {
   def serialise(event: DataEvent): String
@@ -26,6 +38,7 @@ trait AuditSerialiserLike {
 }
 
 class AuditSerialiser extends AuditSerialiserLike {
+  private implicit val dateWriter: Writes[Instant] = DateWriter.instantWrites
   private implicit val dataEventWriter: Writes[DataEvent] = Json.writes[DataEvent]
   private implicit val dataCallWriter: Writes[DataCall] = Json.writes[DataCall]
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] = Json.writes[ExtendedDataEvent]
