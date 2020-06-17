@@ -210,3 +210,18 @@ trait HttpAuditing {
       case (k, v) if auditConnector.auditExtraHeaders ⇒ k -> v.mkString(",")
     }
 }
+
+// TODO: Remove
+object HeaderFieldsExtractor {
+  private val SurrogateHeader = "Surrogate"
+
+  def optionalAuditFields(headers: Map[String, String]): Map[String, String] =
+    optionalAuditFieldsSeq(
+      headers.map(t => t._1 -> Seq(t._2))
+    )
+
+  def optionalAuditFieldsSeq(headers: Map[String, Seq[String]]): Map[String, String] =
+    headers.collect {
+      case (SurrogateHeader, v) => "surrogate" -> v.mkString(",")
+    }
+}
