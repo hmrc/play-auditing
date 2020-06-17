@@ -78,6 +78,7 @@ class HttpAuditingSpec
 
     "handle the happy path with a valid audit event passing through" in {
       val connector = mock[AuditConnector]
+      when(connector.auditExtraHeaders).thenReturn(true)
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = None
@@ -88,7 +89,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true")
+      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true", "whitelisted-header" → "test-value")
       httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
 
       eventually(timeout(Span(1, Seconds))) {
@@ -98,7 +99,7 @@ class HttpAuditingSpec
         dataEvent.auditType shouldBe outboundCallAuditType
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", "whitelisted-header" → "test-value")
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
