@@ -78,6 +78,7 @@ class HttpAuditingSpec
 
     "handle the happy path with a valid audit event passing through" in {
       val connector = mock[AuditConnector]
+      when(connector.auditExtraHeaders).thenReturn(true)
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = None
@@ -88,7 +89,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true")
+      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true", "whitelisted-header" → "test-value")
       httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
 
       eventually(timeout(Span(1, Seconds))) {
@@ -98,13 +99,35 @@ class HttpAuditingSpec
         dataEvent.auditType shouldBe outboundCallAuditType
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", "whitelisted-header" → "test-value")
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
         dataEvent.response.detail shouldBe Map(ResponseMessage -> responseBody, StatusCode -> statusCode.toString)
         dataEvent.response.generatedAt shouldBe responseDateTime
       }
+    }
+
+    "not audit extra headers by default" in {
+      val connector = mock[AuditConnector]
+      when(connector.auditExtraHeaders).thenReturn(false)
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = None
+      val getVerb = "GET"
+      val responseBody = "the response body"
+      val statusCode = 200
+      val response = Future.successful(new DummyHttpResponse(responseBody, statusCode))
+
+      whenAuditSuccess(connector)
+
+      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true", "extra-header" → "test-value")
+      httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
+
+      eventually(timeout(Span(1, Seconds))) {
+        val dataEvent = verifyAndRetrieveEvent(connector)
+        dataEvent.request.detail shouldNot contain key "extra-header"
+       }
     }
 
     "handle the case of an exception being raised inside the future and still send an audit message" in {
