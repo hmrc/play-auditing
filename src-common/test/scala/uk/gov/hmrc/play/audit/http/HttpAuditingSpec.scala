@@ -108,6 +108,28 @@ class HttpAuditingSpec
       }
     }
 
+    "not audit extra headers by default" in {
+      val connector = mock[AuditConnector]
+      when(connector.auditExtraHeaders).thenReturn(false)
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = None
+      val getVerb = "GET"
+      val responseBody = "the response body"
+      val statusCode = 200
+      val response = Future.successful(new DummyHttpResponse(responseBody, statusCode))
+
+      whenAuditSuccess(connector)
+
+      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true", "extra-header" → "test-value")
+      httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
+
+      eventually(timeout(Span(1, Seconds))) {
+        val dataEvent = verifyAndRetrieveEvent(connector)
+        dataEvent.request.detail shouldNot contain key "extra-header"
+       }
+    }
+
     "handle the case of an exception being raised inside the future and still send an audit message" in {
       implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
       val connector = mock[AuditConnector]
