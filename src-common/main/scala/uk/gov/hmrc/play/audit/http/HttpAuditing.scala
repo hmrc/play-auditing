@@ -54,7 +54,15 @@ trait HttpAuditing {
   }
 
   object AuditingHook extends HttpHook {
-    override def apply(url: String, verb: String, body: Option[_], responseF: Future[HttpResponse])(implicit hc: HeaderCarrier, ec : ExecutionContext): Unit = {
+    override def apply(
+      url      : String,
+      verb     : String,
+      body     : Option[_],
+      responseF: Future[HttpResponse]
+    )(implicit
+      hc: HeaderCarrier,
+      ec : ExecutionContext
+    ): Unit = {
       val request = HttpRequest(url, verb, body, now())
       responseF.map {
         response => audit(request, response)
@@ -117,6 +125,7 @@ trait HttpAuditing {
       request.body.map(b => Seq(RequestBody -> maskRequestBody(b))).getOrElse(Seq.empty) ++
       HeaderFieldsExtractor.optionalAuditFields(hc.extraHeaders.toMap)
 
+  // TODO replace Any with an HookData ADT
   private def maskRequestBody(body: Any): String =
     //The request body comes from calls to executeHooks in http-verbs
     //It is either called with

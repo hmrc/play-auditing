@@ -7,6 +7,8 @@ object AppDependencies {
       "org.slf4j"              %  "slf4j-api" % "1.7.30"
     )
 
+  // we depend on http-verbs just to integrate via the AuditHooks
+  // http calls are made with the underlying play-ws
   val compilePlay25 = Seq(
       "uk.gov.hmrc" %% "http-verbs-play-25" % "10.14.0"
     )

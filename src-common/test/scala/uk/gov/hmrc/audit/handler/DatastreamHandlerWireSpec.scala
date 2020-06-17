@@ -21,55 +21,40 @@ import java.net.ServerSocket
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, post, postRequestedFor, urlPathEqualTo}
 import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario
-import org.scalatest._
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.libs.json.{JsString, JsValue}
 import uk.gov.hmrc.audit.HandlerResult
-import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
 
-class DatastreamHandlerUnitSpec extends WordSpecLike with Inspectors with Matchers {
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext
+import ExecutionContext.Implicits.global
 
-  val datastreamHandler = new DatastreamHandler("http", "localhost", 1234,
-    "/some/path", 2000, 2000, "the-micro-service-name") {
-    override def sendHttpRequest(event: String): HttpResult = {
-      HttpResult.Response(event.toInt)
-    }
-  }
 
-  "Any Datastream response" should {
-    "Return Success for any response code of 204" in {
-      datastreamHandler.sendEvent("204") shouldBe Success
-    }
-
-    "Return Failure for any response code of 3XX or 401-412 or 414-499 or 5XX" in {
-      forAll((300 to 399) ++ (401 to 412) ++ (414 to 499) ++ (500 to 599)) { code =>
-        val result = datastreamHandler.sendEvent(code.toString)
-        result shouldBe Failure
-      }
-    }
-
-    "Return Rejected for any response code of 400 or 413" in {
-      forAll(Seq(400, 413)) { code =>
-        val result = datastreamHandler.sendEvent(code.toString)
-        result shouldBe Rejected
-      }
-    }
-  }
-}
-
-class DatastreamHandlerWireSpec extends WordSpecLike with Inspectors with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class DatastreamHandlerWireSpec
+  extends AnyWordSpecLike
+     with Inspectors
+     with Matchers
+     with BeforeAndAfterEach
+     with BeforeAndAfterAll
+     with ScalaFutures
+     with IntegrationPatience {
 
   val datastreamTestPort: Int = availablePort
   val datastreamPath = "/write/audit"
   val datastreamHandler = new DatastreamHandler(
-    scheme = "http",
-    host = "localhost",
-    port = datastreamTestPort,
-    path = datastreamPath,
-    connectTimeout = 2000,
-    requestTimeout = 2000,
-    userAgent = "the-micro-service-name"
+    scheme         = "http",
+    host           = "localhost",
+    port           = datastreamTestPort,
+    path           = datastreamPath,
+    connectTimeout = 2000.millis,
+    requestTimeout = 2000.millis,
+    userAgent      = "the-micro-service-name"
   )
 
   val wireMock = new WireMockServer(datastreamTestPort)
@@ -107,101 +92,100 @@ class DatastreamHandlerWireSpec extends WordSpecLike with Inspectors with Matche
 
   "Successful call to Datastream" should {
     "Return a Success result" in {
-      verifySingleCall("SUCCESS", 204, Success)
+      verifySingleCall(JsString("SUCCESS"), 204, HandlerResult.Success)
     }
   }
 
   "All calls to Datastream" should {
     "set the user-agent" in {
-      stub("EVENT", 204)
-      datastreamHandler.sendEvent("EVENT")
+      val event = JsString("EVENT")
+      stub(event, 204)
+      datastreamHandler.sendEvent(event).futureValue
       WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)).withHeader("User-Agent", equalTo("the-micro-service-name")))
     }
   }
 
   "Failed call to Datastream" should {
     "Return a Rejected if Datastream rejected the event as malformed" in {
-      verifySingleCall("REJECTED", 400, Rejected)
+      verifySingleCall(JsString("REJECTED"), 400, HandlerResult.Rejected)
     }
 
     "Return a Failure if the POST could not be completed" in {
-      verifySingleCall("UNAVAILABLE", 503, Failure)
+      verifySingleCall(JsString("UNAVAILABLE"), 503, HandlerResult.Failure)
     }
 
     "Return a transient Failure if the POST timed out waiting for a response" in {
+      val event = JsString("TIMEOUT")
       WireMock.stubFor(
         post(urlPathEqualTo(datastreamPath))
-          .withRequestBody(WireMock.equalTo("TIMEOUT"))
+          .withRequestBody(WireMock.equalTo(event.toString))
           .willReturn(aResponse().withFixedDelay(3000).withStatus(204)))
 
-      val result = datastreamHandler.sendEvent("TIMEOUT")
-
-      WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
-      result shouldBe Failure
+      whenReady(datastreamHandler.sendEvent(event), timeout(4000.millis)) { result =>
+        WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
+        result shouldBe HandlerResult.Failure
+      }
     }
   }
 
   "Calls to Datastream that return an empty response" should {
     "Retry the POST and return Success if the retried call was ok" in {
-      verifyErrorRetry("EMPTY_RESPONSE", Fault.EMPTY_RESPONSE, 204, Success)
+      verifyErrorRetry(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE, 204, HandlerResult.Success)
     }
 
     "Retry the POST if the Datastream response was malformed and return Failure" in {
-      verifyErrorRetry("EMPTY_RESPONSE", Fault.EMPTY_RESPONSE, 503, Failure)
+      verifyErrorRetry(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE, 503, HandlerResult.Failure)
     }
   }
 
   "Calls to Datastream that return a bad response" should {
     "Retry the POST and return Success if the retried call was ok" in {
-      verifyErrorRetry("RANDOM_DATA_THEN_CLOSE", Fault.RANDOM_DATA_THEN_CLOSE, 204, Success)
+      verifyErrorRetry(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE, 204, HandlerResult.Success)
     }
 
     "Retry the POST if the Datastream response was malformed and return Failure" in {
-      verifyErrorRetry("RANDOM_DATA_THEN_CLOSE", Fault.RANDOM_DATA_THEN_CLOSE, 503, Failure)
+      verifyErrorRetry(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE, 503, HandlerResult.Failure)
     }
   }
 
-  def stub(event: String, status: Integer): Unit = {
+  def stub(event: JsValue, status: Integer): Unit =
     WireMock.stubFor(
       post(urlPathEqualTo(datastreamPath))
-        .withRequestBody(WireMock.equalTo(event))
+        .withRequestBody(WireMock.equalTo(event.toString))
         .willReturn(aResponse().withStatus(status)))
-  }
 
-  def stub(event: String, status: Integer, withScenario: String, toScenario: String): Unit = {
+  def stub(event: JsValue, status: Integer, withScenario: String, toScenario: String): Unit =
     WireMock.stubFor(
       post(urlPathEqualTo(datastreamPath))
         .inScenario("Scenario")
         .whenScenarioStateIs(withScenario)
-        .withRequestBody(WireMock.equalTo(event))
+        .withRequestBody(WireMock.equalTo(event.toString))
         .willReturn(aResponse().withStatus(status))
         .willSetStateTo(toScenario))
-  }
 
-  def stub(event: String, fault: Fault, withScenario: String, toScenario: String): Unit = {
+  def stub(event: JsValue, fault: Fault, withScenario: String, toScenario: String): Unit =
     WireMock.stubFor(
       post(urlPathEqualTo(datastreamPath))
         .inScenario("Scenario")
         .whenScenarioStateIs(withScenario)
-        .withRequestBody(WireMock.equalTo(event))
+        .withRequestBody(WireMock.equalTo(event.toString))
         .willReturn(aResponse().withFault(fault))
         .willSetStateTo(toScenario))
-  }
 
-  def verifyErrorRetry(event: String, fault: Fault, retriedResponse: Integer, expectedResult: HandlerResult): Unit = {
+  def verifyErrorRetry(event: JsValue, fault: Fault, retriedResponse: Integer, expectedResult: HandlerResult): Unit = {
     stub(event, fault, Scenario.STARTED, "RETRYING")
     stub(event, retriedResponse, "RETRYING", "FINISHED")
 
-    val result = datastreamHandler.sendEvent(event)
+    val result = datastreamHandler.sendEvent(event).futureValue
 
     WireMock.verify(2, postRequestedFor(urlPathEqualTo(datastreamPath)))
     result shouldBe expectedResult
   }
 
-  def verifySingleCall(event: String, responseStatus: Integer, expectedResult: HandlerResult): Unit = {
+  def verifySingleCall(event: JsValue, responseStatus: Integer, expectedResult: HandlerResult): Unit = {
     stub(event, responseStatus)
 
-    val result = datastreamHandler.sendEvent(event)
+    val result = datastreamHandler.sendEvent(event).futureValue
 
     WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
     result shouldBe expectedResult

@@ -33,7 +33,7 @@ class AuditSerialiserSpec extends WordSpecLike with Matchers {
         tags        = Map("tagkey" -> "tagval"),
         detail      = Map("detailkey" -> "detailval"),
         generatedAt = Instant.parse("2007-12-03T10:15:30.123Z")
-      )) shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","tags":{"tagkey":"tagval"},"detail":{"detailkey":"detailval"},"generatedAt":"2007-12-03T10:15:30.123+0000"}"""
+      )).toString shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","tags":{"tagkey":"tagval"},"detail":{"detailkey":"detailval"},"generatedAt":"2007-12-03T10:15:30.123+0000"}"""
     }
 
     "serialise ExtendedDataEvent" in {
@@ -44,7 +44,7 @@ class AuditSerialiserSpec extends WordSpecLike with Matchers {
         tags        = Map("tagkey" -> "tagval"),
         detail      = JsString("detail"),
         generatedAt = Instant.parse("2007-12-03T10:15:30.123Z")
-      )) shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","tags":{"tagkey":"tagval"},"detail":"detail","generatedAt":"2007-12-03T10:15:30.123+0000"}"""
+      )).toString shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","tags":{"tagkey":"tagval"},"detail":"detail","generatedAt":"2007-12-03T10:15:30.123+0000"}"""
     }
 
     "serialise MergedDataEvent" in {
@@ -62,7 +62,7 @@ class AuditSerialiserSpec extends WordSpecLike with Matchers {
                         detail = Map("responsedetailkey" -> "responsedetailval"),
                         generatedAt = Instant.parse("2007-12-03T10:16:31.123Z")
                       )
-      )) shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","request":{"tags":{"requesttagkey":"requesttagval"},"detail":{"requestdetailkey":"requestdetailval"},"generatedAt":"2007-12-03T10:15:30.123+0000"},"response":{"tags":{"responsetagkey":"responsetagval"},"detail":{"responsedetailkey":"responsedetailval"},"generatedAt":"2007-12-03T10:16:31.123+0000"}}"""
+      )).toString shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","request":{"tags":{"requesttagkey":"requesttagval"},"detail":{"requestdetailkey":"requestdetailval"},"generatedAt":"2007-12-03T10:15:30.123+0000"},"response":{"tags":{"responsetagkey":"responsetagval"},"detail":{"responsedetailkey":"responsedetailval"},"generatedAt":"2007-12-03T10:16:31.123+0000"}}"""
     }
   }
 }

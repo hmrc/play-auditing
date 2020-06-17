@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.audit.handler
 
+import play.api.libs.json.JsValue
 import uk.gov.hmrc.audit.HandlerResult
 
+import scala.concurrent.{ExecutionContext, Future}
+
 trait AuditHandler {
-  def sendEvent(event: String): HandlerResult
+  def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult]
 }

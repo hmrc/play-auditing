@@ -9,7 +9,7 @@ val scala2_12 = "2.12.10"
 
 // Disable multiple project tests running at the same time: https://stackoverflow.com/questions/11899723/how-to-turn-off-parallel-execution-of-tests-for-multi-project-builds
 // TODO: restrict parallelExecution to tests only (the obvious way to do this using Test scope does not seem to work correctly)
-parallelExecution in Global := false
+parallelExecution in ThisBuild := false
 
 
 lazy val commonSettings = Seq(
@@ -21,7 +21,8 @@ lazy val commonSettings = Seq(
   resolvers := Seq(
                  Resolver.bintrayRepo("hmrc", "releases"),
                  Resolver.typesafeRepo("releases")
-               )
+               ),
+  scalacOptions ++= Seq("-feature")
 )
 
 
@@ -36,7 +37,7 @@ lazy val library = (project in file("."))
     crossScalaVersions := Seq.empty
   )
   .aggregate(
-    playAuditingPlay25,
+    //playAuditingPlay25,
     playAuditingPlay26,
     playAuditingPlay27
   )

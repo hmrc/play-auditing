@@ -17,20 +17,23 @@
 package uk.gov.hmrc.audit.handler
 
 import org.mockito.Mockito._
-import org.scalatest.WordSpecLike
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
+import play.api.libs.json.JsString
 
-class LoggingHandlerSpec extends WordSpecLike with MockitoSugar {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class LoggingHandlerSpec extends AnyWordSpecLike with MockitoSugar {
 
   val mockLog: Logger = mock[Logger]
   val loggingHandler = new LoggingHandler(mockLog)
 
-  "When logging an error, the message" should {
-    "Start with a known value so that downstream processing knows how to deal with it" in {
-      val expectedLogContent = "DS_EventMissed_AuditRequestFailure : audit item : FAILED_EVENT"
+  "LoggingHandler" should {
+    "log the event" in {
+      val expectedLogContent = """DS_EventMissed_AuditRequestFailure : audit item : "FAILED_EVENT""""
 
-      loggingHandler.sendEvent("FAILED_EVENT")
+      loggingHandler.sendEvent(JsString("FAILED_EVENT"))
 
       verify(mockLog).warn(expectedLogContent)
     }

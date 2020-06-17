@@ -145,7 +145,12 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
       val audit = new MockAudit(appName, auditConnector)
 
-      Await.result(audit.asyncAs[AuditableEvent]((transactionName, "request body no key provided", transformer)) { () => Future.successful(auditable)}, 5 seconds)
+      Await.result(
+        audit.asyncAs[AuditableEvent]((transactionName, "request body no key provided", transformer)) {
+          () => Future.successful(auditable)
+        },
+        5.seconds
+      )
 
       eventually {
         audit.verifyDataEvent(
