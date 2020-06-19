@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
+import scala.language.implicitConversions
+
 case class BaseUri(
   host    : String,
   port    : Int,

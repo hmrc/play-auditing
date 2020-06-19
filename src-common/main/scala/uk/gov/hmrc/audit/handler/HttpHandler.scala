@@ -22,8 +22,6 @@ import java.util.concurrent.TimeoutException
 
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.JsValue
-import play.api.libs.ws.ahc.{AhcWSClientConfigFactory, StandaloneAhcWSClient}
-import play.api.libs.ws.WSClientConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
@@ -44,24 +42,10 @@ abstract class HttpHandler(
 ) {
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
+
   val HTTP_STATUS_CONTINUE = 100
 
-  // Create Akka system for thread and streaming management
-  val wsClient = {
-    implicit val system = akka.actor.ActorSystem()
-    implicit val materializer = akka.stream.ActorMaterializer()
-
-    StandaloneAhcWSClient(
-      config = AhcWSClientConfigFactory.forConfig()
-                 .copy(wsClientConfig = WSClientConfig()
-                   .copy(
-                     connectionTimeout = connectTimeout,
-                     requestTimeout    = requestTimeout,
-                     userAgent         = Some(userAgent)
-                   )
-                 )
-    )
-  }
+  val wsClient: WSClient = WSClient(connectTimeout, requestTimeout, userAgent)
 
   def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
     try {
@@ -84,7 +68,7 @@ abstract class HttpHandler(
             HttpResult.Malformed
           }
         }.recover {
-          case e: java.util.concurrent.TimeoutException =>
+          case e: TimeoutException =>
             HttpResult.Failure("Error opening connection, or request timed out", Some(e))
           case e: IOException =>
             HttpResult.Failure("Error opening connection, or request timed out", Some(e))

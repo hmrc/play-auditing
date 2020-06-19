@@ -37,7 +37,7 @@ lazy val library = (project in file("."))
     crossScalaVersions := Seq.empty
   )
   .aggregate(
-    //playAuditingPlay25,
+    playAuditingPlay25,
     playAuditingPlay26,
     playAuditingPlay27
   )
@@ -46,8 +46,10 @@ lazy val playAuditingPlay25 = Project("play-auditing-play-25", file("play-auditi
   .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
   .settings(
     commonSettings,
-    Compile / scalaSource := baseDirectory.value / "../src-common/main/scala",
-    Test    / scalaSource := baseDirectory.value / "../src-common/test/scala",
+    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
+    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
+    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
     libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay25 ++ AppDependencies.test,
     scalaVersion := scala2_11,
     crossScalaVersions := Seq(scala2_11)
@@ -57,8 +59,10 @@ lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditi
   .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
   .settings(
     commonSettings,
-    Compile / scalaSource := baseDirectory.value / "../src-common/main/scala",
-    Test    / scalaSource := baseDirectory.value / "../src-common/test/scala",
+    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
+    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
+    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
     libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay26 ++ AppDependencies.test
   )
 
@@ -66,7 +70,11 @@ lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditi
   .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
   .settings(
     commonSettings,
-    Compile / scalaSource := baseDirectory.value / "../src-common/main/scala",
-    Test    / scalaSource := baseDirectory.value / "../src-common/test/scala",
+    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
+    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
+    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
+    Compile / scalaSource                  := (playAuditingPlay26 / Compile / scalaSource).value,
+    Test    / scalaSource                  := (playAuditingPlay26 / Test    / scalaSource).value,
     libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay27 ++ AppDependencies.test
   )
