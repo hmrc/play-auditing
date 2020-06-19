@@ -59,8 +59,8 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
 
   def mockConnector(config: AuditingConfig) = new AuditConnector {
     override def auditingConfig: AuditingConfig = config
-    override def simpleDatastreamHandler: AuditHandler = mockSimpleDatastreamHandler
-    override def mergedDatastreamHandler: AuditHandler = mockMergedDatastreamHandler
+    override lazy val simpleDatastreamHandler: AuditHandler = mockSimpleDatastreamHandler
+    override lazy val mergedDatastreamHandler: AuditHandler = mockMergedDatastreamHandler
     override def loggingConnector: AuditHandler = mockLoggingHandler
     override def auditSerialiser: AuditSerialiserLike = AuditSerialiser
   }

@@ -40,7 +40,6 @@ abstract class HttpHandler(
   connectTimeout   : Duration,
   requestTimeout   : Duration
 ) {
-
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   val HTTP_STATUS_CONTINUE = 100
@@ -62,8 +61,7 @@ abstract class HttpHandler(
           if (httpStatusCode >= HTTP_STATUS_CONTINUE) {
             logger.info(s"Got status code $httpStatusCode from HTTP server.")
             HttpResult.Response(httpStatusCode)
-          }
-          else {
+          } else {
             logger.warn(s"Malformed response (status $httpStatusCode) returned from server")
             HttpResult.Malformed
           }
