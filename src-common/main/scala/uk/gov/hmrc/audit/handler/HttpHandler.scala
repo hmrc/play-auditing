@@ -20,6 +20,7 @@ import java.io.IOException
 import java.net.URL
 import java.util.concurrent.TimeoutException
 
+import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.JsValue
 
@@ -44,7 +45,12 @@ abstract class HttpHandler(
 
   val HTTP_STATUS_CONTINUE = 100
 
-  val wsClient: WSClient = WSClient(connectTimeout, requestTimeout, userAgent)
+  implicit val materializer: Materializer = {
+    implicit val system = akka.actor.ActorSystem()
+    akka.stream.ActorMaterializer()
+  }
+
+  val wsClient = WSClient(connectTimeout, requestTimeout, userAgent)
 
   def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
     try {

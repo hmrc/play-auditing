@@ -16,27 +16,28 @@
 
 package uk.gov.hmrc.audit
 
+import akka.stream.Materializer
+import org.slf4j.{Logger, LoggerFactory}
+import play.api.libs.ws.WSClientConfig
+import play.api.libs.ws.ahc.{AhcConfigBuilder, AhcWSClientConfig, AhcWSClient}
+
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+
 
 package object handler {
   type WSClient = play.api.libs.ws.WSClient
 
   object WSClient {
+    private val logger: Logger = LoggerFactory.getLogger(getClass)
+
     def apply(
       connectTimeout: Duration,
       requestTimeout: Duration,
       userAgent     : String
-    ): WSClient = {
-      // TODO inject these, and ApplicationLifecycle to unregister (requires dependency on play)
-      implicit val system = akka.actor.ActorSystem()
-      implicit val materializer = akka.stream.ActorMaterializer()
-
-      import play.api.libs.ws.WSClientConfig
-      import play.api.libs.ws.ahc.{AhcConfigBuilder, AhcWSClientConfig, AhcWSClient}
-      import akka.stream.Materializer
-      //import play.api.ApplicationLifecycle
-      import scala.concurrent.Future
-
+    )(implicit
+      materializer: Materializer
+    ): WSClient =
       new AhcWSClient(
         new AhcConfigBuilder(
           ahcConfig = AhcWSClientConfig()
@@ -50,15 +51,5 @@ package object handler {
                         )
         ).build()
       )
-
- //* class MyService @Inject() (lifecycle: ApplicationLifecycle)(implicit mat: Materializer) {
- //   private val client = new AhcWSClient(new AhcConfigBuilder().build())
-  //}
-   /*lifecycle.addStopHook(() =>
- *     // Make sure you close the client after use, otherwise you'll leak threads and connections
- *     client.close()
- *     Future.successful(())
- *   }*/
-    }
   }
 }

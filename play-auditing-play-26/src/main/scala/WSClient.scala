@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.audit
 
+import akka.stream.Materializer
 import play.api.libs.ws.ahc.{StandaloneAhcWSClient, AhcWSClientConfigFactory}
 import play.api.libs.ws.WSClientConfig
 
@@ -29,10 +30,9 @@ package object handler {
       connectTimeout: Duration,
       requestTimeout: Duration,
       userAgent     : String
-    ): WSClient = {
-      implicit val system = akka.actor.ActorSystem()
-      implicit val materializer = akka.stream.ActorMaterializer()
-
+    )(implicit
+      materializer: Materializer
+    ): WSClient =
       StandaloneAhcWSClient(
         config = AhcWSClientConfigFactory.forConfig()
                    .copy(wsClientConfig = WSClientConfig()
@@ -43,6 +43,5 @@ package object handler {
                      )
                    )
       )
-    }
   }
 }
