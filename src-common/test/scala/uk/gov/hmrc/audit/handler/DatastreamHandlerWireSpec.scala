@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.audit.handler
 
-import java.io.IOException
-import java.net.ServerSocket
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.WireMockServer
@@ -32,7 +29,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.DefaultApplicationLifecycle
 import play.api.libs.json.{JsString, JsValue}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
@@ -48,7 +45,7 @@ class DatastreamHandlerWireSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  val datastreamTestPort: Int = availablePort
+  val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
   val datastreamHandler = new DatastreamHandler(
     scheme         = "http",
@@ -64,28 +61,6 @@ class DatastreamHandlerWireSpec
 
 
   val wireMock = new WireMockServer(datastreamTestPort)
-
-  def availablePort: Int = {
-    var port = 9876
-    var socket: ServerSocket = null
-
-    try {
-      socket = new ServerSocket(0)
-      port = socket.getLocalPort
-    } catch {
-      case ex: IOException =>
-    } finally {
-      if (socket != null) {
-        try {
-          socket.close()
-        } catch {
-          case ex: IOException =>
-        }
-      }
-    }
-
-    port
-  }
 
   override def beforeAll: Unit = {
     WireMock.configureFor("localhost", datastreamTestPort)

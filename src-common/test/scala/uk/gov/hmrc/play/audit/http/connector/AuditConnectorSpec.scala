@@ -33,7 +33,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.must.Matchers
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils}
 import uk.gov.hmrc.audit.handler.AuditHandler
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -72,7 +72,7 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
 
   "creating an AuditConnector" should {
     "allow the configuration to be specified" in {
-      val testPort = 9876
+      val testPort = WireMockUtils.availablePort
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
       val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name")
       val connector = new AuditConnector {
