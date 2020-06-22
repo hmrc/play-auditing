@@ -52,6 +52,7 @@ trait AuditConnector {
 
   lazy val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
   lazy val baseUri: BaseUri = consumer.baseUri
+  lazy val auditExtraHeaders: Boolean = auditingConfig.auditExtraHeaders.getOrElse(false)
 
   def simpleDatastreamHandler: AuditHandler =
     new DatastreamHandler(

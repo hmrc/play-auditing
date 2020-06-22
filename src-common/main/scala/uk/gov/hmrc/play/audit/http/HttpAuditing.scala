@@ -20,6 +20,7 @@ import java.time.Instant
 
 import com.fasterxml.jackson.core.JsonParseException
 import javax.xml.parsers.SAXParserFactory
+import play.api.Configuration
 import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
@@ -33,7 +34,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
 trait HttpAuditing {
-
   val outboundCallAuditType: String = "OutboundCall"
 
   private val MaskValue = "########"
@@ -115,7 +115,7 @@ trait HttpAuditing {
       Method                 -> request.verb
     ) ++
       request.body.map(b => Seq(RequestBody -> maskRequestBody(b))).getOrElse(Seq.empty) ++
-      HeaderFieldsExtractor.optionalAuditFields(hc.extraHeaders.toMap)
+      auditExtraHeaderFields(hc.extraHeaders.toMap)
 
   private def maskRequestBody(body: Any): String =
     //The request body comes from calls to executeHooks in http-verbs
@@ -203,8 +203,15 @@ trait HttpAuditing {
     body       : Option[_],
     generatedAt: Instant
   )
+
+  private def auditExtraHeaderFields(headers: Map[String, String]): Map[String, String] =
+    headers.map(t => t._1 -> Seq(t._2)).collect {
+      case ("Surrogate", v) => "surrogate" -> v.mkString(",")
+      case (k, v) if auditConnector.auditExtraHeaders ⇒ k -> v.mkString(",")
+    }
 }
 
+// TODO: Remove
 object HeaderFieldsExtractor {
   private val SurrogateHeader = "Surrogate"
 

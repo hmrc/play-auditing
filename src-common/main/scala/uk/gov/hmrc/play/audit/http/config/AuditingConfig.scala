@@ -47,5 +47,6 @@ object Consumer {
 case class AuditingConfig(
   consumer   : Option[Consumer],
   enabled    : Boolean,
-  auditSource: String
+  auditSource: String,
+  auditExtraHeaders: Option[Boolean] = None
 )
