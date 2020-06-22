@@ -45,7 +45,7 @@ lazy val playAuditingPlay25 = Project("play-auditing-play-25", file("play-auditi
     Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
     Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
     Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay25 ++ AppDependencies.test,
+    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay25 ++ LibDependencies.test,
     scalaVersion := scala2_11,
     crossScalaVersions := Seq(scala2_11)
   )
@@ -58,7 +58,7 @@ lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditi
     Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
     Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
     Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay26 ++ AppDependencies.test
+    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay26 ++ LibDependencies.test
   )
 
 lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditing-play-27"))
@@ -71,5 +71,5 @@ lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditi
     Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
     Compile / scalaSource                  := (playAuditingPlay26 / Compile / scalaSource).value,
     Test    / scalaSource                  := (playAuditingPlay26 / Test    / scalaSource).value,
-    libraryDependencies ++= AppDependencies.compileCommon ++ AppDependencies.compilePlay27 ++ AppDependencies.test
+    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay27 ++ LibDependencies.test
   )
