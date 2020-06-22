@@ -22,6 +22,7 @@ import java.util.concurrent.TimeoutException
 
 import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.JsValue
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,18 +40,24 @@ abstract class HttpHandler(
   endpointUrl      : URL,
   userAgent        : String,
   connectTimeout   : Duration,
-  requestTimeout   : Duration
+  requestTimeout   : Duration,
+  materializer     : Materializer,
+  lifecycle        : ApplicationLifecycle
 ) {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   val HTTP_STATUS_CONTINUE = 100
 
-  implicit val materializer: Materializer = {
-    implicit val system = akka.actor.ActorSystem()
-    akka.stream.ActorMaterializer()
+  val wsClient: WSClient = {
+    implicit val m = materializer
+    val wsClient = WSClient(connectTimeout, requestTimeout, userAgent)
+    lifecycle.addStopHook { () =>
+      logger.info("Closing play-auditing http connections...")
+      wsClient.close()
+      Future.successful(())
+    }
+    wsClient
   }
-
-  val wsClient = WSClient(connectTimeout, requestTimeout, userAgent)
 
   def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
     try {

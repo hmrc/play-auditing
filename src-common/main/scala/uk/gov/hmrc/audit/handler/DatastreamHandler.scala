@@ -18,7 +18,9 @@ package uk.gov.hmrc.audit.handler
 
 import java.net.URL
 
+import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
@@ -33,12 +35,16 @@ class DatastreamHandler(
   path          : String,
   connectTimeout: Duration,
   requestTimeout: Duration,
-  userAgent     : String
+  userAgent     : String,
+  materializer  : Materializer,
+  lifecycle     : ApplicationLifecycle
 ) extends HttpHandler(
   endpointUrl    = new URL(s"$scheme://$host:$port$path"),
   userAgent      = userAgent,
   connectTimeout = connectTimeout,
-  requestTimeout = requestTimeout
+  requestTimeout = requestTimeout,
+  materializer   = materializer,
+  lifecycle      = lifecycle
 ) with AuditHandler {
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)

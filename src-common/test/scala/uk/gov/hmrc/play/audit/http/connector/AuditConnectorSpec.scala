@@ -18,6 +18,8 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import java.time.Instant
 
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
@@ -29,6 +31,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.must.Matchers
+import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.AuditHandler
@@ -59,6 +62,8 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
 
   def mockConnector(config: AuditingConfig) = new AuditConnector {
     override def auditingConfig: AuditingConfig = config
+    override def materializer: Materializer = ActorMaterializer()(ActorSystem())
+    override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
     override lazy val simpleDatastreamHandler: AuditHandler = mockSimpleDatastreamHandler
     override lazy val mergedDatastreamHandler: AuditHandler = mockMergedDatastreamHandler
     override def loggingConnector: AuditHandler = mockLoggingHandler
@@ -72,6 +77,8 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
       val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name")
       val connector = new AuditConnector {
         override def auditingConfig: AuditingConfig = config
+        override def materializer: Materializer = ActorMaterializer()(ActorSystem())
+        override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
       }
       val dataCall = DataCall(Map(), Map(), Instant.now())
 

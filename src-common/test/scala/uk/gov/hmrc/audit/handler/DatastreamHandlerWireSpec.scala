@@ -19,6 +19,8 @@ package uk.gov.hmrc.audit.handler
 import java.io.IOException
 import java.net.ServerSocket
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, post, postRequestedFor, urlPathEqualTo}
@@ -28,6 +30,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.inject.DefaultApplicationLifecycle
 import play.api.libs.json.{JsString, JsValue}
 import uk.gov.hmrc.audit.HandlerResult
 
@@ -54,8 +57,11 @@ class DatastreamHandlerWireSpec
     path           = datastreamPath,
     connectTimeout = 2000.millis,
     requestTimeout = 2000.millis,
-    userAgent      = "the-micro-service-name"
-  )
+    userAgent      = "the-micro-service-name",
+    materializer   = ActorMaterializer()(ActorSystem()),
+    lifecycle      = new DefaultApplicationLifecycle()
+    )
+
 
   val wireMock = new WireMockServer(datastreamTestPort)
 

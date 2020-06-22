@@ -18,7 +18,9 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import java.util.UUID
 
+import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, JsObject, Json, Writes}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.handler.{AuditHandler, DatastreamHandler, LoggingHandler}
@@ -47,6 +49,8 @@ object AuditResult {
 
 trait AuditConnector {
   def auditingConfig: AuditingConfig
+  def materializer  : Materializer
+  def lifecycle     : ApplicationLifecycle
 
   val defaultConnectionTimeout: Duration = 5000.millis
   val defaultRequestTimeout: Duration = 5000.millis
@@ -63,7 +67,9 @@ trait AuditConnector {
       s"/${consumer.singleEventUri}",
       defaultConnectionTimeout,
       defaultRequestTimeout,
-      auditingConfig.auditSource
+      auditingConfig.auditSource,
+      materializer,
+      lifecycle
     )
 
   def mergedDatastreamHandler: AuditHandler =
@@ -74,7 +80,9 @@ trait AuditConnector {
       s"/${consumer.mergedEventUri}",
       defaultConnectionTimeout,
       defaultRequestTimeout,
-      auditingConfig.auditSource
+      auditingConfig.auditSource,
+      materializer,
+      lifecycle
     )
 
   def loggingConnector: AuditHandler = LoggingHandler

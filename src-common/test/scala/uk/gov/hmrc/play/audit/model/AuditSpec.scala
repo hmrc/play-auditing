@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.play.audit.model
 
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpecLike}
+import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
@@ -63,6 +66,8 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
       auditSource = "the-project-name")
+    override def materializer: Materializer = ActorMaterializer()(ActorSystem())
+    override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
   }
 
   "An Audit object" should {
