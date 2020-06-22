@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
-import uk.gov.hmrc.http.hooks.HttpHook
+import uk.gov.hmrc.http.hooks.{HookData, HttpHook}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import scala.xml._
@@ -57,7 +57,7 @@ trait HttpAuditing {
     override def apply(
       url      : String,
       verb     : String,
-      body     : Option[_],
+      body     : Option[HookData],
       responseF: Future[HttpResponse]
     )(implicit
       hc: HeaderCarrier,
@@ -125,22 +125,16 @@ trait HttpAuditing {
       request.body.map(b => Seq(RequestBody -> maskRequestBody(b))).getOrElse(Seq.empty) ++
       auditExtraHeaderFields(hc.extraHeaders.toMap)
 
-  // TODO replace Any with an HookData ADT
-  private def maskRequestBody(body: Any): String =
-    //The request body comes from calls to executeHooks in http-verbs
-    //It is either called with
-    // - a Map in the case of a web form
-    // - a String created from Json.stringify(wts.writes(... in the case of a class
-    // - a String in the case of a string (where the string can be XML)
+  private def maskRequestBody(body: HookData): String =
     body match {
-      case m: Map[_, _] => m.map {
-                             case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
-                             case other                                    => other
-                           }.toString
-      case s: String    => maskString(s)
-      case other        => sys.error(s"Unexpected type for requestBody when auditing ${outboundCallAuditType}: ${other.getClass}")
+      case HookData.FromMap(m)    => m.map {
+                                       case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
+                                       case other                                    => other
+                                     }.toString
+      case HookData.FromString(s) => maskString(s)
     }
 
+  // a String could either be Json or XML
   private def maskString(text: String) =
     if (text.startsWith("{")) {
       try {
@@ -209,7 +203,7 @@ trait HttpAuditing {
   protected case class HttpRequest(
     url        : String,
     verb       : String,
-    body       : Option[_],
+    body       : Option[HookData],
     generatedAt: Instant
   )
 
