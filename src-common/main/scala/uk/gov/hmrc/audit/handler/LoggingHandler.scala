@@ -17,18 +17,22 @@
 package uk.gov.hmrc.audit.handler
 
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.libs.json.JsValue
 import uk.gov.hmrc.audit.HandlerResult
+
+import scala.concurrent.{ExecutionContext, Future}
 
 class LoggingHandler(logger: Logger) extends AuditHandler {
 
   private val ErrorKey = "DS_EventMissed_AuditRequestFailure"
 
-  def makeFailureMessage(event: String): String = s"$ErrorKey : audit item : $event"
+  def makeFailureMessage(event: JsValue): String =
+    s"$ErrorKey : audit item : ${event.toString}"
 
-  def sendEvent(event: String): HandlerResult = {
+  override def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] = {
     val message = makeFailureMessage(event)
     logger.warn(message)
-    HandlerResult.Success
+    Future.successful(HandlerResult.Success)
   }
 }
 

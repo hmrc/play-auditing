@@ -14,13 +14,32 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.audit.handler
+package uk.gov.hmrc.audit
 
-import play.api.libs.json.JsValue
-import uk.gov.hmrc.audit.HandlerResult
+import java.io.IOException
+import java.net.ServerSocket
 
-import scala.concurrent.{ExecutionContext, Future}
 
-trait AuditHandler {
-  def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult]
+object WireMockUtils {
+  def availablePort: Int = {
+    var port = 9876
+    var socket: ServerSocket = null
+
+    try {
+      socket = new ServerSocket(0)
+      port = socket.getLocalPort
+    } catch {
+      case ex: IOException =>
+    } finally {
+      if (socket != null) {
+        try {
+          socket.close()
+        } catch {
+          case ex: IOException =>
+        }
+      }
+    }
+
+    port
+  }
 }

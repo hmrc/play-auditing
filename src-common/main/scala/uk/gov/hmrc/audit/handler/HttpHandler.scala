@@ -16,10 +16,18 @@
 
 package uk.gov.hmrc.audit.handler
 
-import java.io.{IOException, OutputStream}
-import java.net.{HttpURLConnection, URL}
+import java.io.IOException
+import java.net.URL
+import java.util.concurrent.TimeoutException
 
+import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.JsValue
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.Duration
+
 
 sealed trait HttpResult
 object HttpResult {
@@ -31,85 +39,53 @@ object HttpResult {
 abstract class HttpHandler(
   endpointUrl      : URL,
   userAgent        : String,
-  connectTimeout   : Integer = 5000,
-  requestTimeout   : Integer = 5000,
-  contentTypeHeader: String  = "application/json",
-  acceptHeader     : String  = "application/json"
+  connectTimeout   : Duration,
+  requestTimeout   : Duration,
+  materializer     : Materializer,
+  lifecycle        : ApplicationLifecycle
 ) {
-
   private val logger: Logger = LoggerFactory.getLogger(getClass)
+
   val HTTP_STATUS_CONTINUE = 100
 
-  def sendHttpRequest(event: String): HttpResult = {
-    var outputStream: OutputStream = null
+  val wsClient: WSClient = {
+    implicit val m = materializer
+    val wsClient = WSClient(connectTimeout, requestTimeout, userAgent)
+    lifecycle.addStopHook { () =>
+      logger.info("Closing play-auditing http connections...")
+      wsClient.close()
+      Future.successful(())
+    }
+    wsClient
+  }
 
+  def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
     try {
-      if (event != null && event.nonEmpty) {
-        logger.debug(s"Sending audit request to URL ${endpointUrl.toString}")
+      logger.debug(s"Sending audit request to URL ${endpointUrl.toString}")
 
-        try {
-          val connection = getConnection
-          outputStream = connection.getOutputStream
-          outputStream.write(event.getBytes)
-          outputStream.flush()
-          outputStream.close()
-
-          val httpStatusCode = connection.getResponseCode
+      wsClient.url(endpointUrl.toString)
+        .post(event)
+        .map { response =>
+          val httpStatusCode = response.status
           logger.debug(s"Got status code : $httpStatusCode")
-
-          try {
-            // FIXME Not great if this class is meant to be generic...
-            val inputStream = connection.getInputStream
-            if (inputStream != null) {
-              inputStream.close()
-            }
-          } catch {
-            case e: IOException =>
-              // do nothing here as we do not care about the response
-          }
+          response.body
           logger.debug("Response processed and closed")
 
           if (httpStatusCode >= HTTP_STATUS_CONTINUE) {
             logger.info(s"Got status code $httpStatusCode from HTTP server.")
             HttpResult.Response(httpStatusCode)
-          }
-          else {
-            logger.warn("Malformed response returned from server")
+          } else {
+            logger.warn(s"Malformed response (status $httpStatusCode) returned from server")
             HttpResult.Malformed
           }
-        } catch {
+        }.recover {
+          case e: TimeoutException =>
+            HttpResult.Failure("Error opening connection, or request timed out", Some(e))
           case e: IOException =>
             HttpResult.Failure("Error opening connection, or request timed out", Some(e))
         }
-      }
-      else {
-        HttpResult.Failure("Content was empty")
-      }
     } catch {
       case t: Throwable =>
-        HttpResult.Failure("Error sending HTTP request", Some(t))
-    } finally {
-      if (outputStream != null) try
-        outputStream.close()
-      catch {
-        case e: IOException =>
-          // ignore errors
-      }
+        Future.successful(HttpResult.Failure("Error sending HTTP request", Some(t)))
     }
-  }
-
-  @throws[IOException]
-  def getConnection: HttpURLConnection = {
-    val connection = endpointUrl.openConnection.asInstanceOf[HttpURLConnection]
-    connection.setRequestMethod("POST")
-    connection.setRequestProperty("Content-Type", contentTypeHeader)
-    connection.setRequestProperty("Accept", acceptHeader)
-    connection.setRequestProperty("User-Agent", userAgent)
-    connection.setConnectTimeout(connectTimeout)
-    connection.setReadTimeout(requestTimeout)
-    connection.setDoOutput(true)
-    connection.setDoInput(true)
-    connection.connect()
-    connection
-  }
 }

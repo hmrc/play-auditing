@@ -367,7 +367,7 @@ class HttpAuditingSpec
 
         httpWithAudit.audit(request, response)
 
-        verifyZeroInteractions(connector)
+        verifyNoInteractions(connector)
       }
     }
 
@@ -380,7 +380,7 @@ class HttpAuditingSpec
         val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
         httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
-        verifyZeroInteractions(connector)
+        verifyNoInteractions(connector)
       }
     }
   }
@@ -424,7 +424,7 @@ class HttpAuditingSpec
 
       httpWithAudit.audit(request, response)
 
-      verifyZeroInteractions(connector)
+      verifyNoInteractions(connector)
     }
 
     "not generate an audit event when an exception has been thrown" in {
@@ -435,7 +435,7 @@ class HttpAuditingSpec
       val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
       httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
-      verifyZeroInteractions(connector)
+      verifyNoInteractions(connector)
     }
   }
 
@@ -454,7 +454,7 @@ class HttpAuditingSpec
 
       httpWithAudit.audit(request, response)
 
-      verifyZeroInteractions(connector)
+      verifyNoInteractions(connector)
     }
 
     "not generate an audit event when an exception has been thrown" in  {
@@ -465,7 +465,7 @@ class HttpAuditingSpec
       val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
       httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
 
-      verifyZeroInteractions(connector)
+      verifyNoInteractions(connector)
     }
   }
 

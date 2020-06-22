@@ -32,9 +32,9 @@ object DateWriter {
 }
 
 trait AuditSerialiserLike {
-  def serialise(event: DataEvent): String
-  def serialise(event: ExtendedDataEvent): String
-  def serialise(event: MergedDataEvent): String
+  def serialise(event: DataEvent): JsValue
+  def serialise(event: ExtendedDataEvent): JsValue
+  def serialise(event: MergedDataEvent): JsValue
 }
 
 class AuditSerialiser extends AuditSerialiserLike {
@@ -44,14 +44,14 @@ class AuditSerialiser extends AuditSerialiserLike {
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] = Json.writes[ExtendedDataEvent]
   private implicit val mergedDataEventWriter: Writes[MergedDataEvent] = Json.writes[MergedDataEvent]
 
-  override def serialise(event: DataEvent): String =
-    Json.toJson(event).toString()
+  override def serialise(event: DataEvent): JsValue =
+    Json.toJson(event)
 
-  override def serialise(event: ExtendedDataEvent): String =
-    Json.toJson(event).toString()
+  override def serialise(event: ExtendedDataEvent): JsValue =
+    Json.toJson(event)
 
-  override def serialise(event: MergedDataEvent): String =
-    Json.toJson(event).toString()
+  override def serialise(event: MergedDataEvent): JsValue =
+    Json.toJson(event)
 }
 
 object AuditSerialiser extends AuditSerialiser

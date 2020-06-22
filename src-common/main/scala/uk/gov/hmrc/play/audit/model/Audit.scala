@@ -22,6 +22,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.Future
 import scala.util.Try
 
+import scala.language.implicitConversions
 
 sealed trait AuditAsMagnet[A] {
   import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer

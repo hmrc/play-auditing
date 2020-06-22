@@ -16,8 +16,12 @@
 
 package uk.gov.hmrc.play.audit.model
 
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
@@ -28,7 +32,7 @@ import uk.gov.hmrc.http.logging.RequestId
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class AuditSpec extends WordSpecLike with Matchers with Eventually {
+class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
 
   class MockAudit(appName: String, connector: AuditConnector) extends Audit(appName, connector) {
 
@@ -63,6 +67,8 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
       auditSource = "the-project-name")
+    override def materializer: Materializer = ActorMaterializer()(ActorSystem())
+    override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
   }
 
   "An Audit object" should {
@@ -145,7 +151,12 @@ class AuditSpec extends WordSpecLike with Matchers with Eventually {
 
       val audit = new MockAudit(appName, auditConnector)
 
-      Await.result(audit.asyncAs[AuditableEvent]((transactionName, "request body no key provided", transformer)) { () => Future.successful(auditable)}, 5 seconds)
+      Await.result(
+        audit.asyncAs[AuditableEvent]((transactionName, "request body no key provided", transformer)) {
+          () => Future.successful(auditable)
+        },
+        5.seconds
+      )
 
       eventually {
         audit.verifyDataEvent(
