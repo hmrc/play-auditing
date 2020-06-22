@@ -19,10 +19,11 @@ package uk.gov.hmrc.audit.serialiser
 import java.time.Instant
 
 import play.api.libs.json.JsString
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
-import org.scalatest._
 
-class AuditSerialiserSpec extends WordSpecLike with Matchers {
+class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
 
   "AuditSerialiser" should {
     "serialise DataEvent" in {

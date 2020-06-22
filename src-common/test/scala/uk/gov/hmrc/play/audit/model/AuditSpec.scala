@@ -19,7 +19,8 @@ package uk.gov.hmrc.play.audit.model
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -31,7 +32,7 @@ import uk.gov.hmrc.http.logging.RequestId
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class AuditSpec extends WordSpecLike with Matchers with Eventually {
+class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
 
   class MockAudit(appName: String, connector: AuditConnector) extends Audit(appName, connector) {
 
