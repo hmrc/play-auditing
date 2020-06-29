@@ -73,7 +73,7 @@ trait AuditConnector {
       lifecycle
     )
 
-  def mergedDatastreamHandler: AuditHandler =
+  lazy val mergedDatastreamHandler: AuditHandler =
     new DatastreamHandler(
       baseUri.protocol,
       baseUri.host,
@@ -86,8 +86,8 @@ trait AuditConnector {
       lifecycle
     )
 
-  def loggingConnector: AuditHandler = LoggingHandler
-  def auditSerialiser: AuditSerialiserLike = AuditSerialiser
+  lazy val loggingConnector: AuditHandler = LoggingHandler
+  lazy val auditSerialiser: AuditSerialiserLike = AuditSerialiser
 
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
