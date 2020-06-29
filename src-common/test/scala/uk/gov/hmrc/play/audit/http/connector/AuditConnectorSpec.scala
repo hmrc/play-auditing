@@ -66,8 +66,8 @@ class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures
     override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
     override lazy val simpleDatastreamHandler: AuditHandler = mockSimpleDatastreamHandler
     override lazy val mergedDatastreamHandler: AuditHandler = mockMergedDatastreamHandler
-    override def loggingConnector: AuditHandler = mockLoggingHandler
-    override def auditSerialiser: AuditSerialiserLike = AuditSerialiser
+    override lazy val loggingConnector: AuditHandler = mockLoggingHandler
+    override lazy val auditSerialiser: AuditSerialiserLike = AuditSerialiser
   }
 
   "creating an AuditConnector" should {
