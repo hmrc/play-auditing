@@ -20,7 +20,6 @@ import java.time.Instant
 
 import com.fasterxml.jackson.core.JsonParseException
 import javax.xml.parsers.SAXParserFactory
-import play.api.Configuration
 import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
@@ -118,7 +117,6 @@ trait HttpAuditing {
     Map(
       "ipAddress"            -> hc.forwarded.map(_.value).getOrElse("-"),
       hc.names.authorisation -> hc.authorization.map(_.value).getOrElse("-"),
-      hc.names.token         -> hc.token.map(_.value).getOrElse("-"),
       Path                   -> request.url,
       Method                 -> request.verb
     ) ++
