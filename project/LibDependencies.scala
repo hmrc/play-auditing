@@ -9,16 +9,18 @@ object LibDependencies {
 
   // we depend on http-verbs just to integrate via the AuditHooks
   // http calls are made with the underlying play-ws
+  val httpVerbsVersion = "12.0.0"
+
   val compilePlay25 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-25" % "11.2.0"
+      "uk.gov.hmrc" %% "http-verbs-play-25" % httpVerbsVersion
     )
 
   val compilePlay26 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-26" % "11.2.0"
+      "uk.gov.hmrc" %% "http-verbs-play-26" % httpVerbsVersion
     )
 
   val compilePlay27 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-27" % "11.2.0"
+      "uk.gov.hmrc" %% "http-verbs-play-27" % httpVerbsVersion
     )
 
   val test = Seq(

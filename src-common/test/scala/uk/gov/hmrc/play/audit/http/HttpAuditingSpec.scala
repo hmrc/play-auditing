@@ -99,7 +99,7 @@ class HttpAuditingSpec
         dataEvent.auditType shouldBe outboundCallAuditType
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", "whitelisted-header" → "test-value")
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", "whitelisted-header" → "test-value")
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
@@ -151,7 +151,7 @@ class HttpAuditingSpec
         dataEvent.auditType shouldBe outboundCallAuditType
 
         dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
+        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
@@ -209,7 +209,7 @@ class HttpAuditingSpec
       dataEvent.auditType shouldBe outboundCallAuditType
 
       dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
+      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
@@ -237,13 +237,12 @@ class HttpAuditingSpec
       dataEvent.auditType shouldBe outboundCallAuditType
 
       dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", token -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
+      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
       dataEvent.response.detail shouldBe Map(ResponseMessage -> response.body, StatusCode -> response.status.toString)
       dataEvent.response.generatedAt shouldBe responseDateTime
-
     }
 
     "mask passwords in an OutboundCall using form values" in {

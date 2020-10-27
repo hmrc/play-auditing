@@ -20,7 +20,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.http.{HeaderCarrier, Token, UserId}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.logging._
 
 class AuditTagsSpec extends AnyWordSpecLike with Matchers {
@@ -29,8 +29,6 @@ class AuditTagsSpec extends AnyWordSpecLike with Matchers {
   import AuditExtensions._
 
   val authorization = Authorization("authorization")
-  val userId = UserId("userId")
-  val token = Token("token")
   val forwarded = ForwardedFor("ipAdress")
   val sessionId = SessionId("1234567890")
   val requestId = RequestId("0987654321")
@@ -39,7 +37,14 @@ class AuditTagsSpec extends AnyWordSpecLike with Matchers {
 
   "Audit TAGS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId), akamaiReputation = Some(akamaiReputation))
+      val hc = new HeaderCarrier(
+        authorization    = Some(authorization),
+        forwarded        = Some(forwarded),
+        sessionId        = Some(sessionId),
+        requestId        = Some(requestId),
+        deviceID         = Some(deviceId),
+        akamaiReputation = Some(akamaiReputation)
+      )
 
       val tags = hc.toAuditTags("theTransactionName", "/the/request/path")
 
@@ -80,12 +85,17 @@ class AuditTagsSpec extends AnyWordSpecLike with Matchers {
       tags("clientIP") shouldBe "192.168.1.1"
       tags("clientPort") shouldBe "9999"
     }
-
   }
 
   "Audit DETAILS" should {
     "be present" in {
-      val hc = new HeaderCarrier(Some(authorization), Some(userId), Some(token), Some(forwarded), Some(sessionId), Some(requestId), deviceID = Some(deviceId))
+      val hc = new HeaderCarrier(
+        authorization    = Some(authorization),
+        forwarded        = Some(forwarded),
+        sessionId        = Some(sessionId),
+        requestId        = Some(requestId),
+        deviceID         = Some(deviceId)
+      )
 
       val details = hc.toAuditDetails()
 
@@ -110,7 +120,5 @@ class AuditTagsSpec extends AnyWordSpecLike with Matchers {
       details("more-details") shouldBe "the details"
       details("lots-of-details") shouldBe "interesting info"
     }
-
   }
-
 }
