@@ -89,7 +89,13 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true", "whitelisted-header" → "test-value")
+      implicit val hcWithHeaders = HeaderCarrier(
+        deviceID     = Some(deviceID),
+        extraHeaders = Seq(
+          "Surrogate"          -> "true",
+          "whitelisted-header" -> "test-value"
+        )
+      )
       httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
 
       eventually(timeout(Span(1, Seconds))) {
@@ -98,12 +104,30 @@ class HttpAuditingSpec
         dataEvent.auditSource shouldBe httpWithAudit.appName
         dataEvent.auditType shouldBe outboundCallAuditType
 
-        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true", "whitelisted-header" → "test-value")
+        dataEvent.request.tags shouldBe Map(
+          xSessionId          -> "-",
+          xRequestId          -> "-",
+          Path                -> serviceUri,
+          "clientIP"          -> "-",
+          "clientPort"        -> "-",
+          "Akamai-Reputation" -> "-",
+          HeaderNames.deviceID -> deviceID
+        )
+        dataEvent.request.detail shouldBe Map(
+          "ipAddress"          -> "-",
+          authorisation        -> "-",
+          Path                 -> serviceUri,
+          Method               -> getVerb,
+          "surrogate"          -> "true",
+          "whitelisted-header" -> "test-value"
+        )
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
-        dataEvent.response.detail shouldBe Map(ResponseMessage -> responseBody, StatusCode -> statusCode.toString)
+        dataEvent.response.detail shouldBe Map(
+          ResponseMessage -> responseBody,
+          StatusCode      -> statusCode.toString
+        )
         dataEvent.response.generatedAt shouldBe responseDateTime
       }
     }
@@ -121,7 +145,13 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(deviceID = Some(deviceID)).withExtraHeaders("Surrogate" -> "true", "extra-header" → "test-value")
+      implicit val hcWithHeaders = HeaderCarrier(
+        deviceID     = Some(deviceID),
+        extraHeaders = Seq(
+            "Surrogate"    -> "true",
+            "extra-header" -> "test-value"
+          )
+      )
       httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
 
       eventually(timeout(Span(1, Seconds))) {
@@ -150,8 +180,22 @@ class HttpAuditingSpec
         dataEvent.auditSource shouldBe httpWithAudit.appName
         dataEvent.auditType shouldBe outboundCallAuditType
 
-        dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-        dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
+        dataEvent.request.tags shouldBe Map(
+          xSessionId           -> "-",
+          xRequestId           -> "-",
+          Path                 -> serviceUri,
+          "clientIP"           -> "-",
+          "clientPort"         -> "-",
+          "Akamai-Reputation"  -> "-",
+          HeaderNames.deviceID -> deviceID
+        )
+        dataEvent.request.detail shouldBe Map(
+          "ipAddress"   -> "-",
+          authorisation -> "-",
+          Path          -> serviceUri,
+          Method        -> postVerb,
+          RequestBody   -> requestBody
+        )
         dataEvent.request.generatedAt shouldBe requestDateTime
 
         dataEvent.response.tags shouldBe empty
@@ -197,7 +241,12 @@ class HttpAuditingSpec
       val request = httpWithAudit.buildRequest(serviceUri, getVerb, requestBody)
       val response = new DummyHttpResponse("the response body", 200)
 
-      implicit val hc = HeaderCarrier(deviceID = Some(deviceID), trueClientIp = Some("192.168.1.2"), trueClientPort = Some("12000")).withExtraHeaders("Surrogate" -> "true")
+      implicit val hc = HeaderCarrier(
+        deviceID       = Some(deviceID),
+        trueClientIp   = Some("192.168.1.2"),
+        trueClientPort = Some("12000"),
+        extraHeaders   = Seq("Surrogate" -> "true")
+      )
 
       whenAuditSuccess(connector)
 
@@ -208,8 +257,22 @@ class HttpAuditingSpec
       dataEvent.auditSource shouldBe httpWithAudit.appName
       dataEvent.auditType shouldBe outboundCallAuditType
 
-      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "192.168.1.2", "clientPort" -> "12000", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> getVerb, "surrogate" -> "true")
+      dataEvent.request.tags shouldBe Map(
+        xSessionId           -> "-",
+        xRequestId           -> "-",
+        Path                 -> serviceUri,
+        "clientIP"           -> "192.168.1.2",
+        "clientPort"         -> "12000",
+        "Akamai-Reputation"  -> "-",
+        HeaderNames.deviceID -> deviceID
+      )
+      dataEvent.request.detail shouldBe Map(
+        "ipAddress"   -> "-",
+        authorisation -> "-",
+        Path          -> serviceUri,
+        Method        -> getVerb,
+        "surrogate"   -> "true"
+      )
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
@@ -236,8 +299,22 @@ class HttpAuditingSpec
       dataEvent.auditSource shouldBe httpWithAudit.appName
       dataEvent.auditType shouldBe outboundCallAuditType
 
-      dataEvent.request.tags shouldBe Map(xSessionId -> "-", xRequestId -> "-", Path -> serviceUri, "clientIP" -> "-", "clientPort" -> "-", "Akamai-Reputation" -> "-", HeaderNames.deviceID -> deviceID)
-      dataEvent.request.detail shouldBe Map("ipAddress" -> "-", authorisation -> "-", Path -> serviceUri, Method -> postVerb, RequestBody -> requestBody)
+      dataEvent.request.tags shouldBe Map(
+        xSessionId            -> "-",
+        xRequestId            -> "-",
+        Path                  -> serviceUri,
+        "clientIP"            -> "-",
+        "clientPort"          -> "-",
+        "Akamai-Reputation"   -> "-",
+         HeaderNames.deviceID -> deviceID
+      )
+      dataEvent.request.detail shouldBe Map(
+        "ipAddress"   -> "-",
+        authorisation -> "-",
+        Path          -> serviceUri,
+        Method        -> postVerb,
+        RequestBody   -> requestBody
+      )
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
@@ -249,7 +326,11 @@ class HttpAuditingSpec
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val requestBody = Map("ok" -> Seq("a"), "password" -> Seq("hide-me"), "passwordConfirmation" -> Seq("hide-me"))
+      val requestBody = Map(
+        "ok"                   -> Seq("a"),
+        "password"             -> Seq("hide-me"),
+        "passwordConfirmation" -> Seq("hide-me")
+      )
       val response = new DummyHttpResponse(Json.obj("password" -> "hide-me").toString, 200)
 
       val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(HookData.FromMap(requestBody)))

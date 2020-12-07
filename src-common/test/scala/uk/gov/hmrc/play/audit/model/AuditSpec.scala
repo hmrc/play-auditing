@@ -25,9 +25,8 @@ import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.HeaderNames._
-import uk.gov.hmrc.http.logging.RequestId
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

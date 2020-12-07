@@ -20,8 +20,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging._
+import uk.gov.hmrc.http.{AkamaiReputation, Authorization, ForwardedFor, HeaderCarrier, RequestId, SessionId}
 
 class AuditTagsSpec extends AnyWordSpecLike with Matchers {
 

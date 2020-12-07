@@ -9,14 +9,10 @@ val scala2_12 = "2.12.10"
 
 lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
-  majorVersion := 6,
+  majorVersion := 7,
   scalaVersion := scala2_12,
   crossScalaVersions := Seq(scala2_11, scala2_12),
   makePublicallyAvailableOnBintray := true,
-  resolvers := Seq(
-                 Resolver.bintrayRepo("hmrc", "releases"),
-                 Resolver.typesafeRepo("releases")
-               ),
   scalacOptions ++= Seq("-feature")
 )
 
