@@ -13,10 +13,6 @@ lazy val commonSettings = Seq(
   scalaVersion := scala2_12,
   crossScalaVersions := Seq(scala2_11, scala2_12),
   makePublicallyAvailableOnBintray := true,
-  resolvers := Seq(
-                 Resolver.bintrayRepo("hmrc", "releases"),
-                 Resolver.typesafeRepo("releases")
-               ),
   scalacOptions ++= Seq("-feature")
 )
 
