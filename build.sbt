@@ -28,22 +28,8 @@ lazy val library = (project in file("."))
     crossScalaVersions := Seq.empty
   )
   .aggregate(
-    playAuditingPlay25,
     playAuditingPlay26,
     playAuditingPlay27
-  )
-
-lazy val playAuditingPlay25 = Project("play-auditing-play-25", file("play-auditing-play-25"))
-  .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
-  .settings(
-    commonSettings,
-    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
-    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
-    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay25 ++ LibDependencies.test,
-    scalaVersion := scala2_11,
-    crossScalaVersions := Seq(scala2_11)
   )
 
 lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditing-play-26"))
