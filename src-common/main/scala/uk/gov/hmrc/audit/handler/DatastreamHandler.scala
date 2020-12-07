@@ -18,33 +18,22 @@ package uk.gov.hmrc.audit.handler
 
 import java.net.URL
 
-import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.JsValue
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{HandlerResult, WSClient}
 import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.Duration
 
 class DatastreamHandler(
-  scheme        : String,
-  host          : String,
-  port          : Integer,
-  path          : String,
-  connectTimeout: Duration,
-  requestTimeout: Duration,
-  userAgent     : String,
-  materializer  : Materializer,
-  lifecycle     : ApplicationLifecycle
+  scheme  : String,
+  host    : String,
+  port    : Integer,
+  path    : String,
+  wsClient: WSClient
 ) extends HttpHandler(
-  endpointUrl    = new URL(s"$scheme://$host:$port$path"),
-  userAgent      = userAgent,
-  connectTimeout = connectTimeout,
-  requestTimeout = requestTimeout,
-  materializer   = materializer,
-  lifecycle      = lifecycle
+  endpointUrl = new URL(s"$scheme://$host:$port$path"),
+  wsClient    = wsClient
 ) with AuditHandler {
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
