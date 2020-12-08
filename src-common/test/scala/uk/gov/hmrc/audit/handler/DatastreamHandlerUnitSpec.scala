@@ -16,32 +16,30 @@
 
 package uk.gov.hmrc.audit.handler
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.inject.DefaultApplicationLifecycle
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{JsString, JsValue}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{HandlerResult, WSClient}
 
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import ExecutionContext.Implicits.global
 
-class DatastreamHandlerUnitSpec extends AnyWordSpecLike with Inspectors with Matchers with ScalaFutures {
+class DatastreamHandlerUnitSpec
+  extends AnyWordSpecLike
+     with Inspectors
+     with Matchers
+     with ScalaFutures
+     with MockitoSugar {
 
   val datastreamHandler = new DatastreamHandler(
-    scheme         = "http",
-    host           = "localhost",
-    port           = 1234,
-    path           = "/some/path",
-    connectTimeout = 2000.millis,
-    requestTimeout = 2000.millis,
-    userAgent      = "the-micro-service-name",
-    materializer   = ActorMaterializer()(ActorSystem()),
-    lifecycle      = new DefaultApplicationLifecycle()
+    scheme   = "http",
+    host     = "localhost",
+    port     = 1234,
+    path     = "/some/path",
+    wsClient = mock[WSClient]
     ) {
     override def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
       Future.successful(HttpResult.Response(event.as[String].toInt))

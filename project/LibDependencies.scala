@@ -11,10 +11,6 @@ object LibDependencies {
   // http calls are made with the underlying play-ws
   val httpVerbsVersion = "13.0.0-SNAPSHOT"
 
-  val compilePlay25 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-25" % httpVerbsVersion
-    )
-
   val compilePlay26 = Seq(
       "uk.gov.hmrc" %% "http-verbs-play-26" % httpVerbsVersion
     )

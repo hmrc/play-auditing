@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.audit
+package uk.gov.hmrc
 
 import akka.stream.Materializer
-import play.api.libs.ws.ahc.{StandaloneAhcWSClient, AhcWSClientConfigFactory}
-import play.api.libs.ws.WSClientConfig
+import _root_.play.api.libs.ws.ahc.{StandaloneAhcWSClient, AhcWSClientConfigFactory}
+import _root_.play.api.libs.ws.{StandaloneWSClient, WSClientConfig}
 
 import scala.concurrent.duration.Duration
 
-package object handler {
-  type WSClient = play.api.libs.ws.StandaloneWSClient
+package object audit {
+  type WSClient = StandaloneWSClient
 
+  // these are for internal use only, but can't be package private since clients are in uk.gov.hmrc.audit and uk.gov.hmrc.play.audit...
   object WSClient {
     def apply(
       connectTimeout: Duration,
