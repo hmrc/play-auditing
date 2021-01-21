@@ -19,6 +19,10 @@ object LibDependencies {
       "uk.gov.hmrc" %% "http-verbs-play-27" % httpVerbsVersion
     )
 
+  val compilePlay28 = Seq(
+      "uk.gov.hmrc" %% "http-verbs-play-28" % httpVerbsVersion
+    )
+
   val test = Seq(
     "commons-codec"          %  "commons-codec"         % "1.14"     % Test,
     "org.scalatest"          %% "scalatest"             % "3.1.1"    % Test,
