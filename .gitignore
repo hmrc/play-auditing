@@ -18,4 +18,8 @@ dist
 /.settings
 *.iws
 **.orig
-    
+.bloop/
+.metals/
+.vscode/
+.idea/
+metals.sbt

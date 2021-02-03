@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, JsObject, Json, Writes}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{HandlerResult, WSClient}
 import uk.gov.hmrc.audit.handler.{AuditHandler, DatastreamHandler, LoggingHandler}
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
@@ -52,6 +52,8 @@ trait AuditConnector {
   def materializer  : Materializer
   def lifecycle     : ApplicationLifecycle
 
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
   val defaultConnectionTimeout: Duration = 5000.millis
   val defaultRequestTimeout: Duration = 5000.millis
   val defaultBaseUri = BaseUri("datastream.protected.mdtp", 90, "http")
@@ -60,17 +62,28 @@ trait AuditConnector {
   lazy val baseUri: BaseUri = consumer.baseUri
   lazy val auditExtraHeaders: Boolean = auditingConfig.auditExtraHeaders.getOrElse(false)
 
+  private lazy val wsClient: WSClient = {
+    implicit val m = materializer
+    val wsClient = WSClient(
+      connectTimeout = defaultConnectionTimeout,
+      requestTimeout = defaultRequestTimeout,
+      userAgent      = auditingConfig.auditSource
+    )
+    lifecycle.addStopHook { () =>
+      logger.info("Closing play-auditing http connections...")
+      wsClient.close()
+      Future.successful(())
+    }
+    wsClient
+  }
+
   lazy val simpleDatastreamHandler: AuditHandler =
     new DatastreamHandler(
       baseUri.protocol,
       baseUri.host,
       baseUri.port,
       s"/${consumer.singleEventUri}",
-      defaultConnectionTimeout,
-      defaultRequestTimeout,
-      auditingConfig.auditSource,
-      materializer,
-      lifecycle
+      wsClient
     )
 
   lazy val mergedDatastreamHandler: AuditHandler =
@@ -79,17 +92,11 @@ trait AuditConnector {
       baseUri.host,
       baseUri.port,
       s"/${consumer.mergedEventUri}",
-      defaultConnectionTimeout,
-      defaultRequestTimeout,
-      auditingConfig.auditSource,
-      materializer,
-      lifecycle
+      wsClient
     )
 
   lazy val loggingConnector: AuditHandler = LoggingHandler
   lazy val auditSerialiser: AuditSerialiserLike = AuditSerialiser
-
-  private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def sendExplicitAudit(auditType: String, detail: Map[String, String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit =
     sendExplicitAudit(auditType, Json.toJson(detail).as[JsObject])
@@ -133,7 +140,7 @@ trait AuditConnector {
     if (auditingConfig.enabled) {
       send.map(AuditResult.fromHandlerResult)
     } else {
-      log.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
+      logger.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
       Future.successful(AuditResult.Disabled)
     }
 
@@ -145,7 +152,7 @@ trait AuditConnector {
       }
       .recover {
         case e: Throwable =>
-          log.error("Error in handler code", e)
+          logger.error("Error in handler code", e)
           HandlerResult.Failure
       }
 }

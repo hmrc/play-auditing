@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.DefaultApplicationLifecycle
 import play.api.libs.json.{JsString, JsValue}
-import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils}
+import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils, WSClient}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
@@ -47,16 +47,20 @@ class DatastreamHandlerWireSpec
 
   val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
+
+  implicit val materializer   = ActorMaterializer()(ActorSystem())
+  implicit val lifecycle      = new DefaultApplicationLifecycle()
+
   val datastreamHandler = new DatastreamHandler(
     scheme         = "http",
     host           = "localhost",
     port           = datastreamTestPort,
     path           = datastreamPath,
-    connectTimeout = 2000.millis,
-    requestTimeout = 2000.millis,
-    userAgent      = "the-micro-service-name",
-    materializer   = ActorMaterializer()(ActorSystem()),
-    lifecycle      = new DefaultApplicationLifecycle()
+    wsClient       = WSClient(
+                       connectTimeout = 2000.millis,
+                       requestTimeout = 2000.millis,
+                       userAgent      = "the-micro-service-name"
+                     )
     )
 
 

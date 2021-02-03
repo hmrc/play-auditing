@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest._
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.must.Matchers
@@ -36,8 +36,7 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils}
 import uk.gov.hmrc.audit.handler.AuditHandler
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.SessionId
+import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
@@ -46,7 +45,13 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class MyExampleAudit(userType: String, vrn: String)
 
-class AuditConnectorSpec extends AnyWordSpecLike with Matchers with ScalaFutures with MockitoSugar with OneInstancePerTest {
+class AuditConnectorSpec
+  extends AnyWordSpecLike
+     with Matchers
+     with ScalaFutures
+     with IntegrationPatience
+     with MockitoSugar
+     with OneInstancePerTest {
 
   implicit val ec = RunInlineExecutionContext
 

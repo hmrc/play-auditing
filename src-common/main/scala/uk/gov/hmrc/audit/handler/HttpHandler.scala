@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,11 @@ import java.io.IOException
 import java.net.URL
 import java.util.concurrent.TimeoutException
 
-import akka.stream.Materializer
+import uk.gov.hmrc.audit.WSClient
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.JsValue
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.Duration
 
 
 sealed trait HttpResult
@@ -37,27 +35,12 @@ object HttpResult {
 }
 
 abstract class HttpHandler(
-  endpointUrl      : URL,
-  userAgent        : String,
-  connectTimeout   : Duration,
-  requestTimeout   : Duration,
-  materializer     : Materializer,
-  lifecycle        : ApplicationLifecycle
+  endpointUrl: URL,
+  wsClient   : WSClient
 ) {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   val HTTP_STATUS_CONTINUE = 100
-
-  val wsClient: WSClient = {
-    implicit val m = materializer
-    val wsClient = WSClient(connectTimeout, requestTimeout, userAgent)
-    lifecycle.addStopHook { () =>
-      logger.info("Closing play-auditing http connections...")
-      wsClient.close()
-      Future.successful(())
-    }
-    wsClient
-  }
 
   def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
     try {
