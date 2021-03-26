@@ -60,12 +60,14 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
   }
 
   val exampleRequestId = "12345"
-  implicit val hc = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
-  val auditConnector = new AuditConnector {
+  implicit val hc: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
+  val auditConnector: AuditConnector = new AuditConnector {
     override def auditingConfig: AuditingConfig = AuditingConfig(
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
-      auditSource = "the-project-name")
+      auditSource = "the-project-name",
+      auditSentHeaders = false
+    )
     override def materializer: Materializer = ActorMaterializer()(ActorSystem())
     override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
   }

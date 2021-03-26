@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.play.audit.http
 
+import java.net.URL
 import java.time.Instant
 
 import com.fasterxml.jackson.core.JsonParseException
@@ -26,8 +27,9 @@ import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
 import uk.gov.hmrc.http.hooks.{HookData, HttpHook}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
 
+import scala.collection.immutable.SortedMap
 import scala.xml._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
@@ -54,15 +56,16 @@ trait HttpAuditing {
 
   object AuditingHook extends HttpHook {
     override def apply(
-      url      : String,
       verb     : String,
+      url      : URL,
+      headers  : Seq[(String, String)],
       body     : Option[HookData],
       responseF: Future[HttpResponse]
     )(implicit
       hc: HeaderCarrier,
       ec : ExecutionContext
     ): Unit = {
-      val request = HttpRequest(url, verb, body, now())
+      val request = HttpRequest(verb, url.toString, headers, body, now())
       responseF.map {
         response => audit(request, response)
       }.recover {
@@ -70,9 +73,6 @@ trait HttpAuditing {
       }
     }
   }
-
-  def auditFromPlayFrontend(url: String, response: HttpResponse, hc: HeaderCarrier)(implicit ec: ExecutionContext): Unit =
-    audit(HttpRequest(url, "", None, Instant.now), response)(hc, ec)
 
   private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
@@ -113,15 +113,26 @@ trait HttpAuditing {
     )
   }
 
-  private def requestDetails(request: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] =
+  private def when[K, V](pred: Boolean)(value: => Map[K, V]): Map[K, V] =
+    if (pred) value else Map.empty
+
+  private[http] def caseInsensitiveMap(headers: Seq[(String, String)]): SortedMap[String, String] =
+    SortedMap()(Ordering.comparatorToOrdering(String.CASE_INSENSITIVE_ORDER)) ++
+      headers.groupBy(_._1.toLowerCase).map{ case (_, hdrs) => hdrs.head._1 -> hdrs.map(_._2).mkString(",")}
+
+  private def requestDetails(request: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
+    val caseInsensitiveHeaders = caseInsensitiveMap(request.headers)
+
     Map(
-      "ipAddress"            -> hc.forwarded.map(_.value).getOrElse("-"),
-      hc.names.authorisation -> hc.authorization.map(_.value).getOrElse("-"),
-      Path                   -> request.url,
-      Method                 -> request.verb
+      "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
+      HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
+      Path                      -> request.url,
+      Method                    -> request.verb
     ) ++
-      request.body.map(b => Seq(RequestBody -> maskRequestBody(b))).getOrElse(Seq.empty) ++
-      auditExtraHeaderFields(hc.extraHeaders.toMap)
+      caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
+      request.body.map(b => RequestBody -> maskRequestBody(b)).toMap ++
+      when(auditConnector.auditSentHeaders)(caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation)
+  }
 
   private def maskRequestBody(body: HookData): String =
     body match {
@@ -138,7 +149,7 @@ trait HttpAuditing {
       try {
         Json.stringify(maskJsonFields(Json.parse(text)))
       } catch {
-        case e: JsonParseException => text
+        case _: JsonParseException => text
       }
     } else if (text.startsWith("<")) {
       try {
@@ -146,7 +157,7 @@ trait HttpAuditing {
         PrettyPrinter.format(maskXMLFields(xxeResistantParser.loadString(text)), builder)
         builder.toString()
       } catch {
-        case e: SAXParseException => text
+        case _: SAXParseException => text
       }
     } else {
       text
@@ -199,30 +210,16 @@ trait HttpAuditing {
     !url.contains("/write/audit") && auditDisabledForPattern.findFirstIn(url).isEmpty
 
   protected case class HttpRequest(
-    url        : String,
     verb       : String,
+    url        : String,
+    headers    : Seq[(String, String)],
     body       : Option[HookData],
     generatedAt: Instant
   )
-
-  private def auditExtraHeaderFields(headers: Map[String, String]): Map[String, String] =
-    headers.map(t => t._1 -> Seq(t._2)).collect {
-      case ("Surrogate", v) => "surrogate" -> v.mkString(",")
-      case (k, v) if auditConnector.auditExtraHeaders ⇒ k -> v.mkString(",")
-    }
 }
 
 // TODO: Remove
 object HeaderFieldsExtractor {
-  private val SurrogateHeader = "Surrogate"
-
-  def optionalAuditFields(headers: Map[String, String]): Map[String, String] =
-    optionalAuditFieldsSeq(
-      headers.map(t => t._1 -> Seq(t._2))
-    )
-
   def optionalAuditFieldsSeq(headers: Map[String, Seq[String]]): Map[String, String] =
-    headers.collect {
-      case (SurrogateHeader, v) => "surrogate" -> v.mkString(",")
-    }
+    headers.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _.mkString(",")).toMap
 }

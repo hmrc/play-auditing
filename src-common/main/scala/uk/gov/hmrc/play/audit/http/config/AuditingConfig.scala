@@ -50,5 +50,5 @@ case class AuditingConfig(
   consumer   : Option[Consumer],
   enabled    : Boolean,
   auditSource: String,
-  auditExtraHeaders: Option[Boolean] = None
+  auditSentHeaders: Boolean
 )

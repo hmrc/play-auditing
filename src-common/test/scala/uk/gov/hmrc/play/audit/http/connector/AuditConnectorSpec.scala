@@ -28,14 +28,14 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatestplus.mockito.MockitoSugar
-import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils}
 import uk.gov.hmrc.audit.handler.AuditHandler
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
+import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
@@ -53,21 +53,22 @@ class AuditConnectorSpec
      with MockitoSugar
      with OneInstancePerTest {
 
-  implicit val ec = RunInlineExecutionContext
+  implicit val ec: ExecutionContext = RunInlineExecutionContext
+  implicit val as: ActorSystem      = ActorSystem()
+  implicit val m: Materializer      = ActorMaterializer()//required for play 2.6
 
-  val consumer = Consumer(BaseUri("datastream-base-url", 8080, "http"))
-  val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name")
-  val disabledConfig = AuditingConfig(consumer = Some(consumer), enabled = false, auditSource = "the-project-name")
+  private val consumer = Consumer(BaseUri("datastream-base-url", 8080, "http"))
+  private val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false)
 
-  val mockSimpleDatastreamHandler: AuditHandler = mock[AuditHandler]
-  val mockMergedDatastreamHandler: AuditHandler = mock[AuditHandler]
+  private val mockSimpleDatastreamHandler: AuditHandler = mock[AuditHandler]
+  private val mockMergedDatastreamHandler: AuditHandler = mock[AuditHandler]
 
-  val mockFlumeHandler: AuditHandler = mock[AuditHandler]
-  val mockLoggingHandler: AuditHandler = mock[AuditHandler]
+  private val mockFlumeHandler: AuditHandler = mock[AuditHandler]
+  private val mockLoggingHandler: AuditHandler = mock[AuditHandler]
 
-  def mockConnector(config: AuditingConfig) = new AuditConnector {
+  private def mockConnector(config: AuditingConfig): AuditConnector = new AuditConnector {
     override def auditingConfig: AuditingConfig = config
-    override def materializer: Materializer = ActorMaterializer()(ActorSystem())
+    override def materializer: Materializer = implicitly
     override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
     override lazy val simpleDatastreamHandler: AuditHandler = mockSimpleDatastreamHandler
     override lazy val mergedDatastreamHandler: AuditHandler = mockMergedDatastreamHandler
@@ -79,10 +80,10 @@ class AuditConnectorSpec
     "allow the configuration to be specified" in {
       val testPort = WireMockUtils.availablePort
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
-      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name")
+      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false)
       val connector = new AuditConnector {
         override def auditingConfig: AuditingConfig = config
-        override def materializer: Materializer = ActorMaterializer()(ActorSystem())
+        override def materializer: Materializer = implicitly
         override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
       }
       val dataCall = DataCall(Map(), Map(), Instant.now())
@@ -161,7 +162,8 @@ class AuditConnectorSpec
       val disabledConfig = AuditingConfig(
         consumer    = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
         enabled     = false,
-        auditSource = "the-project-name"
+        auditSource = "the-project-name",
+        auditSentHeaders = false
       )
 
       mockConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)

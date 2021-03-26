@@ -55,15 +55,15 @@ trait AuditConnector {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   val defaultConnectionTimeout: Duration = 5000.millis
-  val defaultRequestTimeout: Duration = 5000.millis
-  val defaultBaseUri = BaseUri("datastream.protected.mdtp", 90, "http")
+  val defaultRequestTimeout: Duration    = 5000.millis
+  val defaultBaseUri: BaseUri            = BaseUri("datastream.protected.mdtp", 90, "http")
 
   lazy val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
   lazy val baseUri: BaseUri = consumer.baseUri
-  lazy val auditExtraHeaders: Boolean = auditingConfig.auditExtraHeaders.getOrElse(false)
+  lazy val auditSentHeaders: Boolean = auditingConfig.auditSentHeaders
 
   private lazy val wsClient: WSClient = {
-    implicit val m = materializer
+    implicit val m: Materializer = materializer
     val wsClient = WSClient(
       connectTimeout = defaultConnectionTimeout,
       requestTimeout = defaultRequestTimeout,
