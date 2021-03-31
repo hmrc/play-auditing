@@ -36,6 +36,7 @@ import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
 import uk.gov.hmrc.http.hooks.HookData
 import uk.gov.hmrc.play.test.DummyHttpResponse
+import uk.gov.hmrc.http._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -47,16 +48,18 @@ class HttpAuditingSpec
   with Eventually
   with MockitoSugar {
 
-  val outboundCallAuditType: String = "OutboundCall"
-  val requestDateTime = Instant.now
-  val responseDateTime: Instant = requestDateTime.plusSeconds(5)
+  private val outboundCallAuditType: String = "OutboundCall"
+  private val requestDateTime: Instant      = Instant.now
+  private val responseDateTime: Instant     = requestDateTime.plusSeconds(5)
+  private val postVerb                      = "POST"
+  private val getVerb                       = "GET"
 
   class HttpWithAuditing(connector: AuditConnector) extends HttpAuditing {
     override val appName: String = "httpWithAuditSpec"
     override def auditConnector: AuditConnector = connector
 
-    def auditRequestWithResponseF(url: String, verb: String, requestBody: Option[HookData], response: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit =
-      AuditingHook(url, verb, requestBody, response)(hc, global)
+    def auditRequestWithResponseF(verb: String, url: String, headers: Seq[(String, String)], requestBody: Option[HookData], response: Future[HttpResponse])(implicit hc: HeaderCarrier): Unit =
+      AuditingHook(verb, url"$url", headers, requestBody, response)(hc, global)
 
     var now_call_count = 0
     override def now(): Instant = {
@@ -66,37 +69,37 @@ class HttpAuditingSpec
       else responseDateTime
     }
 
-    def buildRequest(url: String, verb: String, body: Option[HookData]): HttpRequest = {
+    def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Option[HookData]): HttpRequest = {
       now_call_count = 1
-      HttpRequest(url, verb, body, requestDateTime)
+      HttpRequest(verb, url, headers, body, requestDateTime)
     }
   }
 
   "When asked to auditRequestWithResponseF the code" should {
     val deviceID = "A_DEVICE_ID"
-    val serviceUri = "/service/path"
+    val serviceUri = "https://www.google.co.uk"
 
     "handle the happy path with a valid audit event passing through" in {
       val connector = mock[AuditConnector]
-      when(connector.auditExtraHeaders).thenReturn(true)
+      when(connector.auditSentHeaders).thenReturn(true)
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = None
-      val getVerb = "GET"
       val responseBody = "the response body"
       val statusCode = 200
       val response = Future.successful(new DummyHttpResponse(responseBody, statusCode))
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(
-        deviceID     = Some(deviceID),
-        extraHeaders = Seq(
-          "Surrogate"          -> "true",
-          "whitelisted-header" -> "test-value"
-        )
+      val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))
+
+      val sentHeaders = Seq(
+        "surrogate"          -> "true",
+        "authorization"      -> "token",
+        "allowlist-header"   -> "test-value"
       )
-      httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
+
+      httpWithAudit.auditRequestWithResponseF(getVerb, serviceUri, sentHeaders, requestBody, response)(hc)
 
       eventually(timeout(Span(1, Seconds))) {
         val dataEvent = verifyAndRetrieveEvent(connector)
@@ -115,11 +118,11 @@ class HttpAuditingSpec
         )
         dataEvent.request.detail shouldBe Map(
           "ipAddress"          -> "-",
-          authorisation        -> "-",
+          authorisation        -> "token",
           Path                 -> serviceUri,
           Method               -> getVerb,
           "surrogate"          -> "true",
-          "whitelisted-header" -> "test-value"
+          "allowlist-header"   -> "test-value"
         )
         dataEvent.request.generatedAt shouldBe requestDateTime
 
@@ -134,25 +137,23 @@ class HttpAuditingSpec
 
     "not audit extra headers by default" in {
       val connector = mock[AuditConnector]
-      when(connector.auditExtraHeaders).thenReturn(false)
+      when(connector.auditSentHeaders).thenReturn(false)
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = None
-      val getVerb = "GET"
       val responseBody = "the response body"
       val statusCode = 200
       val response = Future.successful(new DummyHttpResponse(responseBody, statusCode))
 
       whenAuditSuccess(connector)
 
-      implicit val hcWithHeaders = HeaderCarrier(
-        deviceID     = Some(deviceID),
-        extraHeaders = Seq(
-            "Surrogate"    -> "true",
-            "extra-header" -> "test-value"
-          )
+      val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))
+      val sentHeaders       = Seq(
+        surrogate      -> "true",
+        "extra-header" -> "test-value"
       )
-      httpWithAudit.auditRequestWithResponseF(serviceUri, getVerb, requestBody, response)
+
+      httpWithAudit.auditRequestWithResponseF(getVerb, serviceUri, sentHeaders, requestBody, response)(hc)
 
       eventually(timeout(Span(1, Seconds))) {
         val dataEvent = verifyAndRetrieveEvent(connector)
@@ -161,18 +162,17 @@ class HttpAuditingSpec
     }
 
     "handle the case of an exception being raised inside the future and still send an audit message" in {
-      implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
+      implicit val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = "the infamous request body"
-      val postVerb = "POST"
       val errorMessage = "FOO bar"
       val response = Future.failed(new Exception(errorMessage))
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.auditRequestWithResponseF(serviceUri, postVerb, Some(HookData.FromString(requestBody)), response)
+      httpWithAudit.auditRequestWithResponseF(postVerb, serviceUri, Seq(), Some(HookData.FromString(requestBody)), response)
 
       eventually(timeout(Span(1, Seconds))) {
         val dataEvent = verifyAndRetrieveEvent(connector)
@@ -205,22 +205,24 @@ class HttpAuditingSpec
     }
 
     "not do anything if the datastream service is throwing an error as in this specific case datastream is logging the event" in {
-      implicit val hc = HeaderCarrier()
+      val hc: HeaderCarrier = HeaderCarrier()
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = "the infamous request body"
-      val postVerb = "POST"
       val errorMessage = "FOO bar"
       val response = Future.failed(new Exception(errorMessage))
 
       when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
         .thenThrow(new IllegalArgumentException("any exception"))
 
-      httpWithAudit.auditRequestWithResponseF(serviceUri, postVerb, Some(HookData.FromString(requestBody)), response)
+      when(connector.auditSentHeaders).thenReturn(false)
+
+      httpWithAudit.auditRequestWithResponseF(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)), response)(hc)
 
       eventually(timeout(Span(1, Seconds))) {
         verify(connector, times(1)).sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext])
+        verify(connector).auditSentHeaders
         verifyNoMoreInteractions(connector)
       }
     }
@@ -230,22 +232,20 @@ class HttpAuditingSpec
     val serviceUri = "/service/path"
     val deviceID = "A_DEVICE_ID"
 
-    implicit val hc = HeaderCarrier(deviceID = Some(deviceID))
+    implicit val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))
 
     "send unique event of type OutboundCall" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = None
-      val getVerb = "GET"
-      val request = httpWithAudit.buildRequest(serviceUri, getVerb, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, serviceUri, Seq(surrogate -> "true") , requestBody)
       val response = new DummyHttpResponse("the response body", 200)
 
-      implicit val hc = HeaderCarrier(
+      implicit val hc: HeaderCarrier = HeaderCarrier(
         deviceID       = Some(deviceID),
         trueClientIp   = Some("192.168.1.2"),
-        trueClientPort = Some("12000"),
-        extraHeaders   = Seq("Surrogate" -> "true")
+        trueClientPort = Some("12000")
       )
 
       whenAuditSuccess(connector)
@@ -281,14 +281,12 @@ class HttpAuditingSpec
     }
 
     "send unique event of type OutboundCall including the requestbody" in {
-      val connector = mock[AuditConnector]
+      val connector     = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
+      val requestBody   = "The request body gets added to the audit details"
+      val response      = new DummyHttpResponse("the response body", 200)
 
-      val postVerb = "POST"
-      val requestBody = "The request body gets added to the audit details"
-      val response = new DummyHttpResponse("the response body", 200)
-
-      val request = httpWithAudit.buildRequest(serviceUri, postVerb, Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
 
       whenAuditSuccess(connector)
 
@@ -323,7 +321,7 @@ class HttpAuditingSpec
     }
 
     "mask passwords in an OutboundCall using form values" in {
-      val connector = mock[AuditConnector]
+      val connector     = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody = Map(
@@ -333,7 +331,7 @@ class HttpAuditingSpec
       )
       val response = new DummyHttpResponse(Json.obj("password" -> "hide-me").toString, 200)
 
-      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(HookData.FromMap(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromMap(requestBody)))
 
       whenAuditSuccess(connector)
 
@@ -352,7 +350,7 @@ class HttpAuditingSpec
       val sampleJson = Json.obj("a" -> Json.arr(Json.obj("ok" -> 1, "password" -> "hide-me", "PASSWD" -> "hide-me")))
       val response = new DummyHttpResponse(Json.stringify(sampleJson), 200)
 
-      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(HookData.FromString(Json.stringify(sampleJson))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(Json.stringify(sampleJson))))
 
       whenAuditSuccess(connector)
 
@@ -378,7 +376,7 @@ class HttpAuditingSpec
           |</abc>""".stripMargin
       val response = new DummyHttpResponse(sampleXml, 200)
 
-      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(HookData.FromString(sampleXml)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(sampleXml)))
 
       whenAuditSuccess(connector)
 
@@ -397,7 +395,7 @@ class HttpAuditingSpec
       val requestBody = "< this is not xml"
       val response = new DummyHttpResponse("< this is not xml", 200)
 
-      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
 
       whenAuditSuccess(connector)
 
@@ -416,7 +414,7 @@ class HttpAuditingSpec
       val requestBody = "{ not json"
       val response = new DummyHttpResponse("{ not json", 200)
 
-      val request = httpWithAudit.buildRequest(serviceUri, "POST", Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
 
       whenAuditSuccess(connector)
 
@@ -435,7 +433,7 @@ class HttpAuditingSpec
     }
     val getVerb = "GET"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "not generate an audit event" in {
       forAll(auditUris) { auditUri =>
@@ -443,7 +441,7 @@ class HttpAuditingSpec
         val httpWithAudit = new HttpWithAuditing(connector)
         val requestBody = None
         val response = new DummyHttpResponse("the response body", 200)
-        val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
+        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
         httpWithAudit.audit(request, response)
 
@@ -457,7 +455,7 @@ class HttpAuditingSpec
         val httpWithAudit = new HttpWithAuditing(connector)
         val requestBody = None
 
-        val request = httpWithAudit.buildRequest(auditUri, getVerb, requestBody)
+        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
         httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
         verifyNoInteractions(connector)
@@ -466,17 +464,16 @@ class HttpAuditingSpec
   }
 
   "Calling an external service with service in its domain name" should {
-    val AuditUri = "http://some.service.gov.uk:80/self-assessment/data"
-    val getVerb = "GET"
+    val auditUri = "http://some.service.gov.uk:80/self-assessment/data"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "generate an audit event" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody = None
       val response = new DummyHttpResponse("the response body", 200)
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
       whenAuditSuccess(connector)
 
@@ -490,17 +487,16 @@ class HttpAuditingSpec
   }
 
   "Auditing the url /write/audit" should {
-    val AuditUri = "/write/audit"
-    val getVerb = "GET"
+    val auditUri = "/write/audit"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "not generate an audit event" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody = None
       val response = new DummyHttpResponse("the response body", 200)
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
       httpWithAudit.audit(request, response)
 
@@ -512,7 +508,7 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody = None
 
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
       httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
       verifyNoInteractions(connector)
@@ -520,17 +516,16 @@ class HttpAuditingSpec
   }
 
   "Auditing the url /write/audit/merged" should {
-    val AuditUri = "/write/audit/merged"
-    val getVerb = "GET"
+    val auditUri = "/write/audit/merged"
 
-    implicit val hc = HeaderCarrier()
+    implicit val hc: HeaderCarrier = HeaderCarrier()
 
     "not generate an audit event" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody = None
       val response = new DummyHttpResponse("the response body", 200)
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
       httpWithAudit.audit(request, response)
 
@@ -542,10 +537,61 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody = None
 
-      val request = httpWithAudit.buildRequest(AuditUri, getVerb, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
       httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
 
       verifyNoInteractions(connector)
+    }
+  }
+
+  "caseInsensitiveMap" should {
+
+    "comma separate values for duplicate keys" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val headers = Seq("a" -> "a", "a" -> "b", "a" -> "c", "b" -> "d")
+
+      val result = httpWithAudit.caseInsensitiveMap(headers)
+
+      result shouldBe Map("a" -> "a,b,c", "b" -> "d")
+    }
+
+    "treat keys in a case insensitive way when returning values" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val headers = Seq(
+        "aa" -> "a",
+        "Aa" -> "b",
+        "Aa" -> "c",
+        "AA" -> "d",
+        "b" -> "d"
+      )
+
+      val result = httpWithAudit.caseInsensitiveMap(headers)
+
+      result shouldBe Map("aa" -> "a,b,c,d", "b" -> "d")
+      result.get("aA") shouldBe Some("a,b,c,d")
+      result.get("Aa") shouldBe Some("a,b,c,d")
+      result.get("AA") shouldBe Some("a,b,c,d")
+    }
+
+    "preserve the case of the first header name when there are duplicates" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val headers = Seq(
+        "X-forwarded-for" -> "a",
+        "X-forwarded-for" -> "b",
+        "x-forwarded-for" -> "c",
+        "X-FORWARDED-for" -> "d",
+        "b" -> "d"
+      )
+
+      val result = httpWithAudit.caseInsensitiveMap(headers)
+
+      result shouldBe Map("X-forwarded-for" -> "a,b,c,d", "b" -> "d")
     }
   }
 
