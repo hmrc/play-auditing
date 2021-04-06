@@ -20,7 +20,6 @@ import java.util.UUID
 
 import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, Writes}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
@@ -48,8 +47,8 @@ object AuditResult {
 trait AuditConnector {
   def auditingConfig: AuditingConfig
   def materializer  : Materializer
-  def lifecycle     : ApplicationLifecycle
   def auditChannel  : AuditChannel
+  def auditCounter  : AuditCounter
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
@@ -76,24 +75,24 @@ trait AuditConnector {
 
   def sendEvent(event: DataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec: ExecutionContext): Future[AuditResult] =
     ifEnabled {
-      auditChannel.send(
-        "write/audit",
+      send(
+        "/write/audit",
         auditSerialiser.serialise(event.copy(tags = hc.appendToDefaultTags(event.tags)))
         )
     }
 
   def sendExtendedEvent(event: ExtendedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec: ExecutionContext): Future[AuditResult] =
     ifEnabled {
-      auditChannel.send(
-         "write/audit",
+      send(
+         "/write/audit",
         auditSerialiser.serialise(event.copy(tags = hc.appendToDefaultTags(event.tags)))
       )
     }
 
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec: ExecutionContext): Future[AuditResult] =
     ifEnabled {
-      auditChannel.send(
-        "write/audit/merged",
+      send(
+        "/write/audit/merged",
         auditSerialiser.serialise(event)
       )
     }
@@ -106,4 +105,7 @@ trait AuditConnector {
       Future.successful(AuditResult.Disabled)
     }
 
+  private def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
+    auditChannel.send(path, audit ++ auditCounter.createMetadata())
+  }
 }

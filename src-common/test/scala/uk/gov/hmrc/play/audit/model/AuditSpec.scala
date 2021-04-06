@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.play.audit.model
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, CoordinatedShutdown}
 import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
-import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector}
+import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, AuditCounter, AuditCounterMetrics}
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.HeaderNames._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
 
@@ -69,16 +69,26 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
       auditSentHeaders = false
     )
     val testmaterializer = ActorMaterializer()(ActorSystem())
-    val testlifecycle = new DefaultApplicationLifecycle()
     new AuditConnector {
       override def auditingConfig: AuditingConfig = testconfig
       override def materializer: Materializer = testmaterializer
-      override def lifecycle: ApplicationLifecycle = testlifecycle
 
       override def auditChannel: AuditChannel = new AuditChannel {
         override def auditingConfig: AuditingConfig = testconfig
         override def materializer: Materializer = testmaterializer
-        override def lifecycle: ApplicationLifecycle = testlifecycle
+        override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
+      }
+
+      override def auditCounter: AuditCounter = new AuditCounter {
+        override def actorSystem: ActorSystem = ???
+        override def auditingConfig: AuditingConfig = ???
+        override def coordinatedShutdown : CoordinatedShutdown = ???
+        override def ec: ExecutionContext = ???
+        override def auditChannel: AuditChannel = ???
+
+        override def auditMetrics: AuditCounterMetrics = new AuditCounterMetrics {
+          def registerMetric(name:String, read:()=>Long):Unit = {}
+        }
       }
     }
   }
