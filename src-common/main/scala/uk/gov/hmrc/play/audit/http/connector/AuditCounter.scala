@@ -19,8 +19,7 @@ package uk.gov.hmrc.play.audit.http.connector
 import java.time.{Instant, ZoneId}
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicLong
-
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import akka.Done
 import akka.actor.{ActorSystem, CoordinatedShutdown}
 import org.slf4j.{Logger, LoggerFactory}
@@ -31,64 +30,47 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 trait AuditCounter {
-  def actorSystem: ActorSystem
   def auditingConfig: AuditingConfig
-  def coordinatedShutdown : CoordinatedShutdown
-  def ec: ExecutionContext
   def auditChannel: AuditChannel
   def auditMetrics: AuditCounterMetrics
 
-  private val logger: Logger = LoggerFactory.getLogger(getClass)
-
-  private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneId.of("UTC"))
-
+  protected val logger: Logger = LoggerFactory.getLogger(getClass)
   private val instanceID = UUID.randomUUID().toString
-
   private val sequence = new AtomicLong(0)
   private val publishedSequence = new AtomicLong(0)
-  private val finalSequence = new AtomicLong(0)
+  private val finalSequence = new AtomicBoolean(false)
 
   if (auditingConfig.enabled) {
+    auditMetrics.registerMetric("audit-count.sequence", () => sequence.get())
+    auditMetrics.registerMetric("audit-count.published", () => publishedSequence.get())
+    auditMetrics.registerMetric("audit-count.final", () => if (finalSequence.get()) 1 else 0)
+  }
 
-
-    auditMetrics.registerMetric("audit-counter.sequence", () => sequence.get())
-    auditMetrics.registerMetric("audit-counter.published", () => publishedSequence.get())
-    auditMetrics.registerMetric("audit-counter.final", () => finalSequence.get())
-
-    def publish(isFinal:Boolean): Future[Done] = {
+  def publish(isFinal:Boolean)(implicit ec: ExecutionContext): Future[Done] = {
+    if (auditingConfig.enabled) {
       val currentSequence = sequence.get()
-      val auditMetric = Json.obj(
-        "type" -> "audit-counter",
+      val auditCount = Json.obj(
+        "type" -> "audit-count",
         "auditSource" -> auditingConfig.auditSource,
         "instanceID" -> instanceID,
         "timestamp" -> timestamp(),
         "sequence" -> currentSequence,
-        "isFinal"-> isFinal
+        "isFinal" -> isFinal
       )
       publishedSequence.set(currentSequence)
       if (isFinal) {
-        finalSequence.set(currentSequence)
+        finalSequence.set(true)
       }
-      logger.info(s"AuditMetric: $auditMetric")
-      auditChannel.send("/write/audit", auditMetric)(ec).map (_ => Done)(ec)
-    }
-
-    val scheduler = actorSystem.scheduler.schedule(60.seconds, 60.seconds, new Runnable {
-      override def run(): Unit = publish(false)
-    })(ec)
-
-    //This is intentionally run at ServiceRequestsDone which is before the default ApplicationLifecycle stopHook
-    // as this must be run before the AuditChannel WSClient is closed
-    // and before final metrics report, triggered by the close in the EnabledGraphiteReporting stopHook
-    coordinatedShutdown.addTask(CoordinatedShutdown.PhaseServiceRequestsDone, "final audit counters") { () =>
-      scheduler.cancel()
-      publish(isFinal = true)
+      logger.info(s"AuditCount: $auditCount")
+      auditChannel.send("/write/audit", auditCount)(ec).map(_ => Done)(ec)
+    } else {
+      Future.successful(Done)
     }
   }
 
   def createMetadata():JsObject = {
-    if (finalSequence.get != 0) {
-      logger.warn(s"Audit created after publication of final audit count. This can lead to undetected audit loss")
+    if (finalSequence.get) {
+      logger.warn(s"Audit created after publication of final audit-count. This can lead to undetected audit loss.")
     }
     Json.obj(
       "metadata" -> Json.obj(
@@ -99,5 +81,11 @@ trait AuditCounter {
     )
   }
 
-  private def timestamp(): String = dateFormat.format(Instant.now())
+  protected def currentTime() = Instant.now
+  private def timestamp(): String = {
+    DateTimeFormatter
+      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+      .withZone(ZoneId.of("UTC"))
+      .format(currentTime())
+  }
 }

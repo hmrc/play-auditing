@@ -16,24 +16,19 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import akka.Done
-import akka.actor.{ActorSystem, CoordinatedShutdown}
-import akka.stream.Materializer
-import org.mockito.{ArgumentCaptor, ArgumentMatchers}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{spy, verify, when}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.JsValue
-import uk.gov.hmrc.audit.HandlerResult.Success
+import org.slf4j.Logger
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
-import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers.any
 
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
+import scala.concurrent.Future
 
 class AuditCounterSpec
   extends AnyWordSpecLike
@@ -45,68 +40,34 @@ class AuditCounterSpec
 
   class Test {
 
-    implicit val _ec: ExecutionContext = RunInlineExecutionContext
-    implicit val _as: ActorSystem = ActorSystem()
+    implicit val executionContext = RunInlineExecutionContext
 
-    var messages = Seq.empty[JsValue]
-
-    val stubAuditChannel = new AuditChannel {
-      override def auditingConfig: AuditingConfig = ???
-
-      override def materializer: Materializer = ???
-
-      override def lifecycle: ApplicationLifecycle = ???
-
-      override def send(path: String, event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] = {
-        messages = messages :+ event
-        Future.successful(Success)
-      }
-    }
+    val stubAuditChannel = mock[AuditChannel]
+    val stubLogger = mock[Logger]
 
     var metrics = Map.empty[String,()=>Long]
-
     val stubAuditMetrics = new AuditCounterMetrics {
       override def registerMetric(name: String, read:()=>Long):Unit = {
         metrics = metrics + (name -> read)
       }
     }
 
-    //This does not work because CoordinatedShutdown is a final class
-    val shutdownTaskCaptor = ArgumentCaptor.forClass(classOf[() => Future[Done]])
-    val stubCoordinatedShutdown = mock[CoordinatedShutdown]
-    verify(stubCoordinatedShutdown).addTask(any[String], any[String])(shutdownTaskCaptor.capture())
-
-    def createCounter(): AuditCounter = {
+    def createCounter(enabled: Boolean = true): AuditCounter = {
       new AuditCounter {
-        override def actorSystem: ActorSystem = _as
-
-        override def auditingConfig: AuditingConfig = AuditingConfig(None, true, "projectname", false)
-
-        def coordinatedShutdown : CoordinatedShutdown = stubCoordinatedShutdown
-
-        override def ec: ExecutionContext = _ec
-
-        override def auditChannel: AuditChannel = stubAuditChannel
-
-        override def auditMetrics: AuditCounterMetrics = stubAuditMetrics
+        override def auditingConfig = AuditingConfig(None, enabled, "projectname", false)
+        override def auditChannel = stubAuditChannel
+        override def auditMetrics = stubAuditMetrics
+        override val logger = stubLogger
       }
     }
 
   }
 
   "AuditCounter" should {
-    "increment the sequence" in new Test {
-      val counter = createCounter()
 
-      val first = counter.createMetadata()
-      (first \ "metadata" \ "sequence").as[Long] mustBe 1
 
-      val second = counter.createMetadata()
-      (second \ "metadata" \ "sequence").as[Long] mustBe 2
-      (first \ "metadata" \ "instanceID") mustEqual (second \ "metdata" \ "instanceID" )
-    }
-
-    "uniqueness of audit counter Id" in new Test {
+    // TODO:  This should be service global - where's the right place to ensure this?
+    "create a unique instanceId" in new Test {
       val counter1 = createCounter()
       val counter2 = createCounter()
 
@@ -115,29 +76,69 @@ class AuditCounterSpec
 
       (metadata1 \ "metadata" \ "instanceID") mustNot be (metadata2 \ "metadata" \ "instanceID")
     }
+  }
 
-//    "emit the counter on shutdown" in new Test {
-//      val counter = createCounter()
-//
-//      (1 to 10).map(_ =>  counter.createMetadata())
-//      shutdownTaskCaptor.getValue()
-//
-//      messages.length mustBe 1
-//      (messages(0) \ "type").as[String] mustBe "audit-counter"
-//      (messages(0) \ "sequence").as[Long] mustBe 10L
-//      (messages(0) \ "isFinal").as[Boolean] mustBe true
-//    }
+  "createMetadata" should {
+    "increment the sequence" in new Test {
+      val counter = createCounter()
+
+      val first = counter.createMetadata()
+      val second = counter.createMetadata()
+
+      (first \ "metadata" \ "sequence").as[Long] mustBe 1
+      (second \ "metadata" \ "sequence").as[Long] mustBe 2
+    }
+
+    "include the same instanceID" in new Test {
+      val counter = createCounter()
+
+      val first = counter.createMetadata()
+      val second = counter.createMetadata()
+
+      (first \ "metadata" \ "instanceID") mustEqual (second \ "metadata" \ "instanceID")
+    }
+
+    "include a validly formatted sendAttemptAt time" in new Test {
+      val time = LocalDateTime.of(2021, 2, 2, 12, 0, 0).toInstant(ZoneOffset.of("Z"))
+
+      val counter = new AuditCounter {
+        override def auditingConfig = AuditingConfig(None, true, "projectname", false)
+        override def auditChannel = stubAuditChannel
+        override def auditMetrics = stubAuditMetrics
+        override def currentTime() = time
+      }
+
+      val metadata = counter.createMetadata()
+      (metadata \ "metadata" \ "sendAttemptAt").as[String] mustBe "2021-02-02T12:00:00.000+0000"
+    }
 
     "record the counters as metrics" in new Test {
       val counter = createCounter()
 
       (1 to 10).map(_ =>  counter.createMetadata())
-      metrics("audit-counter.sequence")() mustBe 10
+      metrics("audit-count.sequence")() mustBe 10
       (1 to 10).map(_ =>  counter.createMetadata())
-      metrics("audit-counter.sequence")() mustBe 20
-
-//      shutdownTaskCaptor.getValue()
-//      metrics("audit-counter.final")() mustBe 20
+      metrics("audit-count.sequence")() mustBe 20
     }
+
+    "not record the counters as metrics if auditing is disabled" in new Test {
+      val counter = createCounter(enabled=false)
+
+      (1 to 10).map(_ =>  counter.createMetadata())
+      metrics.isEmpty mustBe true
+    }
+
+    "warn if a final audit event has already been sent" in new Test {
+      val counter = createCounter()
+
+      when(stubAuditChannel.send(any(), any())(any())).thenReturn(Future.successful(HandlerResult.Success))
+      counter.publish(isFinal=true)
+      counter.createMetadata()
+
+      verify(stubLogger).warn("Audit created after publication of final audit-count. This can lead to undetected audit loss.")
+    }
+
   }
+
+  "publish" should {}
 }

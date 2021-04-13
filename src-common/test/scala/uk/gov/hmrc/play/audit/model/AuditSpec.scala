@@ -80,10 +80,7 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
       }
 
       override def auditCounter: AuditCounter = new AuditCounter {
-        override def actorSystem: ActorSystem = ???
         override def auditingConfig: AuditingConfig = ???
-        override def coordinatedShutdown : CoordinatedShutdown = ???
-        override def ec: ExecutionContext = ???
         override def auditChannel: AuditChannel = ???
 
         override def auditMetrics: AuditCounterMetrics = new AuditCounterMetrics {
