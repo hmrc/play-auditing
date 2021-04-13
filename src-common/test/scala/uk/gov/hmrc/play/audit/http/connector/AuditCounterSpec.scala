@@ -19,7 +19,7 @@ package uk.gov.hmrc.play.audit.http.connector
 import akka.Done
 import akka.actor.{ActorSystem, CoordinatedShutdown}
 import akka.stream.Materializer
-import org.mockito.ArgumentCaptor
+import org.mockito.{ArgumentCaptor, ArgumentMatchers}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
@@ -103,6 +103,17 @@ class AuditCounterSpec
 
       val second = counter.createMetadata()
       (second \ "metadata" \ "sequence").as[Long] mustBe 2
+      (first \ "metadata" \ "instanceID") mustEqual (second \ "metdata" \ "instanceID" )
+    }
+
+    "uniqueness of audit counter Id" in new Test {
+      val counter1 = createCounter()
+      val counter2 = createCounter()
+
+      val metadata1 = counter1.createMetadata()
+      val metadata2 = counter2.createMetadata()
+
+      (metadata1 \ "metadata" \ "instanceID") mustNot be (metadata2 \ "metadata" \ "instanceID")
     }
 
 //    "emit the counter on shutdown" in new Test {
