@@ -33,12 +33,26 @@ trait AuditCounter {
   def auditingConfig: AuditingConfig
   def auditChannel: AuditChannel
   def auditMetrics: AuditCounterMetrics
+  def actorSystem: ActorSystem
+  def coordinatedShutdown : CoordinatedShutdown
+  implicit def ec: ExecutionContext
 
   protected val logger: Logger = LoggerFactory.getLogger(getClass)
   private val instanceID = UUID.randomUUID().toString
   private val sequence = new AtomicLong(0)
   private val publishedSequence = new AtomicLong(0)
   private val finalSequence = new AtomicBoolean(false)
+  private val thisAuditCounter = this
+
+  protected val auditCountPublisher = new AuditCountPublisher {
+    override def actorSystem: ActorSystem = actorSystem
+
+    override def coordinatedShutdown: CoordinatedShutdown = coordinatedShutdown
+
+    override def ec: ExecutionContext = thisAuditCounter.ec
+
+    override def auditCounter: AuditCounter = thisAuditCounter // todo refactor this
+  }
 
   if (auditingConfig.enabled) {
     auditMetrics.registerMetric("audit-count.sequence", () => sequence.get())

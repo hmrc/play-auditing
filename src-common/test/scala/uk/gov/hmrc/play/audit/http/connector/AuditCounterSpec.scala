@@ -44,6 +44,7 @@ class AuditCounterSpec
 
     val stubAuditChannel = mock[AuditChannel]
     val stubLogger = mock[Logger]
+    val stubAuditCountPublisher = mock[AuditCountPublisher]
 
     var metrics = Map.empty[String,()=>Long]
     val stubAuditMetrics = new AuditCounterMetrics {
@@ -52,8 +53,12 @@ class AuditCounterSpec
       }
     }
 
+
+
     def createCounter(enabled: Boolean = true): AuditCounter = {
       new AuditCounter {
+        override protected val auditCountPublisher: AuditCountPublisher = stubAuditCountPublisher
+
         override def auditingConfig = AuditingConfig(None, enabled, "projectname", false)
         override def auditChannel = stubAuditChannel
         override def auditMetrics = stubAuditMetrics
@@ -140,5 +145,9 @@ class AuditCounterSpec
 
   }
 
-  "publish" should {}
+  "publish" should {
+
+    ""
+
+  }
 }
