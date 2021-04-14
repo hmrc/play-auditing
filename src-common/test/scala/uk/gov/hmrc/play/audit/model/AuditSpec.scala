@@ -70,20 +70,16 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
       auditSentHeaders = false
     )
     val testmaterializer = ActorMaterializer()(ActorSystem())
-    new AuditConnector {
-      override def auditingConfig: AuditingConfig = testconfig
-      override def materializer: Materializer = testmaterializer
-
-      override def auditCountScheduler: AuditCountScheduler = mock[AuditCountScheduler]
-
-      override def auditChannel: AuditChannel = new AuditChannel {
+    new AuditConnector(
+      auditingConfig = testconfig,
+      auditCountScheduler = mock[AuditCountScheduler],
+      auditChannel = new AuditChannel {
         override def auditingConfig: AuditingConfig = testconfig
         override def materializer: Materializer = testmaterializer
         override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-      }
-
-      override def auditCounter: AuditCounter = mock[AuditCounter]
-    }
+      },
+      auditCounter = mock[AuditCounter]
+    )
   }
 
   "An Audit object" should {

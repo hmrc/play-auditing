@@ -44,19 +44,16 @@ object AuditResult {
     }
 }
 
-trait AuditConnector {
-  def auditingConfig: AuditingConfig
-  def materializer  : Materializer
-  def auditChannel  : AuditChannel
-  def auditCounter  : AuditCounter
-  def auditCountScheduler: AuditCountScheduler
+class AuditConnector(val auditingConfig: AuditingConfig,
+                     val auditChannel: AuditChannel,
+                     val auditCounter: AuditCounter,
+                     val auditCountScheduler: AuditCountScheduler) {
 
   auditCountScheduler.watch(auditCounter)
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   lazy val auditSentHeaders: Boolean = auditingConfig.auditSentHeaders
-
   lazy val auditSerialiser: AuditSerialiserLike = AuditSerialiser
 
   def sendExplicitAudit(auditType: String, detail: Map[String, String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit =

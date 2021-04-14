@@ -59,14 +59,14 @@ class AuditConnectorSpec
 
   private val mockAuditChannel: AuditChannel = mock[AuditChannel]
   private val mockAuditCounter: AuditCounter = mock[AuditCounter]
+  private val mockAuditCountScheduler: AuditCountScheduler = mock[AuditCountScheduler]
 
-  private def createConnector(config: AuditingConfig): AuditConnector = new AuditConnector {
-    override def auditCountScheduler: AuditCountScheduler = mock[AuditCountScheduler]
-    override def auditingConfig: AuditingConfig = config
-    override def materializer: Materializer = implicitly
-    override lazy val auditChannel: AuditChannel = mockAuditChannel
-    override lazy val auditSerialiser: AuditSerialiserLike = AuditSerialiser
-    override lazy val auditCounter: AuditCounter = mockAuditCounter
+  private def createConnector(config: AuditingConfig): AuditConnector =
+    new AuditConnector(auditingConfig = config,
+                        auditChannel = mockAuditChannel,
+                        auditCounter = mockAuditCounter,
+                        auditCountScheduler = mockAuditCountScheduler) {
+
   }
 
   "sendMergedEvent" should {
@@ -211,6 +211,13 @@ class AuditConnectorSpec
       detail mustBe expectedDetail
       verify(mockAuditCounter).createMetadata()
       (captor.getValue \ "metadata").as[JsObject] mustBe Json.obj("sample" -> "data")
+    }
+  }
+
+  "audit connector" should {
+    "ensure audit count scheduler is setup on creation" in {
+      val connector = createConnector(config = enabledConfig)
+      verify(connector.auditCountScheduler).watch(connector.auditCounter)
     }
   }
 }

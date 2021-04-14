@@ -53,8 +53,6 @@ class AuditCounterSpec
       }
     }
 
-
-
     def createCounter(enabled: Boolean = true): AuditCounter = {
       new AuditCounter {
         override def auditingConfig = AuditingConfig(None, enabled, "projectname", false)
@@ -63,12 +61,9 @@ class AuditCounterSpec
         override val logger = stubLogger
       }
     }
-
   }
 
   "AuditCounter" should {
-
-
     // TODO:  This should be service global - where's the right place to ensure this?
     "create a unique instanceId" in new Test {
       val counter1 = createCounter()
