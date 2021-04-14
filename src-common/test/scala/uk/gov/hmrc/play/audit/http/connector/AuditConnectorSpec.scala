@@ -61,6 +61,7 @@ class AuditConnectorSpec
   private val mockAuditCounter: AuditCounter = mock[AuditCounter]
 
   private def createConnector(config: AuditingConfig): AuditConnector = new AuditConnector {
+    override def auditCountScheduler: AuditCountScheduler = mock[AuditCountScheduler]
     override def auditingConfig: AuditingConfig = config
     override def materializer: Materializer = implicitly
     override lazy val auditChannel: AuditChannel = mockAuditChannel

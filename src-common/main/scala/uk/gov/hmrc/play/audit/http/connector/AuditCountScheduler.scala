@@ -21,22 +21,22 @@ import akka.actor.{ActorSystem, CoordinatedShutdown}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-trait AuditCountPublisher {
+trait AuditCountScheduler {
   def actorSystem: ActorSystem
   def coordinatedShutdown : CoordinatedShutdown
   implicit def ec: ExecutionContext
-  def auditCounter: AuditCounter
 
-  val scheduler = actorSystem.scheduler.schedule(60.seconds, 60.seconds, new Runnable {
-    override def run(): Unit = auditCounter.publish(false)
-  })
+  def watch(auditCounter: AuditCounter) = {
+    val scheduler = actorSystem.scheduler.schedule(60.seconds, 60.seconds, new Runnable {
+      override def run(): Unit = auditCounter.publish(false)
+    })
 
-  //This is intentionally run at ServiceRequestsDone which is before the default ApplicationLifecycle stopHook
-  // as this must be run before the AuditChannel WSClient is closed
-  // and before final metrics report, triggered by the close in the EnabledGraphiteReporting stopHook
-  coordinatedShutdown.addTask(CoordinatedShutdown.PhaseServiceRequestsDone, "final audit counters") { () =>
-    scheduler.cancel()
-    auditCounter.publish(isFinal = true)
+    //This is intentionally run at ServiceRequestsDone which is before the default ApplicationLifecycle stopHook
+    // as this must be run before the AuditChannel WSClient is closed
+    // and before final metrics report, triggered by the close in the EnabledGraphiteReporting stopHook
+    coordinatedShutdown.addTask(CoordinatedShutdown.PhaseServiceRequestsDone, "final audit counters") { () =>
+      scheduler.cancel()
+      auditCounter.publish(isFinal = true)
+    }
   }
-
 }

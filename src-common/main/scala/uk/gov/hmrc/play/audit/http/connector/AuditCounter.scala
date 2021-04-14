@@ -16,44 +16,28 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import java.time.{Instant, ZoneId}
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import akka.Done
-import akka.actor.{ActorSystem, CoordinatedShutdown}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId}
+import java.util.UUID
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 
 trait AuditCounter {
   def auditingConfig: AuditingConfig
   def auditChannel: AuditChannel
   def auditMetrics: AuditCounterMetrics
-  def actorSystem: ActorSystem
-  def coordinatedShutdown : CoordinatedShutdown
-  implicit def ec: ExecutionContext
 
   protected val logger: Logger = LoggerFactory.getLogger(getClass)
   private val instanceID = UUID.randomUUID().toString
   private val sequence = new AtomicLong(0)
   private val publishedSequence = new AtomicLong(0)
   private val finalSequence = new AtomicBoolean(false)
-  private val thisAuditCounter = this
-
-  protected val auditCountPublisher = new AuditCountPublisher {
-    override def actorSystem: ActorSystem = actorSystem
-
-    override def coordinatedShutdown: CoordinatedShutdown = coordinatedShutdown
-
-    override def ec: ExecutionContext = thisAuditCounter.ec
-
-    override def auditCounter: AuditCounter = thisAuditCounter // todo refactor this
-  }
-
+  
   if (auditingConfig.enabled) {
     auditMetrics.registerMetric("audit-count.sequence", () => sequence.get())
     auditMetrics.registerMetric("audit-count.published", () => publishedSequence.get())

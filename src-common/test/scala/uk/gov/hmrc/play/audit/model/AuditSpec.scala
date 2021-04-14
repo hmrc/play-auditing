@@ -16,20 +16,21 @@
 
 package uk.gov.hmrc.play.audit.model
 
-import akka.actor.{ActorSystem, CoordinatedShutdown}
+import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
-import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, AuditCounter, AuditCounterMetrics}
-import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.HeaderNames._
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
+import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
+import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, AuditCountScheduler, AuditCounter, AuditCounterMetrics}
+import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
 
@@ -73,20 +74,15 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
       override def auditingConfig: AuditingConfig = testconfig
       override def materializer: Materializer = testmaterializer
 
+      override def auditCountScheduler: AuditCountScheduler = mock[AuditCountScheduler]
+
       override def auditChannel: AuditChannel = new AuditChannel {
         override def auditingConfig: AuditingConfig = testconfig
         override def materializer: Materializer = testmaterializer
         override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
       }
 
-      override def auditCounter: AuditCounter = new AuditCounter {
-        override def auditingConfig: AuditingConfig = ???
-        override def auditChannel: AuditChannel = ???
-
-        override def auditMetrics: AuditCounterMetrics = new AuditCounterMetrics {
-          def registerMetric(name:String, read:()=>Long):Unit = {}
-        }
-      }
+      override def auditCounter: AuditCounter = mock[AuditCounter]
     }
   }
 

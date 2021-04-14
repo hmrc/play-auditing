@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{spy, verify, when}
+import org.mockito.Mockito.{verify, when}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
@@ -27,7 +27,7 @@ import org.slf4j.Logger
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.{LocalDateTime, ZoneOffset}
 import scala.concurrent.Future
 
 class AuditCounterSpec
@@ -44,7 +44,7 @@ class AuditCounterSpec
 
     val stubAuditChannel = mock[AuditChannel]
     val stubLogger = mock[Logger]
-    val stubAuditCountPublisher = mock[AuditCountPublisher]
+    val stubAuditCountPublisher = mock[AuditCountScheduler]
 
     var metrics = Map.empty[String,()=>Long]
     val stubAuditMetrics = new AuditCounterMetrics {
@@ -57,8 +57,6 @@ class AuditCounterSpec
 
     def createCounter(enabled: Boolean = true): AuditCounter = {
       new AuditCounter {
-        override protected val auditCountPublisher: AuditCountPublisher = stubAuditCountPublisher
-
         override def auditingConfig = AuditingConfig(None, enabled, "projectname", false)
         override def auditChannel = stubAuditChannel
         override def auditMetrics = stubAuditMetrics
@@ -142,12 +140,6 @@ class AuditCounterSpec
 
       verify(stubLogger).warn("Audit created after publication of final audit-count. This can lead to undetected audit loss.")
     }
-
-  }
-
-  "publish" should {
-
-    ""
 
   }
 }

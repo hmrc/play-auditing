@@ -49,6 +49,9 @@ trait AuditConnector {
   def materializer  : Materializer
   def auditChannel  : AuditChannel
   def auditCounter  : AuditCounter
+  def auditCountScheduler: AuditCountScheduler
+
+  auditCountScheduler.watch(auditCounter)
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
