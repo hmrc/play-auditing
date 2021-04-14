@@ -33,11 +33,15 @@ trait AuditCounter {
   def auditMetrics: AuditCounterMetrics
 
   protected val logger: Logger = LoggerFactory.getLogger(getClass)
-  private val instanceID = UUID.randomUUID().toString
-  private val sequence = new AtomicLong(0)
-  private val publishedSequence = new AtomicLong(0)
-  private val finalSequence = new AtomicBoolean(false)
-  
+
+  protected val instanceID = UUID.randomUUID().toString
+  protected def currentTime() = Instant.now
+
+
+  private[connector] val sequence = new AtomicLong(0)
+  private[connector] val publishedSequence = new AtomicLong(0)
+  private[connector] val finalSequence = new AtomicBoolean(false)
+
   if (auditingConfig.enabled) {
     auditMetrics.registerMetric("audit-count.sequence", () => sequence.get())
     auditMetrics.registerMetric("audit-count.published", () => publishedSequence.get())
@@ -79,7 +83,6 @@ trait AuditCounter {
     )
   }
 
-  protected def currentTime() = Instant.now
   private def timestamp(): String = {
     DateTimeFormatter
       .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")

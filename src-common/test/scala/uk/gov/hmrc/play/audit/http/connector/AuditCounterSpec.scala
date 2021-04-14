@@ -16,19 +16,21 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{verify, when}
+import org.mockito.Mockito.{verify, verifyNoMoreInteractions, verifyZeroInteractions, when}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
+import play.api.libs.json.{JsObject, JsValue, Json}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 
 import java.time.{LocalDateTime, ZoneOffset}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class AuditCounterSpec
   extends AnyWordSpecLike
@@ -37,6 +39,9 @@ class AuditCounterSpec
      with IntegrationPatience
      with MockitoSugar
      with OneInstancePerTest {
+
+
+  val time = LocalDateTime.of(2021, 2, 2, 12, 0, 0).toInstant(ZoneOffset.of("Z"))
 
   class Test {
 
@@ -97,7 +102,6 @@ class AuditCounterSpec
     }
 
     "include a validly formatted sendAttemptAt time" in new Test {
-      val time = LocalDateTime.of(2021, 2, 2, 12, 0, 0).toInstant(ZoneOffset.of("Z"))
 
       val counter = new AuditCounter {
         override def auditingConfig = AuditingConfig(None, true, "projectname", false)
@@ -136,5 +140,87 @@ class AuditCounterSpec
       verify(stubLogger).warn("Audit created after publication of final audit-count. This can lead to undetected audit loss.")
     }
 
+  }
+
+  "publish" should {
+    "not publish if auditing is disabled" in new Test {
+      val counter = createCounter(enabled = false)
+
+      counter.publish(isFinal = false)
+      counter.publish(isFinal = true)
+
+      verifyNoMoreInteractions(stubAuditChannel)
+      verifyNoMoreInteractions(stubLogger)
+    }
+
+    "publish the current count via the auditing channel and log, including relevant metadata" in new Test {
+      val config = AuditingConfig(None, true, "projectname", false)
+      val counter =  new AuditCounter {
+        override def auditingConfig = config
+        override def auditChannel = stubAuditChannel
+        override def auditMetrics = stubAuditMetrics
+        override val logger = stubLogger
+        override def currentTime = time
+        override val instanceID = "some-instance-id"
+      }
+
+      when(stubAuditChannel.send(any(), any())(any())).thenReturn(Future.successful(HandlerResult.Success))
+
+      for (i <- 1 to 10) counter.createMetadata()
+      counter.publish(isFinal = false)
+
+      val expectedData = Json.obj(
+        "type" -> "audit-count",
+        "auditSource" -> config.auditSource,
+        "instanceID" -> "some-instance-id",
+        "timestamp" -> "2021-02-02T12:00:00.000+0000",
+        "sequence" -> 10,
+        "isFinal" -> false
+      )
+
+      verify(stubAuditChannel).send("/write/audit", expectedData)
+      verify(stubLogger).info(s"AuditCount: $expectedData")
+    }
+
+    "record that non-final publishes are non-final" in new Test {
+      val counter = createCounter()
+
+      val captor: ArgumentCaptor[JsValue] = ArgumentCaptor.forClass(classOf[JsValue])
+
+      when(stubAuditChannel.send(any(), any())(any())).thenReturn(Future.successful(HandlerResult.Success))
+
+      counter.publish(isFinal = false)
+      verify(stubAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+
+      (captor.getValue \ "isFinal").as[Boolean] mustBe false
+    }
+
+    "record that final publishes are final" in new Test {
+      val counter = createCounter()
+
+      val captor: ArgumentCaptor[JsValue] = ArgumentCaptor.forClass(classOf[JsValue])
+
+      when(stubAuditChannel.send(any(), any())(any())).thenReturn(Future.successful(HandlerResult.Success))
+
+      counter.publish(isFinal = true)
+      verify(stubAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+
+      (captor.getValue \ "isFinal").as[Boolean] mustBe true
+    }
+
+    "should update the published counter to the current count" in new Test {
+      val counter = createCounter()
+      when(stubAuditChannel.send(any(), any())(any())).thenReturn(Future.successful(HandlerResult.Success))
+
+      for (i <- 1 to 10) counter.createMetadata()
+
+      counter.publishedSequence.get mustBe 0
+      counter.sequence.get mustBe 10
+
+      counter.publish(isFinal = false)
+
+      counter.publishedSequence.get mustBe 10
+      counter.sequence.get mustBe 10
+    }
   }
 }
