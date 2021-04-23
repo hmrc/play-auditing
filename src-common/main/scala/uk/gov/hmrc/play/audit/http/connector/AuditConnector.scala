@@ -18,19 +18,15 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import java.util.UUID
 
-import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsValue, JsObject, Json, Writes}
-import uk.gov.hmrc.audit.{HandlerResult, WSClient}
-import uk.gov.hmrc.audit.handler.{AuditHandler, DatastreamHandler, LoggingHandler}
+import play.api.libs.json.{JsObject, Json, Writes}
+import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
+import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import uk.gov.hmrc.play.audit.model.{DataEvent, ExtendedDataEvent, MergedDataEvent}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
 
-import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{ExecutionContext, Future}
 
 sealed trait AuditResult
@@ -49,53 +45,13 @@ object AuditResult {
 
 trait AuditConnector {
   def auditingConfig: AuditingConfig
-  def materializer  : Materializer
-  def lifecycle     : ApplicationLifecycle
+  def auditChannel  : AuditChannel
+  def auditCounter  : AuditCounter
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  val defaultConnectionTimeout: Duration = 5000.millis
-  val defaultRequestTimeout: Duration    = 5000.millis
-  val defaultBaseUri: BaseUri            = BaseUri("datastream.protected.mdtp", 90, "http")
-
-  lazy val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
-  lazy val baseUri: BaseUri = consumer.baseUri
   lazy val auditSentHeaders: Boolean = auditingConfig.auditSentHeaders
 
-  private lazy val wsClient: WSClient = {
-    implicit val m: Materializer = materializer
-    val wsClient = WSClient(
-      connectTimeout = defaultConnectionTimeout,
-      requestTimeout = defaultRequestTimeout,
-      userAgent      = auditingConfig.auditSource
-    )
-    lifecycle.addStopHook { () =>
-      logger.info("Closing play-auditing http connections...")
-      wsClient.close()
-      Future.successful(())
-    }
-    wsClient
-  }
-
-  lazy val simpleDatastreamHandler: AuditHandler =
-    new DatastreamHandler(
-      baseUri.protocol,
-      baseUri.host,
-      baseUri.port,
-      s"/${consumer.singleEventUri}",
-      wsClient
-    )
-
-  lazy val mergedDatastreamHandler: AuditHandler =
-    new DatastreamHandler(
-      baseUri.protocol,
-      baseUri.host,
-      baseUri.port,
-      s"/${consumer.mergedEventUri}",
-      wsClient
-    )
-
-  lazy val loggingConnector: AuditHandler = LoggingHandler
   lazy val auditSerialiser: AuditSerialiserLike = AuditSerialiser
 
   def sendExplicitAudit(auditType: String, detail: Map[String, String])(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit =
@@ -117,23 +73,26 @@ trait AuditConnector {
 
   def sendEvent(event: DataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec: ExecutionContext): Future[AuditResult] =
     ifEnabled {
-      send(simpleDatastreamHandler){
+      send(
+        "/write/audit",
         auditSerialiser.serialise(event.copy(tags = hc.appendToDefaultTags(event.tags)))
-      }
+        )
     }
 
   def sendExtendedEvent(event: ExtendedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec: ExecutionContext): Future[AuditResult] =
     ifEnabled {
-      send(simpleDatastreamHandler){
+      send(
+         "/write/audit",
         auditSerialiser.serialise(event.copy(tags = hc.appendToDefaultTags(event.tags)))
-      }
+      )
     }
 
   def sendMergedEvent(event: MergedDataEvent)(implicit hc: HeaderCarrier = HeaderCarrier(), ec: ExecutionContext): Future[AuditResult] =
     ifEnabled {
-      send(mergedDatastreamHandler){
+      send(
+        "/write/audit/merged",
         auditSerialiser.serialise(event)
-       }
+      )
     }
 
   private def ifEnabled(send: => Future[HandlerResult])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AuditResult] =
@@ -144,15 +103,7 @@ trait AuditConnector {
       Future.successful(AuditResult.Disabled)
     }
 
-  private def send(datastreamHandler: AuditHandler)(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] =
-    datastreamHandler.sendEvent(event)
-      .flatMap {
-        case HandlerResult.Failure => loggingConnector.sendEvent(event)
-        case result                => Future.successful(result)
-      }
-      .recover {
-        case e: Throwable =>
-          logger.error("Error in handler code", e)
-          HandlerResult.Failure
-      }
+  private def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
+    auditChannel.send(path, audit ++ auditCounter.createMetadata())
+  }
 }

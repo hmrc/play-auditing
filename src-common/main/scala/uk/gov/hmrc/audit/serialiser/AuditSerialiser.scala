@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.audit.serialiser
 
-import play.api.libs.json.{JsString, JsValue, Json, Writes}
+import play.api.libs.json.{JsObject, JsString, JsValue, Json, Writes}
 import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
 import java.time.{Instant, ZoneId}
 import java.time.format.DateTimeFormatter
@@ -32,9 +32,9 @@ object DateWriter {
 }
 
 trait AuditSerialiserLike {
-  def serialise(event: DataEvent): JsValue
-  def serialise(event: ExtendedDataEvent): JsValue
-  def serialise(event: MergedDataEvent): JsValue
+  def serialise(event: DataEvent): JsObject
+  def serialise(event: ExtendedDataEvent): JsObject
+  def serialise(event: MergedDataEvent): JsObject
 }
 
 class AuditSerialiser extends AuditSerialiserLike {
@@ -44,14 +44,14 @@ class AuditSerialiser extends AuditSerialiserLike {
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] = Json.writes[ExtendedDataEvent]
   private implicit val mergedDataEventWriter: Writes[MergedDataEvent] = Json.writes[MergedDataEvent]
 
-  override def serialise(event: DataEvent): JsValue =
-    Json.toJson(event)
+  override def serialise(event: DataEvent): JsObject =
+    Json.toJson(event).as[JsObject]
 
-  override def serialise(event: ExtendedDataEvent): JsValue =
-    Json.toJson(event)
+  override def serialise(event: ExtendedDataEvent): JsObject =
+    Json.toJson(event).as[JsObject]
 
-  override def serialise(event: MergedDataEvent): JsValue =
-    Json.toJson(event)
+  override def serialise(event: MergedDataEvent): JsObject =
+    Json.toJson(event).as[JsObject]
 }
 
 object AuditSerialiser extends AuditSerialiser

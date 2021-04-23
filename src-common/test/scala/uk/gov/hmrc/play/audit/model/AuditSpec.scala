@@ -21,12 +21,13 @@ import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.http.HeaderNames._
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
+import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
+import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, AuditCounter}
+import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -61,15 +62,23 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
 
   val exampleRequestId = "12345"
   implicit val hc: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
-  val auditConnector: AuditConnector = new AuditConnector {
-    override def auditingConfig: AuditingConfig = AuditingConfig(
+  val auditConnector: AuditConnector = {
+    val testconfig = AuditingConfig(
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
       auditSource = "the-project-name",
       auditSentHeaders = false
     )
-    override def materializer: Materializer = ActorMaterializer()(ActorSystem())
-    override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
+    val testmaterializer = ActorMaterializer()(ActorSystem())
+    new AuditConnector {
+      override def auditingConfig = testconfig
+      override def auditChannel = new AuditChannel {
+        override def auditingConfig: AuditingConfig = testconfig
+        override def materializer: Materializer = testmaterializer
+        override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
+      }
+      override def auditCounter = mock[AuditCounter]
+    }
   }
 
   "An Audit object" should {
