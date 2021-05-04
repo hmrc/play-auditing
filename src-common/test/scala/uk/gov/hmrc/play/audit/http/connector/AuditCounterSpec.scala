@@ -26,9 +26,12 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
-
 import java.time.{LocalDateTime, ZoneOffset}
-import scala.concurrent.Future
+
+import play.api.libs.json.JsValue
+import uk.gov.hmrc.audit.HandlerResult.Success
+
+import scala.concurrent.{ExecutionContext, Future}
 
 class AuditCounterSpec
   extends AnyWordSpecLike
@@ -43,11 +46,13 @@ class AuditCounterSpec
     implicit val executionContext = RunInlineExecutionContext
 
     val stubAuditChannel = mock[AuditChannel]
+    when(stubAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext])).thenReturn(Future.successful(Success))
+
     val stubLogger = mock[Logger]
 
-    var metrics = Map.empty[String,()=>Long]
+    var metrics = Map.empty[String,()=>Option[Long]]
     val stubAuditMetrics = new AuditCounterMetrics {
-      override def registerMetric(name: String, read:()=>Long):Unit = {
+      override def registerMetric(name: String, read:()=>Option[Long]):Unit = {
         metrics = metrics + (name -> read)
       }
     }
@@ -113,9 +118,19 @@ class AuditCounterSpec
       val counter = createCounter()
 
       (1 to 10).map(_ =>  counter.createMetadata())
-      metrics("audit-counter.sequence")() mustBe 10
+      metrics("audit-counter.sequence")() mustBe Some(10)
       (1 to 10).map(_ =>  counter.createMetadata())
-      metrics("audit-counter.sequence")() mustBe 20
+      metrics("audit-counter.sequence")() mustBe Some(20)
+    }
+
+    "not report the final counter until the final publish" in new Test {
+      val counter = createCounter()
+      (1 to 10).map(_ =>  counter.createMetadata())
+      counter.publish(isFinal = false)
+      (1 to 10).map(_ =>  counter.createMetadata())
+      metrics("audit-counter.final")() mustBe None
+      counter.publish(isFinal = true)
+      metrics("audit-counter.final")() mustBe Some(20)
     }
 
     "not record the counters as metrics if auditing is disabled" in new Test {

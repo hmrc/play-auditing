@@ -23,7 +23,7 @@ import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 import java.util.UUID
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference}
 
 import org.slf4j.{LoggerFactory, Logger}
 
@@ -43,12 +43,23 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
   private val instanceID = UUID.randomUUID().toString
   private val sequence = new AtomicLong(0)
   private val publishedSequence = new AtomicLong(0)
-  private val finalSequence = new AtomicBoolean(false)
+  private val finalSequence = new AtomicReference[Option[Long]](None)
   
   if (auditingConfig.enabled) {
-    auditMetrics.registerMetric("audit-counter.sequence", () => sequence.get())
-    auditMetrics.registerMetric("audit-counter.published", () => publishedSequence.get())
-    auditMetrics.registerMetric("audit-counter.isFinal", () => if (finalSequence.get()) 1 else 0)
+
+    //This could have the wrong value at shutdown, but this is hard to fix so there is an additional metric (see below)
+    auditMetrics.registerMetric("audit-counter.sequence", () => Some(sequence.get()))
+
+    //GraphiteReporter is called every minute and at shutdown, which means at shutdown two values
+    //can be published in the same minute.
+    //Clickhouse averages values where there is more than one in a minute which means the sequence value
+    //will be incorrect if auditing occurs between the last scheduled publish and the shutdown publish
+
+    //As well as an accurate sequence at shutdown, we need to know that it is _the_ 'final' value for the sequence
+
+    //For this reason there is a separate 'final' metric which is not set until shutdown
+    //so that there are never two values to average (None values become null, and null values are not published)
+    auditMetrics.registerMetric("audit-counter.final", () => finalSequence.get)
   }
 
   def publish(isFinal:Boolean)(implicit ec: ExecutionContext): Future[Done] = {
@@ -64,7 +75,7 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
       )
       publishedSequence.set(currentSequence)
       if (isFinal) {
-        finalSequence.set(true)
+        finalSequence.set(Some(currentSequence))
       }
       logger.info(s"AuditCounter: $auditCount")
       auditChannel.send("/write/audit", auditCount)(ec).map(_ => Done)(ec)
@@ -74,7 +85,7 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
   }
 
   def createMetadata():JsObject = {
-    if (finalSequence.get) {
+    if (finalSequence.get.isDefined) {
       logger.warn(s"Audit created after publication of final audit-count. This can lead to undetected audit loss.")
     }
     Json.obj(
