@@ -21,5 +21,5 @@ package uk.gov.hmrc.play.audit.http.connector
 // This indirection is needed because the play metrics library is specific to the play version
 
 trait AuditCounterMetrics {
-  def registerMetric(name:String, read:()=>Long):Unit
+  def registerMetric(name:String, read:()=>Option[Long]):Unit
 }
