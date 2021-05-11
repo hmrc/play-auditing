@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
+import java.io.PrintStream
+import java.net.InetAddress
+
 import akka.Done
 import akka.actor.{ActorSystem, CoordinatedShutdown}
 import play.api.libs.json.{JsObject, Json}
@@ -40,6 +43,8 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
   def auditMetrics: AuditCounterMetrics
 
   protected val logger: Logger = LoggerFactory.getLogger("auditCounter")
+  protected val stdOut: PrintStream = System.out
+
   private val instanceID = UUID.randomUUID().toString
   private val sequence = new AtomicLong(0)
   private val publishedSequence = new AtomicLong(0)
@@ -77,7 +82,9 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
       if (isFinal) {
         finalSequence.set(Some(currentSequence))
       }
-      logger.info(s"AuditCounter: $auditCount")
+      if (auditingConfig.publishCountersToStdOut) {
+        logToStdOut(s"AuditCounter: $auditCount")
+      }
       auditChannel.send("/write/audit", auditCount)(ec).map(_ => Done)(ec)
     } else {
       Future.successful(Done)
@@ -97,10 +104,27 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
     )
   }
 
+  private def logToStdOut(message:String): Unit = {
+    //Not using the normal log method because
+    // -most services only log WARN and ERROR in production
+    // -it would be inappropriate to log the counters using a warning
+    // -forcing the log level in code could be confusing and requires casting to a specific slf4j backend
+    stdOut.println(
+      Json.obj(
+        "app" -> auditingConfig.auditSource,
+        "hostname" -> InetAddress.getLocalHost.getHostName,
+        "logger" -> "play-auditing",
+        "timestamp" -> timestamp(),
+        "message" -> message
+      )
+    )
+  }
+
   protected def currentTime() = Instant.now
+
   private def timestamp(): String = {
     DateTimeFormatter
-      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+      .ofPattern("yyyy-MM-dd HH:mm:ss.SSSZZ")
       .withZone(ZoneId.of("UTC"))
       .format(currentTime())
   }

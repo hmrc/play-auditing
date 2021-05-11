@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
+import java.io.{ByteArrayOutputStream, PrintStream}
+import java.net.InetAddress
+
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{verify, when}
 import org.scalatest._
@@ -28,7 +31,7 @@ import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import java.time.{LocalDateTime, ZoneOffset}
 
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.audit.HandlerResult.Success
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -59,7 +62,7 @@ class AuditCounterSpec
 
     def createCounter(enabled: Boolean = true) = {
       new UnpublishedAuditCounter {
-        override def auditingConfig = AuditingConfig(None, enabled, "projectname", false)
+        override def auditingConfig = AuditingConfig(None, enabled, "projectname", false, true)
         override def auditChannel = stubAuditChannel
         override def auditMetrics = stubAuditMetrics
         override val logger = stubLogger
@@ -104,14 +107,14 @@ class AuditCounterSpec
       val time = LocalDateTime.of(2021, 2, 2, 12, 0, 0).toInstant(ZoneOffset.of("Z"))
 
       val counter = new UnpublishedAuditCounter {
-        override def auditingConfig = AuditingConfig(None, true, "projectname", false)
+        override def auditingConfig = AuditingConfig(None, true, "projectname", false, true)
         override def auditChannel = stubAuditChannel
         override def auditMetrics = stubAuditMetrics
         override def currentTime() = time
       }
 
       val metadata = counter.createMetadata()
-      (metadata \ "metadata" \ "sendAttemptAt").as[String] mustBe "2021-02-02T12:00:00.000+0000"
+      (metadata \ "metadata" \ "sendAttemptAt").as[String] mustBe "2021-02-02 12:00:00.000+0000"
     }
 
     "record the counters as metrics" in new Test {
@@ -138,6 +141,44 @@ class AuditCounterSpec
 
       (1 to 10).map(_ =>  counter.createMetadata())
       metrics.isEmpty mustBe true
+    }
+
+    "publish the counters to std out" in new Test {
+      val stubStdOut = new ByteArrayOutputStream()
+      val time = LocalDateTime.of(2021, 2, 2, 12, 0, 0).toInstant(ZoneOffset.of("Z"))
+      val counter = new UnpublishedAuditCounter {
+        override def auditingConfig = AuditingConfig(None, true, "projectname", false, true)
+        override def auditChannel = stubAuditChannel
+        override def auditMetrics = stubAuditMetrics
+        override def currentTime() = time
+        override val stdOut = new PrintStream(stubStdOut)
+      }
+      val instanceID = (counter.createMetadata() \ "metadata" \ "instanceID").as[String]
+      counter.publish(isFinal = false)
+
+      val log = new String(stubStdOut.toByteArray)
+      val json = Json.parse(log)
+      val message = (json \ "message").as[String]
+      val published = Json.parse(message.substring(message.indexOf('{')))
+
+      (json \ "app").asOpt[String] mustBe Some("projectname")
+      (json \ "hostname").asOpt[String] mustBe Some(InetAddress.getLocalHost.getHostName)
+      (json \ "timestamp").asOpt[String] mustBe Some("2021-02-02 12:00:00.000+0000")
+      (published \ "instanceID").asOpt[String] mustBe Some(instanceID)
+      (published \ "sequence").asOpt[Long] mustBe Some(1)
+    }
+
+    "not publish the counters to std out when disabled" in new Test {
+      val stubStdOut = new ByteArrayOutputStream()
+      val counter = new UnpublishedAuditCounter {
+        override def auditingConfig = AuditingConfig(None, true, "projectname", false, publishCountersToStdOut = false)
+        override def auditChannel = stubAuditChannel
+        override def auditMetrics = stubAuditMetrics
+        override val stdOut = new PrintStream(stubStdOut)
+      }
+      counter.publish(isFinal=false)
+      val log = new String(stubStdOut.toByteArray)
+      log mustBe ""
     }
 
     "warn if a final audit event has already been sent" in new Test {
