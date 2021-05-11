@@ -67,7 +67,8 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
       auditSource = "the-project-name",
-      auditSentHeaders = false
+      auditSentHeaders = false,
+      publishCountersToStdOut = true
     )
     val testmaterializer = ActorMaterializer()(ActorSystem())
     new AuditConnector {
