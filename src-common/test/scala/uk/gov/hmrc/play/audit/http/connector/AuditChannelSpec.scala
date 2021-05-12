@@ -55,7 +55,7 @@ class AuditChannelSpec
     "post data to datastream" in {
       val testPort = WireMockUtils.availablePort
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
-      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false)
+      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false, publishCountersToLogs = false)
       val channel = new AuditChannel {
         override def auditingConfig: AuditingConfig = config
 

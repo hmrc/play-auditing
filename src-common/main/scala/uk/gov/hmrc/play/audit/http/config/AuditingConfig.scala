@@ -50,5 +50,6 @@ case class AuditingConfig(
   consumer   : Option[Consumer],
   enabled    : Boolean,
   auditSource: String,
-  auditSentHeaders: Boolean
+  auditSentHeaders: Boolean,
+  publishCountersToLogs: Boolean
 )
