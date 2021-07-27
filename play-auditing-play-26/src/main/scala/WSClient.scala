@@ -36,12 +36,14 @@ package object audit {
     ): WSClient =
       StandaloneAhcWSClient(
         config = AhcWSClientConfigFactory.forConfig()
-                   .copy(wsClientConfig = WSClientConfig()
+                   .copy(
+                     wsClientConfig = WSClientConfig()
                      .copy(
                        connectionTimeout = connectTimeout,
                        requestTimeout    = requestTimeout,
-                       userAgent         = Some(userAgent)
-                     )
+                       userAgent         = Some(userAgent),
+                     ),
+                     maxRequestRetry   = 0
                    )
       )
   }

@@ -54,13 +54,8 @@ class DatastreamHandler(
                       Failure
         })
       case HttpResult.Malformed =>
-        if (retryIfMalformed) {
-          logger.warn("Malformed response on first request, retrying")
-          sendEvent(event, retryIfMalformed = false)
-        } else {
-          logger.warn("Malformed response on second request, failing")
+//          logger.warn("MalformedHttpResult response on second request, failing")
           Future.successful(Failure)
-        }
       case HttpResult.Failure(msg, exceptionOption) =>
         exceptionOption match {
           case None     => logger.error(msg)
