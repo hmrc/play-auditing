@@ -45,7 +45,7 @@ class DatastreamHandler(
     sendHttpRequest(event).flatMap {
       case HttpResult.Response(status) =>
         Future.successful(status match {
-          case 204 => Success
+          case status if 200 <= status && status <= 299 => Success
           case 400 => logger.warn("Malformed request rejected by Datastream")
                       Rejected
           case 413 => logger.warn("Too large request rejected by Datastream")
