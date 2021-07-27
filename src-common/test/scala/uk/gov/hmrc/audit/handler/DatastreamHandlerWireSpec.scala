@@ -22,7 +22,6 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, post, postRequestedFor, urlPathEqualTo}
 import com.github.tomakehurst.wiremock.http.Fault
-import com.github.tomakehurst.wiremock.stubbing.Scenario
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -79,7 +78,7 @@ class DatastreamHandlerWireSpec
   }
 
   "Successful call to Datastream" should {
-    "Return a Success result" in new Test {
+    "Return a Success result" in {
       verifySingleCall(JsString("SUCCESS"), 204, HandlerResult.Success)
     }
   }
@@ -122,22 +121,14 @@ class DatastreamHandlerWireSpec
   }
 
   "Calls to Datastream that return an empty response" should {
-    "Retry the POST and return Success if the retried call was ok" in {
-      verifyErrorRetry(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE, 204, HandlerResult.Success)
-    }
-
-    "Retry the POST if the Datastream response was malformed and return Failure" in {
-      verifyErrorRetry(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE, 503, HandlerResult.Failure)
+    "Not retry the POST and return a failure" in {
+      verifyNoErrorRetry(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE)
     }
   }
 
   "Calls to Datastream that return a bad response" should {
-    "Retry the POST and return Success if the retried call was ok" in {
-      verifyErrorRetry(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE, 204, HandlerResult.Success)
-    }
-
-    "Retry the POST if the Datastream response was malformed and return Failure" in {
-      verifyErrorRetry(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE, 503, HandlerResult.Failure)
+    "Not retry the POST and return a failure" in {
+      verifyNoErrorRetry(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE)
     }
   }
 
@@ -156,23 +147,18 @@ class DatastreamHandlerWireSpec
         .willReturn(aResponse().withStatus(status))
         .willSetStateTo(toScenario))
 
-  def stub(event: JsValue, fault: Fault, withScenario: String, toScenario: String): Unit =
+  def stub(event: JsValue, fault: Fault): Unit =
     WireMock.stubFor(
       post(urlPathEqualTo(datastreamPath))
-        .inScenario("Scenario")
-        .whenScenarioStateIs(withScenario)
         .withRequestBody(WireMock.equalTo(event.toString))
-        .willReturn(aResponse().withFault(fault))
-        .willSetStateTo(toScenario))
+        .willReturn(aResponse().withFault(fault)))
 
-  def verifyErrorRetry(event: JsValue, fault: Fault, retriedResponse: Integer, expectedResult: HandlerResult): Unit = new Test {
-    stub(event, fault, Scenario.STARTED, "RETRYING")
-    stub(event, retriedResponse, "RETRYING", "FINISHED")
-
+  def verifyNoErrorRetry(event: JsValue, fault: Fault): Unit = new Test {
+    stub(event, fault)
     val result = datastreamHandler.sendEvent(event).futureValue
 
-    WireMock.verify(2, postRequestedFor(urlPathEqualTo(datastreamPath)))
-    result shouldBe expectedResult
+    WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
+    result shouldBe HandlerResult.Failure
   }
 
   def verifySingleCall(event: JsValue, responseStatus: Integer, expectedResult: HandlerResult): Unit = new Test {

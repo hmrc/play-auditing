@@ -29,9 +29,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import uk.gov.hmrc.audit.serialiser.{AuditSerialiser, AuditSerialiserLike}
 import uk.gov.hmrc.audit.HandlerResult
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
@@ -59,20 +57,16 @@ class AuditConnectorSpec
 
   private val mockAuditChannel: AuditChannel = mock[AuditChannel]
 
-  private val mockAuditCounter: AuditCounter = mock[AuditCounter]
-
   private def createConnector(config: AuditingConfig): AuditConnector =
     new AuditConnector {
       override def auditingConfig = config
       override def auditChannel = mockAuditChannel
-      override def auditCounter = mockAuditCounter
     }
 
   "sendMergedEvent" should {
     "call merged Datastream with event converted to json" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
-      when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> "stub"))
 
       val mergedEvent = MergedDataEvent("Test", "Test", "TestEventId",
           DataCall(Map.empty, Map.empty, Instant.now()),
@@ -81,7 +75,6 @@ class AuditConnectorSpec
       createConnector(enabledConfig).sendMergedEvent(mergedEvent).futureValue mustBe Success
 
       verify(mockAuditChannel).send(any[String], any[JsValue])(any[ExecutionContext])
-      verify(mockAuditCounter).createMetadata()
     }
   }
 
@@ -91,18 +84,15 @@ class AuditConnectorSpec
     "call AuditChannel.send with the event converted to json" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
-      when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> "stub"))
 
       createConnector(enabledConfig).sendEvent(event).futureValue mustBe AuditResult.Success
 
       verify(mockAuditChannel).send(any[String], any[JsValue])(any[ExecutionContext])
-      verify(mockAuditCounter).createMetadata()
     }
 
     "add tags if not specified" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
-      when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> "stub"))
       val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")))
 
       createConnector(enabledConfig).sendEvent(event)(headerCarrier, ec).futureValue mustBe AuditResult.Success
@@ -124,7 +114,6 @@ class AuditConnectorSpec
       createConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)
 
       verifyNoInteractions(mockAuditChannel)
-      verifyNoInteractions(mockAuditCounter)
     }
   }
 
@@ -132,7 +121,6 @@ class AuditConnectorSpec
     "call AuditChannel.send with extended event data converted to json" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
-      when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> Json.obj("sample" -> "data")))
 
       val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
       val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", detail = detail)
@@ -140,14 +128,12 @@ class AuditConnectorSpec
       createConnector(enabledConfig).sendExtendedEvent(event).futureValue mustBe AuditResult.Success
 
       verify(mockAuditChannel).send(any[String], any[JsValue])(any[ExecutionContext])
-      verify(mockAuditCounter).createMetadata()
     }
 
     "sendExplicitEvent Map[String,String]" should {
       "call AuditChannel.send with tags read from headerCarrier" in {
         when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
           .thenReturn(Future.successful(HandlerResult.Success))
-        when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> Json.obj("sample" -> "data")))
 
         val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
         createConnector(enabledConfig).sendExplicitAudit("theAuditType", Map("a" -> "1"))(headerCarrier, ec)
@@ -159,8 +145,6 @@ class AuditConnectorSpec
         (tags \ "X-Session-ID").as[String] mustBe "session-123"
         (tags \ "path").as[String] mustBe "/a/b/c"
         (captor.getValue \ "detail").as[Map[String,String]] mustBe Map("a" -> "1")
-        verify(mockAuditCounter).createMetadata()
-        (captor.getValue \ "metadata").as[JsObject] mustBe Json.obj("sample" -> "data")
       }
     }
 
@@ -168,8 +152,6 @@ class AuditConnectorSpec
       "call AuditChannel.send with tags read from headerCarrier and serialize T" in {
         when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
           .thenReturn(Future.successful(HandlerResult.Success))
-        when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> Json.obj("sample" -> "data")))
-
         val writes = Json.writes[MyExampleAudit]
 
         val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
@@ -184,8 +166,6 @@ class AuditConnectorSpec
         val detail = (captor.getValue \ "detail").as[JsObject]
         (detail \ "userType").as[String] mustBe "Agent"
         (detail \ "vrn").as[String] mustBe "123"
-        verify(mockAuditCounter).createMetadata()
-        (captor.getValue \ "metadata").as[JsObject] mustBe Json.obj("sample" -> "data")
       }
     }
   }
@@ -194,7 +174,6 @@ class AuditConnectorSpec
     "call AuditChannel.send with tags read from headerCarrier and pass through detail" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
-      when(mockAuditCounter.createMetadata()).thenReturn(Json.obj("metadata" -> Json.obj("sample" -> "data")))
 
       val expectedDetail = Json.obj("Address" -> Json.obj("line1" -> "Road", "postCode" -> "123"))
       val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
@@ -208,8 +187,6 @@ class AuditConnectorSpec
       (tags \ "path").as[String] mustBe "/a/b/c"
       val detail = (captor.getValue \ "detail").as[JsObject]
       detail mustBe expectedDetail
-      verify(mockAuditCounter).createMetadata()
-      (captor.getValue \ "metadata").as[JsObject] mustBe Json.obj("sample" -> "data")
     }
   }
 }

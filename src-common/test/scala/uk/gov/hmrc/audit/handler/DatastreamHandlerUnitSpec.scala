@@ -46,9 +46,11 @@ class DatastreamHandlerUnitSpec
   }
 
   "Any Datastream response" should {
-    "Return Success for any response code of 204" in {
-      val result = datastreamHandler.sendEvent(JsString("204")).futureValue
-      result shouldBe HandlerResult.Success
+    "Return Success for any response code of 2xx" in {
+      forAll(200 to 299) { code =>
+        val result = datastreamHandler.sendEvent(JsString(code.toString)).futureValue
+        result shouldBe HandlerResult.Success
+      }
     }
 
     "Return Failure for any response code of 3XX or 401-412 or 414-499 or 5XX" in {

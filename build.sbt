@@ -43,8 +43,6 @@ lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditi
     Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
     Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
     Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    Compile / scalaSource                  := (playAuditingPlay26 / Compile / scalaSource).value,
-    Test    / scalaSource                  := (playAuditingPlay26 / Test    / scalaSource).value,
     libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay27 ++ LibDependencies.test
   )
 
@@ -55,7 +53,5 @@ lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditi
     Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
     Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
     Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    Compile / scalaSource                  := (playAuditingPlay26 / Compile / scalaSource).value,
-    Test    / scalaSource                  := (playAuditingPlay26 / Test    / scalaSource).value,
     libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay28 ++ LibDependencies.test
   )

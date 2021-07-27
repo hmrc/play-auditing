@@ -26,7 +26,7 @@ import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
-import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, AuditCounter}
+import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector}
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
 import scala.concurrent.duration._
@@ -77,7 +77,6 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
         override def materializer: Materializer = testmaterializer
         override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
       }
-      override def auditCounter = mock[AuditCounter]
     }
   }
 
