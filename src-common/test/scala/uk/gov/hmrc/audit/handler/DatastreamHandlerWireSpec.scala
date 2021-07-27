@@ -27,9 +27,10 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.DefaultApplicationLifecycle
 import play.api.libs.json.{JsString, JsValue}
-import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils, WSClient}
+import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient, WireMockUtils}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
@@ -43,7 +44,8 @@ class DatastreamHandlerWireSpec
      with BeforeAndAfterEach
      with BeforeAndAfterAll
      with ScalaFutures
-     with IntegrationPatience {
+     with IntegrationPatience
+     with DatastreamMetricsMock {
 
   val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
@@ -60,8 +62,9 @@ class DatastreamHandlerWireSpec
                        connectTimeout = 2000.millis,
                        requestTimeout = 2000.millis,
                        userAgent      = "the-micro-service-name"
-                     )
-    )
+                     ),
+    metrics = mockDatastreamMetrics()
+  )
 
 
   val wireMock = new WireMockServer(datastreamTestPort)

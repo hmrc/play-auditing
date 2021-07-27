@@ -17,11 +17,11 @@
 package uk.gov.hmrc.audit.handler
 
 import java.net.URL
-
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.audit.{HandlerResult, WSClient}
 import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
+import uk.gov.hmrc.play.audit.http.connector.DatastreamMetrics
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,6 +31,7 @@ class DatastreamHandler(
   port    : Integer,
   path    : String,
   wsClient: WSClient,
+  metrics: DatastreamMetrics,
   logger : Logger = LoggerFactory.getLogger(getClass)
 ) extends HttpHandler(
   endpointUrl = new URL(s"$scheme://$host:$port$path"),
@@ -44,18 +45,29 @@ class DatastreamHandler(
     sendHttpRequest(event).flatMap {
       case HttpResult.Response(status) =>
         Future.successful(status match {
-          case status if 200 <= status && status <= 299 => Success
-          case 400 => logger.warn(s"PLAY_AUDIT_REJECTED: received response with $status status code")
-                      Rejected
-          case 413 => logger.warn(s"PLAY_AUDIT_REJECTED: received response with $status status code")
-                      Rejected
-          case _   => logger.warn(s"PLAY_AUDIT_FAILURE: received response with $status status code")
-                      Failure
+          case status if 200 <= status && status <= 299 =>
+            metrics.successCounter.inc()
+            Success
+          case 400 =>
+            metrics.rejectedCounter.inc()
+            logger.warn(s"PLAY_AUDIT_REJECTED: received response with $status status code")
+            Rejected
+          case 413 =>
+            metrics.rejectedCounter.inc()
+            logger.warn(s"PLAY_AUDIT_REJECTED: received response with $status status code")
+            Rejected
+          case _   =>
+            metrics.failureCounter.inc()
+            logger.warn(s"PLAY_AUDIT_FAILURE: received response with $status status code")
+            Failure
         })
       case HttpResult.Malformed =>
-          logger.warn("PLAY_AUDIT_FAILURE: received malformed response")
+        metrics.failureCounter.inc()
+        logger.warn("PLAY_AUDIT_FAILURE: received malformed response")
           Future.successful(Failure)
       case HttpResult.Failure(msg, exceptionOption) =>
+        metrics.failureCounter.inc()
+
         exceptionOption match {
           case None     => logger.warn(s"PLAY_AUDIT_FAILURE: failed with error '$msg'")
           case Some(ex) => logger.warn(s"PLAY_AUDIT_FAILURE: failed with error '$msg'", ex)

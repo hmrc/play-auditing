@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.audit.handler
 
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.{times, verify, verifyNoInteractions}
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -24,7 +24,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import play.api.libs.json.{JsString, JsValue}
-import uk.gov.hmrc.audit.{HandlerResult, WSClient}
+import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient}
 
 import scala.concurrent.{ExecutionContext, Future}
 import ExecutionContext.Implicits.global
@@ -34,10 +34,12 @@ class DatastreamHandlerUnitSpec
      with Inspectors
      with Matchers
      with ScalaFutures
-     with MockitoSugar {
+     with MockitoSugar
+     with DatastreamMetricsMock {
 
   trait Test {
     val logger = mock[Logger]
+    val metrics = mockDatastreamMetrics()
     val httpResult: HttpResult
 
     val datastreamHandler = new DatastreamHandler(
@@ -46,7 +48,8 @@ class DatastreamHandlerUnitSpec
       port = 1234,
       path = "/some/path",
       wsClient = mock[WSClient],
-      logger = logger
+      logger = logger,
+      metrics = metrics
     ) {
       override def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
         Future.successful(httpResult)
@@ -54,11 +57,14 @@ class DatastreamHandlerUnitSpec
   }
 
   "Any Datastream response" should {
-    "Return Success for any response code of 2xx" in forAll(200 to 299) { code =>
+    "Return Success for any response code of 2xx + increment counter" in forAll(200 to 299) { code =>
       new Test {
         val httpResult = HttpResult.Response(code)
         val result = datastreamHandler.sendEvent(JsString("SUCCESS")).futureValue
         result shouldBe HandlerResult.Success
+        verify(metrics.successCounter, times(1)).inc()
+        verifyNoInteractions(metrics.rejectedCounter)
+        verifyNoInteractions(metrics.failureCounter)
       }
     }
 
@@ -69,6 +75,10 @@ class DatastreamHandlerUnitSpec
           val result = datastreamHandler.sendEvent(JsString("FAILURE")).futureValue
           result shouldBe HandlerResult.Failure
           verify(logger).warn(s"PLAY_AUDIT_FAILURE: received response with $code status code")
+
+          verifyNoInteractions(metrics.successCounter)
+          verifyNoInteractions(metrics.rejectedCounter)
+          verify(metrics.failureCounter, times(1)).inc()
         }
       }
 
@@ -79,6 +89,9 @@ class DatastreamHandlerUnitSpec
 
       result shouldBe HandlerResult.Failure
       verify(logger).warn(s"PLAY_AUDIT_FAILURE: received malformed response")
+      verifyNoInteractions(metrics.successCounter)
+      verifyNoInteractions(metrics.rejectedCounter)
+      verify(metrics.failureCounter, times(1)).inc()
     }
 
 
@@ -90,6 +103,9 @@ class DatastreamHandlerUnitSpec
 
       result shouldBe HandlerResult.Failure
       verify(logger).warn(s"PLAY_AUDIT_FAILURE: failed with error 'my error message'", error)
+      verifyNoInteractions(metrics.successCounter)
+      verifyNoInteractions(metrics.rejectedCounter)
+      verify(metrics.failureCounter, times(1)).inc()
     }
 
     "Return Failure + log error for any failure response (if error is unavailable)" in new Test {
@@ -98,6 +114,9 @@ class DatastreamHandlerUnitSpec
 
       result shouldBe HandlerResult.Failure
       verify(logger).warn(s"PLAY_AUDIT_FAILURE: failed with error 'my error message'")
+      verifyNoInteractions(metrics.successCounter)
+      verifyNoInteractions(metrics.rejectedCounter)
+      verify(metrics.failureCounter, times(1)).inc()
     }
 
     "Return Rejected for any response code of 400 or 413" in forAll(Seq(400, 413)) { code =>
@@ -106,6 +125,9 @@ class DatastreamHandlerUnitSpec
         val result = datastreamHandler.sendEvent(JsString("REJECTED")).futureValue
         result shouldBe HandlerResult.Rejected
         verify(logger).warn(s"PLAY_AUDIT_REJECTED: received response with $code status code")
+        verifyNoInteractions(metrics.successCounter)
+        verify(metrics.rejectedCounter, times(1)).inc()
+        verifyNoInteractions(metrics.failureCounter)
       }
     }
   }
