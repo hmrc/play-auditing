@@ -46,7 +46,6 @@ object AuditResult {
 trait AuditConnector {
   def auditingConfig: AuditingConfig
   def auditChannel  : AuditChannel
-  def auditCounter  : AuditCounter
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
@@ -104,6 +103,6 @@ trait AuditConnector {
     }
 
   private def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
-    auditChannel.send(path, audit ++ auditCounter.createMetadata())
+    auditChannel.send(path, audit)
   }
 }
