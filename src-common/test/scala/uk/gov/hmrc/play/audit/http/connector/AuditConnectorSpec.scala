@@ -55,7 +55,7 @@ class AuditConnectorSpec
   implicit val m: Materializer      = ActorMaterializer()//required for play 2.6
 
   private val consumer = Consumer(BaseUri("datastream-base-url", 8080, "http"))
-  private val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false, publishCountersToLogs = false)
+  private val enabledConfig = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false)
 
   private val mockAuditChannel: AuditChannel = mock[AuditChannel]
 
@@ -109,9 +109,7 @@ class AuditConnectorSpec
         consumer    = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
         enabled     = false,
         auditSource = "the-project-name",
-        auditSentHeaders = false,
-        publishCountersToLogs = false
-      )
+        auditSentHeaders = false)
 
       createConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)
 
