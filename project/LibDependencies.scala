@@ -4,8 +4,9 @@ object LibDependencies {
 
   val compileCommon = Seq(
       "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
-      "org.slf4j"              %  "slf4j-api" % "1.7.30"
-    )
+      "org.slf4j"              %  "slf4j-api" % "1.7.30",
+      "com.kenshoo"            %% "metrics-play" % "2.7.3_0.8.2" % Provided
+  )
 
   // we depend on http-verbs just to integrate via the AuditHooks
   // http calls are made with the underlying play-ws

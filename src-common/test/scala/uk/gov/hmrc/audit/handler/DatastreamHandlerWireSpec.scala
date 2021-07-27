@@ -28,7 +28,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.DefaultApplicationLifecycle
 import play.api.libs.json.{JsString, JsValue}
-import uk.gov.hmrc.audit.{HandlerResult, WireMockUtils, WSClient}
+import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient, WireMockUtils}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
@@ -37,12 +37,13 @@ import ExecutionContext.Implicits.global
 
 class DatastreamHandlerWireSpec
   extends AnyWordSpecLike
-    with Inspectors
-    with Matchers
-    with BeforeAndAfterEach
-    with BeforeAndAfterAll
-    with ScalaFutures
-    with IntegrationPatience {
+     with Inspectors
+     with Matchers
+     with BeforeAndAfterEach
+     with BeforeAndAfterAll
+     with ScalaFutures
+     with IntegrationPatience
+     with DatastreamMetricsMock {
 
   val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
@@ -62,7 +63,8 @@ class DatastreamHandlerWireSpec
       host           = "localhost",
       port           = datastreamTestPort,
       path           = datastreamPath,
-      wsClient       = wsClient
+      wsClient       = wsClient,
+      metrics        = mockDatastreamMetrics()
     )
   }
 
