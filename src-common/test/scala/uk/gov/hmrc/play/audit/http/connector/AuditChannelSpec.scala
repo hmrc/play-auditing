@@ -56,7 +56,13 @@ class AuditChannelSpec
     "post data to datastream" in {
       val testPort = WireMockUtils.availablePort
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
-      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false)
+      val config = AuditingConfig(
+        consumer = Some(consumer),
+        enabled = true,
+        auditSource = "the-project-name",
+        auditSentHeaders = false,
+        metricsKey = "play.the-project-name"
+      )
       val channel = createAuditChannel(config)
       val wireMock = new WireMockServer(testPort)
       WireMock.configureFor("localhost", testPort)

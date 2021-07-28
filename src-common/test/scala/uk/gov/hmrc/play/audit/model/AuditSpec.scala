@@ -68,7 +68,9 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
       auditSource = "the-project-name",
-      auditSentHeaders = false)
+      auditSentHeaders = false,
+      metricsKey = "play.the-project-name"
+    )
     val testmaterializer = ActorMaterializer()(ActorSystem())
     new AuditConnector {
       override def auditingConfig = testconfig

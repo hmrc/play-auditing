@@ -103,6 +103,7 @@ trait AuditConnector {
     }
 
   private def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
-    auditChannel.send(path, audit)
+    val metadata = Json.obj("metadata" -> Json.obj("metricsKey" -> auditingConfig.metricsKey))
+    auditChannel.send(path, audit ++ metadata)
   }
 }
