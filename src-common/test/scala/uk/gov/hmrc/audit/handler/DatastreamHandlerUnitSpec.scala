@@ -74,7 +74,7 @@ class DatastreamHandlerUnitSpec
           val httpResult = HttpResult.Response(code)
           val result = datastreamHandler.sendEvent(JsString("FAILURE")).futureValue
           result shouldBe HandlerResult.Failure
-          verify(logger).warn(s"PLAY_AUDIT_FAILURE: received response with $code status code")
+          verify(logger).warn(s"AUDIT_FAILURE: received response with $code status code")
 
           verifyNoInteractions(metrics.successCounter)
           verifyNoInteractions(metrics.rejectCounter)
@@ -88,7 +88,7 @@ class DatastreamHandlerUnitSpec
       val result = datastreamHandler.sendEvent(JsString("MALFORMED_FAILURE")).futureValue
 
       result shouldBe HandlerResult.Failure
-      verify(logger).warn(s"PLAY_AUDIT_FAILURE: received malformed response")
+      verify(logger).warn(s"AUDIT_FAILURE: received malformed response")
       verifyNoInteractions(metrics.successCounter)
       verifyNoInteractions(metrics.rejectCounter)
       verify(metrics.failureCounter, times(1)).inc()
@@ -102,7 +102,7 @@ class DatastreamHandlerUnitSpec
       val result = datastreamHandler.sendEvent(JsString("FAILURE")).futureValue
 
       result shouldBe HandlerResult.Failure
-      verify(logger).warn(s"PLAY_AUDIT_FAILURE: failed with error 'my error message'", error)
+      verify(logger).warn(s"AUDIT_FAILURE: failed with error 'my error message'", error)
       verifyNoInteractions(metrics.successCounter)
       verifyNoInteractions(metrics.rejectCounter)
       verify(metrics.failureCounter, times(1)).inc()
@@ -113,7 +113,7 @@ class DatastreamHandlerUnitSpec
       val result = datastreamHandler.sendEvent(JsString("FAILURE")).futureValue
 
       result shouldBe HandlerResult.Failure
-      verify(logger).warn(s"PLAY_AUDIT_FAILURE: failed with error 'my error message'")
+      verify(logger).warn(s"AUDIT_FAILURE: failed with error 'my error message'")
       verifyNoInteractions(metrics.successCounter)
       verifyNoInteractions(metrics.rejectCounter)
       verify(metrics.failureCounter, times(1)).inc()
@@ -124,7 +124,7 @@ class DatastreamHandlerUnitSpec
         val httpResult = HttpResult.Response(code)
         val result = datastreamHandler.sendEvent(JsString("REJECTED")).futureValue
         result shouldBe HandlerResult.Rejected
-        verify(logger).warn(s"PLAY_AUDIT_REJECTED: received response with $code status code")
+        verify(logger).warn(s"AUDIT_REJECTED: received response with $code status code")
         verifyNoInteractions(metrics.successCounter)
         verify(metrics.rejectCounter, times(1)).inc()
         verifyNoInteractions(metrics.failureCounter)

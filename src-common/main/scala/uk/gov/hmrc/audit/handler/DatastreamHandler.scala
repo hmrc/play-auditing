@@ -50,27 +50,27 @@ class DatastreamHandler(
             Success
           case 400 =>
             metrics.rejectCounter.inc()
-            logger.warn(s"PLAY_AUDIT_REJECTED: received response with $status status code")
+            logger.warn(s"AUDIT_REJECTED: received response with $status status code")
             Rejected
           case 413 =>
             metrics.rejectCounter.inc()
-            logger.warn(s"PLAY_AUDIT_REJECTED: received response with $status status code")
+            logger.warn(s"AUDIT_REJECTED: received response with $status status code")
             Rejected
           case _   =>
             metrics.failureCounter.inc()
-            logger.warn(s"PLAY_AUDIT_FAILURE: received response with $status status code")
+            logger.warn(s"AUDIT_FAILURE: received response with $status status code")
             Failure
         })
       case HttpResult.Malformed =>
         metrics.failureCounter.inc()
-        logger.warn("PLAY_AUDIT_FAILURE: received malformed response")
+        logger.warn("AUDIT_FAILURE: received malformed response")
           Future.successful(Failure)
       case HttpResult.Failure(msg, exceptionOption) =>
         metrics.failureCounter.inc()
 
         exceptionOption match {
-          case None     => logger.warn(s"PLAY_AUDIT_FAILURE: failed with error '$msg'")
-          case Some(ex) => logger.warn(s"PLAY_AUDIT_FAILURE: failed with error '$msg'", ex)
+          case None     => logger.warn(s"AUDIT_FAILURE: failed with error '$msg'")
+          case Some(ex) => logger.warn(s"AUDIT_FAILURE: failed with error '$msg'", ex)
         }
         Future.successful(Failure)
     }
