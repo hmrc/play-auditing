@@ -20,17 +20,17 @@ import com.codahale.metrics.Counter
 import com.kenshoo.play.metrics._
 
 case class DatastreamMetrics(
-  successCounter: Counter,
-  rejectedCounter: Counter,
-  failureCounter: Counter
+                              successCounter: Counter,
+                              rejectCounter: Counter,
+                              failureCounter: Counter
 )
 
 object DatastreamMetrics {
   def register(metrics: Metrics) = {
     DatastreamMetrics(
-      metrics.defaultRegistry.counter("audit.success"),
-      metrics.defaultRegistry.counter("audit.rejected"),
-      metrics.defaultRegistry.counter("audit.failure")
+      successCounter = metrics.defaultRegistry.counter("audit.success"),
+      rejectCounter = metrics.defaultRegistry.counter("audit.reject"),
+      failureCounter = metrics.defaultRegistry.counter("audit.failure")
     )
   }
 }

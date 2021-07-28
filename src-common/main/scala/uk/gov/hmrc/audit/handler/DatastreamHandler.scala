@@ -49,11 +49,11 @@ class DatastreamHandler(
             metrics.successCounter.inc()
             Success
           case 400 =>
-            metrics.rejectedCounter.inc()
+            metrics.rejectCounter.inc()
             logger.warn(s"AUDIT_REJECTED: received response with $status status code")
             Rejected
           case 413 =>
-            metrics.rejectedCounter.inc()
+            metrics.rejectCounter.inc()
             logger.warn(s"AUDIT_REJECTED: received response with $status status code")
             Rejected
           case _   =>

@@ -63,7 +63,7 @@ class DatastreamHandlerUnitSpec
         val result = datastreamHandler.sendEvent(JsString("SUCCESS")).futureValue
         result shouldBe HandlerResult.Success
         verify(metrics.successCounter, times(1)).inc()
-        verifyNoInteractions(metrics.rejectedCounter)
+        verifyNoInteractions(metrics.rejectCounter)
         verifyNoInteractions(metrics.failureCounter)
       }
     }
@@ -77,7 +77,7 @@ class DatastreamHandlerUnitSpec
           verify(logger).warn(s"AUDIT_FAILURE: received response with $code status code")
 
           verifyNoInteractions(metrics.successCounter)
-          verifyNoInteractions(metrics.rejectedCounter)
+          verifyNoInteractions(metrics.rejectCounter)
           verify(metrics.failureCounter, times(1)).inc()
         }
       }
@@ -90,7 +90,7 @@ class DatastreamHandlerUnitSpec
       result shouldBe HandlerResult.Failure
       verify(logger).warn(s"AUDIT_FAILURE: received malformed response")
       verifyNoInteractions(metrics.successCounter)
-      verifyNoInteractions(metrics.rejectedCounter)
+      verifyNoInteractions(metrics.rejectCounter)
       verify(metrics.failureCounter, times(1)).inc()
     }
 
@@ -104,7 +104,7 @@ class DatastreamHandlerUnitSpec
       result shouldBe HandlerResult.Failure
       verify(logger).warn(s"AUDIT_FAILURE: failed with error 'my error message'", error)
       verifyNoInteractions(metrics.successCounter)
-      verifyNoInteractions(metrics.rejectedCounter)
+      verifyNoInteractions(metrics.rejectCounter)
       verify(metrics.failureCounter, times(1)).inc()
     }
 
@@ -115,7 +115,7 @@ class DatastreamHandlerUnitSpec
       result shouldBe HandlerResult.Failure
       verify(logger).warn(s"AUDIT_FAILURE: failed with error 'my error message'")
       verifyNoInteractions(metrics.successCounter)
-      verifyNoInteractions(metrics.rejectedCounter)
+      verifyNoInteractions(metrics.rejectCounter)
       verify(metrics.failureCounter, times(1)).inc()
     }
 
@@ -126,7 +126,7 @@ class DatastreamHandlerUnitSpec
         result shouldBe HandlerResult.Rejected
         verify(logger).warn(s"AUDIT_REJECTED: received response with $code status code")
         verifyNoInteractions(metrics.successCounter)
-        verify(metrics.rejectedCounter, times(1)).inc()
+        verify(metrics.rejectCounter, times(1)).inc()
         verifyNoInteractions(metrics.failureCounter)
       }
     }
