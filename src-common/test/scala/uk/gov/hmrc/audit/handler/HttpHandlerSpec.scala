@@ -66,7 +66,7 @@ class HttpHandlerSpec
       val e = new IllegalArgumentException("illegal argument") // only permitted error via checked exception
       when(wsClient.url(any())).thenThrow(e)
 
-      httpHandler.sendHttpRequest(JsString("any old thing")).futureValue mustBe HttpResult.Failure("Error opening connection or sending request", Some(e))
+      httpHandler.sendHttpRequest(JsString("any old thing")).futureValue mustBe HttpResult.Failure("Error opening connection or sending request (sync)", Some(e))
     }
 
     "return failure whenever WSClient POST throws" in forAll(checkedPostExceptions) { e =>
@@ -75,7 +75,7 @@ class HttpHandlerSpec
         when(wsClient.url(any())).thenReturn(requestMock)
         when(requestMock.post(any())(any())).thenThrow(e)
 
-        httpHandler.sendHttpRequest(JsString("any old thing")).futureValue mustBe HttpResult.Failure("Error opening connection or sending request", Some(e))
+        httpHandler.sendHttpRequest(JsString("any old thing")).futureValue mustBe HttpResult.Failure("Error opening connection or sending request (sync)", Some(e))
       }
     }
 
@@ -85,7 +85,7 @@ class HttpHandlerSpec
         when(wsClient.url(any())).thenReturn(requestMock)
         when(requestMock.post(any())(any())).thenReturn(Future.failed(e))
 
-        httpHandler.sendHttpRequest(JsString("any old thing")).futureValue mustBe HttpResult.Failure("Error opening connection or sending request", Some(e))
+        httpHandler.sendHttpRequest(JsString("any old thing")).futureValue mustBe HttpResult.Failure("Error opening connection or sending request (async)", Some(e))
       }
     }
   }

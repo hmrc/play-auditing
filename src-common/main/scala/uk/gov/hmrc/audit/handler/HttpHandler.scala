@@ -63,10 +63,10 @@ class HttpHandler(
           }
         }.recover {
           case e: Throwable =>
-            HttpResult.Failure("Error opening connection or sending request", Some(e))
+            HttpResult.Failure("Error opening connection or sending request (async)", Some(e))
         }
     } catch {
       case e: Throwable =>
-        Future.successful(HttpResult.Failure("Error opening connection or sending request", Some(e)))
+        Future.successful(HttpResult.Failure("Error opening connection or sending request (sync)", Some(e)))
     }
 }
