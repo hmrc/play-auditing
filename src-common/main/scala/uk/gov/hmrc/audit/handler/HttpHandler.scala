@@ -34,7 +34,7 @@ object HttpResult {
   case class Failure(msg: String, nested: Option[Throwable] = None) extends Exception(msg, nested.orNull) with HttpResult
 }
 
-abstract class HttpHandler(
+class HttpHandler(
   endpointUrl: URL,
   wsClient   : WSClient
 ) {
@@ -62,13 +62,11 @@ abstract class HttpHandler(
             HttpResult.Malformed
           }
         }.recover {
-          case e: TimeoutException =>
-            HttpResult.Failure("Error opening connection, or request timed out", Some(e))
-          case e: IOException =>
-            HttpResult.Failure("Error opening connection, or request timed out", Some(e))
+          case e: Throwable =>
+            HttpResult.Failure("Error opening connection or sending request (async)", Some(e))
         }
     } catch {
-      case t: Throwable =>
-        Future.successful(HttpResult.Failure("Error sending HTTP request", Some(t)))
+      case e: Throwable =>
+        Future.successful(HttpResult.Failure("Error opening connection or sending request (sync)", Some(e)))
     }
 }
