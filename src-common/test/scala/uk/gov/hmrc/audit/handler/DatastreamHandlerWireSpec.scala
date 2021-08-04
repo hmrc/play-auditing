@@ -38,12 +38,12 @@ import ExecutionContext.Implicits.global
 
 class DatastreamHandlerWireSpec
   extends AnyWordSpecLike
-     with Inspectors
-     with Matchers
-     with BeforeAndAfterEach
-     with BeforeAndAfterAll
-     with ScalaFutures
-     with IntegrationPatience {
+    with Inspectors
+    with Matchers
+    with BeforeAndAfterEach
+    with BeforeAndAfterAll
+    with ScalaFutures
+    with IntegrationPatience {
 
   val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
@@ -51,18 +51,21 @@ class DatastreamHandlerWireSpec
   implicit val materializer   = ActorMaterializer()(ActorSystem())
   implicit val lifecycle      = new DefaultApplicationLifecycle()
 
-  val datastreamHandler = new DatastreamHandler(
-    scheme         = "http",
-    host           = "localhost",
-    port           = datastreamTestPort,
-    path           = datastreamPath,
-    wsClient       = WSClient(
-                       connectTimeout = 2000.millis,
-                       requestTimeout = 2000.millis,
-                       userAgent      = "the-micro-service-name"
-                     )
+  trait Test {
+    val wsClient = WSClient(
+      connectTimeout = 2000.millis,
+      requestTimeout = 2000.millis,
+      userAgent      = "the-micro-service-name"
     )
 
+    val datastreamHandler = new DatastreamHandler(
+      scheme         = "http",
+      host           = "localhost",
+      port           = datastreamTestPort,
+      path           = datastreamPath,
+      wsClient       = wsClient
+    )
+  }
 
   val wireMock = new WireMockServer(datastreamTestPort)
 
@@ -76,13 +79,13 @@ class DatastreamHandlerWireSpec
   }
 
   "Successful call to Datastream" should {
-    "Return a Success result" in {
+    "Return a Success result" in new Test {
       verifySingleCall(JsString("SUCCESS"), 204, HandlerResult.Success)
     }
   }
 
   "All calls to Datastream" should {
-    "set the user-agent" in {
+    "set the user-agent" in new Test {
       val event = JsString("EVENT")
       stub(event, 204)
       datastreamHandler.sendEvent(event).futureValue
@@ -91,15 +94,15 @@ class DatastreamHandlerWireSpec
   }
 
   "Failed call to Datastream" should {
-    "Return a Rejected if Datastream rejected the event as malformed" in {
+    "Return a Rejected if Datastream rejected the event as malformed" in new Test {
       verifySingleCall(JsString("REJECTED"), 400, HandlerResult.Rejected)
     }
 
-    "Return a Failure if the POST could not be completed" in {
+    "Return a Failure if the POST could not be completed" in new Test {
       verifySingleCall(JsString("UNAVAILABLE"), 503, HandlerResult.Failure)
     }
 
-    "Return a transient Failure if the POST timed out waiting for a response" in {
+    "Return a transient Failure if the POST timed out waiting for a response" in new Test {
       val event = JsString("TIMEOUT")
       WireMock.stubFor(
         post(urlPathEqualTo(datastreamPath))
@@ -110,6 +113,11 @@ class DatastreamHandlerWireSpec
         WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
         result shouldBe HandlerResult.Failure
       }
+    }
+
+    "Return a failure if the WSClient is in IllegalStateException: Closed state " in new Test {
+      wsClient.close()
+      datastreamHandler.sendEvent(JsString("CLOSED")).futureValue shouldBe HandlerResult.Failure
     }
   }
 
@@ -157,7 +165,7 @@ class DatastreamHandlerWireSpec
         .willReturn(aResponse().withFault(fault))
         .willSetStateTo(toScenario))
 
-  def verifyErrorRetry(event: JsValue, fault: Fault, retriedResponse: Integer, expectedResult: HandlerResult): Unit = {
+  def verifyErrorRetry(event: JsValue, fault: Fault, retriedResponse: Integer, expectedResult: HandlerResult): Unit = new Test {
     stub(event, fault, Scenario.STARTED, "RETRYING")
     stub(event, retriedResponse, "RETRYING", "FINISHED")
 
@@ -167,7 +175,7 @@ class DatastreamHandlerWireSpec
     result shouldBe expectedResult
   }
 
-  def verifySingleCall(event: JsValue, responseStatus: Integer, expectedResult: HandlerResult): Unit = {
+  def verifySingleCall(event: JsValue, responseStatus: Integer, expectedResult: HandlerResult): Unit = new Test {
     stub(event, responseStatus)
 
     val result = datastreamHandler.sendEvent(event).futureValue
