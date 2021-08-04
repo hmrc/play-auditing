@@ -1,8 +1,6 @@
 
 import sbt.Keys._
 import sbt._
-import uk.gov.hmrc.SbtArtifactory
-import uk.gov.hmrc.versioning.SbtGitVersioning
 
 val scala2_12 = "2.12.12"
 
@@ -10,12 +8,11 @@ lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
   majorVersion := 7,
   scalaVersion := scala2_12,
-  makePublicallyAvailableOnBintray := true,
+  isPublicArtefact := true,
   scalacOptions ++= Seq("-feature")
 )
 
 lazy val library = (project in file("."))
-  .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
   .settings(
     commonSettings,
     publish := {},
@@ -30,7 +27,6 @@ lazy val library = (project in file("."))
   )
 
 lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditing-play-26"))
-  .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
   .settings(
     commonSettings,
     Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
@@ -41,7 +37,6 @@ lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditi
   )
 
 lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditing-play-27"))
-  .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
   .settings(
     commonSettings,
     Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
@@ -54,7 +49,6 @@ lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditi
   )
 
 lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditing-play-28"))
-  .enablePlugins(SbtAutoBuildPlugin, SbtArtifactory)
   .settings(
     commonSettings,
     Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
