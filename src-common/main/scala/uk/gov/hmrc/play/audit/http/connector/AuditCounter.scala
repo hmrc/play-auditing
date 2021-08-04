@@ -38,7 +38,6 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
   def auditingConfig: AuditingConfig
   def auditChannel: AuditChannel
   def auditMetrics: AuditCounterMetrics
-  def auditCounterLogs: AuditCounterLogs
 
   protected val logger: Logger = LoggerFactory.getLogger("auditCounter")
   private val instanceID = UUID.randomUUID().toString
@@ -78,9 +77,7 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
       if (isFinal) {
         finalSequence.set(Some(currentSequence))
       }
-      if (auditingConfig.publishCountersToLogs) {
-        auditCounterLogs.logInfo(s"AuditCounter: $auditCount")
-      }
+      logger.info(s"AuditCounter: $auditCount")
       auditChannel.send("/write/audit", auditCount)(ec).map(_ => Done)(ec)
     } else {
       Future.successful(Done)
@@ -101,7 +98,6 @@ private[connector] trait UnpublishedAuditCounter extends AuditCounter {
   }
 
   protected def currentTime() = Instant.now
-
   private def timestamp(): String = {
     DateTimeFormatter
       .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")

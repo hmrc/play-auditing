@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{verify, when, verifyNoInteractions}
+import org.mockito.Mockito.{verify, when}
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
@@ -48,8 +48,6 @@ class AuditCounterSpec
     val stubAuditChannel = mock[AuditChannel]
     when(stubAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext])).thenReturn(Future.successful(Success))
 
-    val stubAuditCounterLogs = mock[AuditCounterLogs]
-
     val stubLogger = mock[Logger]
 
     var metrics = Map.empty[String,()=>Option[Long]]
@@ -61,10 +59,9 @@ class AuditCounterSpec
 
     def createCounter(enabled: Boolean = true) = {
       new UnpublishedAuditCounter {
-        override def auditingConfig = AuditingConfig(None, enabled, "projectname", false, true)
+        override def auditingConfig = AuditingConfig(None, enabled, "projectname", false)
         override def auditChannel = stubAuditChannel
         override def auditMetrics = stubAuditMetrics
-        override def auditCounterLogs = stubAuditCounterLogs
         override val logger = stubLogger
       }
     }
@@ -107,10 +104,9 @@ class AuditCounterSpec
       val time = LocalDateTime.of(2021, 2, 2, 12, 0, 0).toInstant(ZoneOffset.of("Z"))
 
       val counter = new UnpublishedAuditCounter {
-        override def auditingConfig = AuditingConfig(None, true, "projectname", false, true)
+        override def auditingConfig = AuditingConfig(None, true, "projectname", false)
         override def auditChannel = stubAuditChannel
         override def auditMetrics = stubAuditMetrics
-        override def auditCounterLogs: AuditCounterLogs = stubAuditCounterLogs
         override def currentTime() = time
       }
 
@@ -142,24 +138,6 @@ class AuditCounterSpec
 
       (1 to 10).map(_ =>  counter.createMetadata())
       metrics.isEmpty mustBe true
-    }
-
-    "publish the counters logs" in new Test {
-      val counter = createCounter()
-      counter.publish(isFinal = false)
-      verify(stubAuditCounterLogs).logInfo(any[String])
-    }
-
-    "not publish the counters to std out when disabled" in new Test {
-      val counter = new UnpublishedAuditCounter {
-        override def auditingConfig = AuditingConfig(None, true, "projectname", false, publishCountersToLogs = false)
-        override def auditChannel = stubAuditChannel
-        override def auditMetrics = stubAuditMetrics
-        override def auditCounterLogs = stubAuditCounterLogs
-      }
-      counter.publish(isFinal=false)
-
-      verifyNoInteractions(stubAuditCounterLogs)
     }
 
     "warn if a final audit event has already been sent" in new Test {
