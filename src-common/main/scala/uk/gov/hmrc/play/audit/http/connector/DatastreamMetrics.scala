@@ -16,21 +16,12 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import com.codahale.metrics.Counter
-import com.kenshoo.play.metrics._
+trait Counter {
+  def inc(): Unit
+}
 
 case class DatastreamMetrics(
-                              successCounter: Counter,
-                              rejectCounter: Counter,
-                              failureCounter: Counter
+  successCounter: Counter,
+  rejectCounter: Counter,
+  failureCounter: Counter
 )
-
-object DatastreamMetrics {
-  def register(metrics: Metrics) = {
-    DatastreamMetrics(
-      successCounter = metrics.defaultRegistry.counter("audit.success"),
-      rejectCounter = metrics.defaultRegistry.counter("audit.reject"),
-      failureCounter = metrics.defaultRegistry.counter("audit.failure")
-    )
-  }
-}
