@@ -72,7 +72,7 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
       auditSentHeaders = false
     )
     val testmaterializer = ActorMaterializer()(ActorSystem())
-    val datastreamMetricsMock = mockDatastreamMetrics("play.the-project-name")
+    val datastreamMetricsMock = mockDatastreamMetrics(Some("play.the-project-name"))
 
     new AuditConnector {
       override def auditingConfig = testconfig

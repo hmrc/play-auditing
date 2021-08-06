@@ -64,7 +64,7 @@ class DatastreamHandlerWireSpec
       port           = datastreamTestPort,
       path           = datastreamPath,
       wsClient       = wsClient,
-      metrics        = mockDatastreamMetrics("play.some-application")
+      metrics        = mockDatastreamMetrics(Some("play.some-application"))
     )
   }
 

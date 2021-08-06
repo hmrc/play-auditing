@@ -24,5 +24,5 @@ case class DatastreamMetrics(
   successCounter: Counter,
   rejectCounter: Counter,
   failureCounter: Counter,
-  metricsKey: String
+  metricsKey: Option[String] // not present if metrics are disabled
 )

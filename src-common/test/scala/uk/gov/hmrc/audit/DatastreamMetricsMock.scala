@@ -21,7 +21,7 @@ import uk.gov.hmrc.play.audit.http.connector.{DatastreamMetrics, Counter}
 
 trait DatastreamMetricsMock {
 
-  def mockDatastreamMetrics(metricsKey: String): DatastreamMetrics = DatastreamMetrics(
+  def mockDatastreamMetrics(metricsKey: Option[String]): DatastreamMetrics = DatastreamMetrics(
     mock[Counter],
     mock[Counter],
     mock[Counter],

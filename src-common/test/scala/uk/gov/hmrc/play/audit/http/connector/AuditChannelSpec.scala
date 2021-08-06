@@ -49,7 +49,7 @@ class AuditChannelSpec
     override def auditingConfig: AuditingConfig = config
     override def materializer: Materializer = implicitly
     override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-    override def datastreamMetrics: DatastreamMetrics = mockDatastreamMetrics("play.the-project-name")
+    override def datastreamMetrics: DatastreamMetrics = mockDatastreamMetrics(Some("play.the-project-name"))
   }
 
   "AuditConnector" should {

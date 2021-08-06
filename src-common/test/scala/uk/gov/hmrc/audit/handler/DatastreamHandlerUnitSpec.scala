@@ -39,7 +39,7 @@ class DatastreamHandlerUnitSpec
 
   trait Test {
     val logger = mock[Logger]
-    val metrics = mockDatastreamMetrics("play.some-application")
+    val metrics = mockDatastreamMetrics(Some("play.some-application"))
     val httpResult: HttpResult
 
     val datastreamHandler = new DatastreamHandler(
