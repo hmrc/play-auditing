@@ -46,6 +46,7 @@ object AuditResult {
 trait AuditConnector {
   def auditingConfig: AuditingConfig
   def auditChannel  : AuditChannel
+  def datastreamMetrics: DatastreamMetrics
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
@@ -103,7 +104,7 @@ trait AuditConnector {
     }
 
   private def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
-    val metadata = Json.obj("metadata" -> Json.obj("metricsKey" -> auditingConfig.metricsKey))
+    val metadata = Json.obj("metadata" -> Json.obj("metricsKey" -> datastreamMetrics.metricsKey))
     auditChannel.send(path, audit ++ metadata)
   }
 }

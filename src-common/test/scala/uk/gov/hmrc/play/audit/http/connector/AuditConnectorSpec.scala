@@ -17,7 +17,6 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import java.time.Instant
-
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
@@ -30,7 +29,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{JsObject, JsString, JsValue, Json}
-import uk.gov.hmrc.audit.HandlerResult
+import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult._
@@ -46,7 +45,8 @@ class AuditConnectorSpec
      with ScalaFutures
      with IntegrationPatience
      with MockitoSugar
-     with OneInstancePerTest {
+     with OneInstancePerTest
+     with DatastreamMetricsMock {
 
   implicit val ec: ExecutionContext = RunInlineExecutionContext
   implicit val as: ActorSystem      = ActorSystem()
@@ -57,15 +57,15 @@ class AuditConnectorSpec
     consumer = Some(consumer),
     enabled = true,
     auditSource = "the-project-name",
-    auditSentHeaders = false,
-    metricsKey = "play.the-project-name")
-
+    auditSentHeaders = false
+  )
   private val mockAuditChannel: AuditChannel = mock[AuditChannel]
 
   private def createConnector(config: AuditingConfig): AuditConnector =
     new AuditConnector {
       override def auditingConfig = config
       override def auditChannel = mockAuditChannel
+      override def datastreamMetrics = mockDatastreamMetrics("play.the-project-name")
     }
 
   "sendMergedEvent" should {
@@ -112,8 +112,7 @@ class AuditConnectorSpec
         consumer    = Some(Consumer(BaseUri("datastream-base-url", 8080, "http"))),
         enabled     = false,
         auditSource = "the-project-name",
-        auditSentHeaders = false,
-        metricsKey = "play.the-project-name"
+        auditSentHeaders = false
       )
 
       createConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)

@@ -63,22 +63,30 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
 
   val exampleRequestId = "12345"
   implicit val hc: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
+
   val auditConnector: AuditConnector = {
     val testconfig = AuditingConfig(
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
       enabled = true,
       auditSource = "the-project-name",
-      auditSentHeaders = false,
-      metricsKey = "play.the-project-name"
+      auditSentHeaders = false
     )
     val testmaterializer = ActorMaterializer()(ActorSystem())
+    val datastreamMetricsMock = mockDatastreamMetrics("play.the-project-name")
+
     new AuditConnector {
       override def auditingConfig = testconfig
+
+      override def datastreamMetrics = datastreamMetricsMock
+
       override def auditChannel = new AuditChannel {
         override def auditingConfig: AuditingConfig = testconfig
+
         override def materializer: Materializer = testmaterializer
+
         override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-        override def datastreamMetrics: DatastreamMetrics =  mockDatastreamMetrics()
+
+        override def datastreamMetrics: DatastreamMetrics = datastreamMetricsMock
       }
     }
   }

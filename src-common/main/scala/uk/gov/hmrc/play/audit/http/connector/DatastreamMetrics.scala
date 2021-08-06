@@ -23,5 +23,6 @@ trait Counter {
 case class DatastreamMetrics(
   successCounter: Counter,
   rejectCounter: Counter,
-  failureCounter: Counter
+  failureCounter: Counter,
+  metricsKey: String
 )

@@ -49,7 +49,7 @@ class AuditChannelSpec
     override def auditingConfig: AuditingConfig = config
     override def materializer: Materializer = implicitly
     override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-    override def datastreamMetrics: DatastreamMetrics = mockDatastreamMetrics()
+    override def datastreamMetrics: DatastreamMetrics = mockDatastreamMetrics("play.the-project-name")
   }
 
   "AuditConnector" should {
@@ -60,8 +60,7 @@ class AuditChannelSpec
         consumer = Some(consumer),
         enabled = true,
         auditSource = "the-project-name",
-        auditSentHeaders = false,
-        metricsKey = "play.the-project-name"
+        auditSentHeaders = false
       )
       val channel = createAuditChannel(config)
       val wireMock = new WireMockServer(testPort)
