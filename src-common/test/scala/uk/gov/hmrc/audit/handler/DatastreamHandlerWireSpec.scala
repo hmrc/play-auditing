@@ -123,14 +123,14 @@ class DatastreamHandlerWireSpec
   }
 
   "Calls to Datastream that return an empty response" should {
-    "Not retry the POST and return a failure" in {
-      verifyNoErrorRetry(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE)
+    "Not retry the POST (beyond default lib retries) and return a failure" in {
+      verifyOnlyDefaultLibraryRetries(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE)
     }
   }
 
   "Calls to Datastream that return a bad response" should {
-    "Not retry the POST and return a failure" in {
-      verifyNoErrorRetry(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE)
+    "Not retry the POST (beyond default lib retries) and return a failure" in {
+      verifyOnlyDefaultLibraryRetries(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE)
     }
   }
 
@@ -155,7 +155,7 @@ class DatastreamHandlerWireSpec
         .withRequestBody(WireMock.equalTo(event.toString))
         .willReturn(aResponse().withFault(fault)))
 
-  def verifyNoErrorRetry(event: JsValue, fault: Fault): Unit = new Test {
+  def verifyOnlyDefaultLibraryRetries(event: JsValue, fault: Fault): Unit = new Test {
     stub(event, fault)
     val result = datastreamHandler.sendEvent(event).futureValue
 
