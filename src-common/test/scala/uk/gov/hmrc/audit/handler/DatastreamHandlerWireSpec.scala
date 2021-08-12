@@ -159,7 +159,8 @@ class DatastreamHandlerWireSpec
     stub(event, fault)
     val result = datastreamHandler.sendEvent(event).futureValue
 
-    WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
+    // These 6 attempts represent the default retries coming from the StandaloneAhcWSClient + our original request
+    WireMock.verify(6, postRequestedFor(urlPathEqualTo(datastreamPath)))
     result shouldBe HandlerResult.Failure
   }
 

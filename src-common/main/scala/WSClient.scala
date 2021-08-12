@@ -42,8 +42,7 @@ package object audit {
                 connectionTimeout = connectTimeout,
                 requestTimeout    = requestTimeout,
                 userAgent         = Some(userAgent),
-              ),
-            maxRequestRetry   = 0
+              )
           )
       )
   }
