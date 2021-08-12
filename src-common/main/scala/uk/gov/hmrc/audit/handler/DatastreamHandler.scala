@@ -32,27 +32,21 @@ class DatastreamHandler(
   path    : String,
   wsClient: WSClient,
   metrics: DatastreamMetrics,
-  logger : Logger = LoggerFactory.getLogger(getClass)
 ) extends HttpHandler(
   endpointUrl = new URL(s"$scheme://$host:$port$path"),
   wsClient    = wsClient
 ) with AuditHandler {
 
-  override def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] =
-    sendEvent(event, retryIfMalformed = true)
+  private[handler] val logger : Logger = LoggerFactory.getLogger(getClass)
 
-  private def sendEvent(event: JsValue, retryIfMalformed: Boolean)(implicit ec: ExecutionContext): Future[HandlerResult] =
+  override def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] =
     sendHttpRequest(event).flatMap {
       case HttpResult.Response(status) =>
         Future.successful(status match {
-          case status if 200 <= status && status <= 299 =>
+          case status if play.api.http.Status.isSuccessful(status) =>
             metrics.successCounter.inc()
             Success
-          case 400 =>
-            metrics.rejectCounter.inc()
-            logger.warn(s"AUDIT_REJECTED: received response with $status status code")
-            Rejected
-          case 413 =>
+          case 400 | 413 =>
             metrics.rejectCounter.inc()
             logger.warn(s"AUDIT_REJECTED: received response with $status status code")
             Rejected

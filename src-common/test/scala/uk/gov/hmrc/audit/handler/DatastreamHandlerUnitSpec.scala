@@ -31,14 +31,14 @@ import ExecutionContext.Implicits.global
 
 class DatastreamHandlerUnitSpec
   extends AnyWordSpecLike
-     with Inspectors
-     with Matchers
-     with ScalaFutures
-     with MockitoSugar
-     with DatastreamMetricsMock {
+    with Inspectors
+    with Matchers
+    with ScalaFutures
+    with MockitoSugar
+    with DatastreamMetricsMock {
 
   trait Test {
-    val logger = mock[Logger]
+    val mockLogger = mock[Logger]
     val metrics = mockDatastreamMetrics(Some("play.some-application"))
     val httpResult: HttpResult
 
@@ -48,9 +48,9 @@ class DatastreamHandlerUnitSpec
       port = 1234,
       path = "/some/path",
       wsClient = mock[WSClient],
-      logger = logger,
       metrics = metrics
     ) {
+      override val logger = mockLogger
       override def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
         Future.successful(httpResult)
     }
@@ -61,10 +61,10 @@ class DatastreamHandlerUnitSpec
       new Test {
         val httpResult = HttpResult.Response(code)
         val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
-        
+
         result shouldBe HandlerResult.Success
         verify(metrics.successCounter, times(1)).inc()
-        
+
         verifyNoInteractions(metrics.rejectCounter)
         verifyNoInteractions(metrics.failureCounter)
       }
@@ -76,7 +76,7 @@ class DatastreamHandlerUnitSpec
         val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
         result shouldBe HandlerResult.Rejected
-        verify(logger).warn(s"AUDIT_REJECTED: received response with $code status code")
+        verify(mockLogger).warn(s"AUDIT_REJECTED: received response with $code status code")
         verify(metrics.rejectCounter, times(1)).inc()
 
         verifyNoInteractions(metrics.successCounter)
@@ -89,11 +89,11 @@ class DatastreamHandlerUnitSpec
         new Test {
           val httpResult = HttpResult.Response(code)
           val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
-          
+
           result shouldBe HandlerResult.Failure
-          verify(logger).warn(s"AUDIT_FAILURE: received response with $code status code")
+          verify(mockLogger).warn(s"AUDIT_FAILURE: received response with $code status code")
           verify(metrics.failureCounter, times(1)).inc()
-          
+
           verifyNoInteractions(metrics.successCounter)
           verifyNoInteractions(metrics.rejectCounter)
         }
@@ -104,9 +104,9 @@ class DatastreamHandlerUnitSpec
       val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
       result shouldBe HandlerResult.Failure
-      verify(logger).warn("AUDIT_FAILURE: received malformed response")
+      verify(mockLogger).warn("AUDIT_FAILURE: received malformed response")
       verify(metrics.failureCounter, times(1)).inc()
-      
+
       verifyNoInteractions(metrics.successCounter)
       verifyNoInteractions(metrics.rejectCounter)
     }
@@ -117,9 +117,9 @@ class DatastreamHandlerUnitSpec
       val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
       result shouldBe HandlerResult.Failure
-      verify(logger).warn("AUDIT_FAILURE: failed with error 'my error message'", error)
+      verify(mockLogger).warn("AUDIT_FAILURE: failed with error 'my error message'", error)
       verify(metrics.failureCounter, times(1)).inc()
-      
+
       verifyNoInteractions(metrics.successCounter)
       verifyNoInteractions(metrics.rejectCounter)
     }
@@ -129,7 +129,7 @@ class DatastreamHandlerUnitSpec
       val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
       result shouldBe HandlerResult.Failure
-      verify(logger).warn("AUDIT_FAILURE: failed with error 'my error message'")
+      verify(mockLogger).warn("AUDIT_FAILURE: failed with error 'my error message'")
       verify(metrics.failureCounter, times(1)).inc()
 
       verifyNoInteractions(metrics.successCounter)
