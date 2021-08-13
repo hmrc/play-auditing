@@ -17,11 +17,11 @@
 package uk.gov.hmrc.audit.handler
 
 import java.net.URL
-
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.audit.{HandlerResult, WSClient}
 import uk.gov.hmrc.audit.HandlerResult.{Failure, Rejected, Success}
+import uk.gov.hmrc.play.audit.http.connector.DatastreamMetrics
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,41 +30,41 @@ class DatastreamHandler(
   host    : String,
   port    : Integer,
   path    : String,
-  wsClient: WSClient
+  wsClient: WSClient,
+  metrics: DatastreamMetrics,
 ) extends HttpHandler(
   endpointUrl = new URL(s"$scheme://$host:$port$path"),
   wsClient    = wsClient
 ) with AuditHandler {
 
-  private val logger: Logger = LoggerFactory.getLogger(getClass)
+  private[handler] val logger : Logger = LoggerFactory.getLogger(getClass)
 
   override def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] =
-    sendEvent(event, retryIfMalformed = true)
-
-  private def sendEvent(event: JsValue, retryIfMalformed: Boolean)(implicit ec: ExecutionContext): Future[HandlerResult] =
     sendHttpRequest(event).flatMap {
       case HttpResult.Response(status) =>
         Future.successful(status match {
-          case 204 => Success
-          case 400 => logger.warn("Malformed request rejected by Datastream")
-                      Rejected
-          case 413 => logger.warn("Too large request rejected by Datastream")
-                      Rejected
-          case _   => logger.error(s"Unknown return value $status")
-                      Failure
+          case status if play.api.http.Status.isSuccessful(status) =>
+            metrics.successCounter.inc()
+            Success
+          case 400 | 413 =>
+            metrics.rejectCounter.inc()
+            logger.warn(s"AUDIT_REJECTED: received response with $status status code")
+            Rejected
+          case _   =>
+            metrics.failureCounter.inc()
+            logger.warn(s"AUDIT_FAILURE: received response with $status status code")
+            Failure
         })
       case HttpResult.Malformed =>
-        if (retryIfMalformed) {
-          logger.warn("Malformed response on first request, retrying")
-          sendEvent(event, retryIfMalformed = false)
-        } else {
-          logger.warn("Malformed response on second request, failing")
+        metrics.failureCounter.inc()
+        logger.warn("AUDIT_FAILURE: received malformed response")
           Future.successful(Failure)
-        }
       case HttpResult.Failure(msg, exceptionOption) =>
+        metrics.failureCounter.inc()
+
         exceptionOption match {
-          case None     => logger.error(msg)
-          case Some(ex) => logger.error(msg, ex)
+          case None     => logger.warn(s"AUDIT_FAILURE: failed with error '$msg'")
+          case Some(ex) => logger.warn(s"AUDIT_FAILURE: failed with error '$msg'", ex)
         }
         Future.successful(Failure)
     }

@@ -46,7 +46,7 @@ object AuditResult {
 trait AuditConnector {
   def auditingConfig: AuditingConfig
   def auditChannel  : AuditChannel
-  def auditCounter  : AuditCounter
+  def datastreamMetrics: DatastreamMetrics
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
@@ -103,7 +103,8 @@ trait AuditConnector {
       Future.successful(AuditResult.Disabled)
     }
 
-  private def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
-    auditChannel.send(path, audit ++ auditCounter.createMetadata())
+  private[connector] def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
+    val metadata = Json.obj("metadata" -> Json.obj("metricsKey" -> datastreamMetrics.metricsKey))
+    auditChannel.send(path, audit ++ metadata)
   }
 }

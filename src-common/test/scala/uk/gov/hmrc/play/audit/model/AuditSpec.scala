@@ -23,16 +23,17 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
+import uk.gov.hmrc.audit.DatastreamMetricsMock
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
-import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, AuditCounter}
+import uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, DatastreamMetrics}
 import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
+class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with DatastreamMetricsMock {
 
   class MockAudit(appName: String, connector: AuditConnector) extends Audit(appName, connector) {
 
@@ -62,6 +63,7 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
 
   val exampleRequestId = "12345"
   implicit val hc: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
+
   val auditConnector: AuditConnector = {
     val testconfig = AuditingConfig(
       consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
@@ -70,14 +72,22 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually {
       auditSentHeaders = false
     )
     val testmaterializer = ActorMaterializer()(ActorSystem())
+    val datastreamMetricsMock = mockDatastreamMetrics(Some("play.the-project-name"))
+
     new AuditConnector {
       override def auditingConfig = testconfig
+
+      override def datastreamMetrics = datastreamMetricsMock
+
       override def auditChannel = new AuditChannel {
         override def auditingConfig: AuditingConfig = testconfig
+
         override def materializer: Materializer = testmaterializer
+
         override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
+
+        override def datastreamMetrics: DatastreamMetrics = datastreamMetricsMock
       }
-      override def auditCounter = mock[AuditCounter]
     }
   }
 

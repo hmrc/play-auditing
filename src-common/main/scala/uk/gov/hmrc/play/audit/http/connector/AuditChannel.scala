@@ -31,6 +31,7 @@ trait AuditChannel {
   def auditingConfig: AuditingConfig
   def materializer  : Materializer
   def lifecycle     : ApplicationLifecycle
+  def datastreamMetrics: DatastreamMetrics
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
@@ -62,9 +63,9 @@ trait AuditChannel {
       baseUri.host,
       baseUri.port,
       path,
-      wsClient
+      wsClient,
+      datastreamMetrics
     )
-
 
   lazy val loggingConnector: AuditHandler = LoggingHandler
 

@@ -28,7 +28,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.Json
-import uk.gov.hmrc.audit.WireMockUtils
+import uk.gov.hmrc.audit.{DatastreamMetricsMock, WireMockUtils}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 
 import scala.concurrent.ExecutionContext
@@ -45,25 +45,24 @@ class AuditChannelSpec
   implicit val as: ActorSystem      = ActorSystem()
   implicit val m: Materializer      = ActorMaterializer()//required for play 2.6
 
-  private def createAuditChannel(config: AuditingConfig): AuditChannel = new AuditChannel {
+  private def createAuditChannel(config: AuditingConfig): AuditChannel = new AuditChannel with DatastreamMetricsMock {
     override def auditingConfig: AuditingConfig = config
     override def materializer: Materializer = implicitly
     override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
+    override def datastreamMetrics: DatastreamMetrics = mockDatastreamMetrics(Some("play.the-project-name"))
   }
 
   "AuditConnector" should {
     "post data to datastream" in {
       val testPort = WireMockUtils.availablePort
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
-      val config = AuditingConfig(consumer = Some(consumer), enabled = true, auditSource = "the-project-name", auditSentHeaders = false)
-      val channel = new AuditChannel {
-        override def auditingConfig: AuditingConfig = config
-
-        override def materializer: Materializer = implicitly
-
-        override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-      }
-
+      val config = AuditingConfig(
+        consumer = Some(consumer),
+        enabled = true,
+        auditSource = "the-project-name",
+        auditSentHeaders = false
+      )
+      val channel = createAuditChannel(config)
       val wireMock = new WireMockServer(testPort)
       WireMock.configureFor("localhost", testPort)
       wireMock.start()

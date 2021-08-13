@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.audit.http.connector
+package uk.gov.hmrc.audit
 
-//
-// Exposes the underlying metrics to the AuditCounter code
-// This indirection is needed because the play metrics library is specific to the play version
+import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.hmrc.play.audit.http.connector.{DatastreamMetrics, Counter}
 
-trait AuditCounterMetrics {
-  def registerMetric(name:String, read:()=>Option[Long]):Unit
+trait DatastreamMetricsMock {
+
+  def mockDatastreamMetrics(metricsKey: Option[String]): DatastreamMetrics = DatastreamMetrics(
+    mock[Counter],
+    mock[Counter],
+    mock[Counter],
+    metricsKey
+  )
 }
