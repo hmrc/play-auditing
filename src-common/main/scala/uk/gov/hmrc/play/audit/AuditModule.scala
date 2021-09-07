@@ -19,7 +19,7 @@ package uk.gov.hmrc.play.audit
 import akka.stream.Materializer
 import play.api.{Configuration, Environment}
 import play.api.inject.{ApplicationLifecycle, Binding, Module}
-import _root_.uk.gov.hmrc.play.audit.http.config.{AuditingConfig, AuditingConfigProvider}
+import _root_.uk.gov.hmrc.play.audit.http.config.AuditingConfig
 import _root_.uk.gov.hmrc.play.audit.http.connector.{AuditChannel, AuditConnector, DatastreamMetrics}
 
 import javax.inject.{Inject, Singleton}
@@ -32,7 +32,7 @@ class AuditModule extends Module {
   ): Seq[Binding[_]] = Seq(
     bind[AuditChannel].to[DefaultAuditChannel],
     bind[AuditConnector].to[DefaultAuditConnector],
-    bind[AuditingConfig].toProvider[AuditingConfigProvider]
+    bind[AuditingConfig].to(AuditingConfig.fromConfig(configuration))
   )
 }
 

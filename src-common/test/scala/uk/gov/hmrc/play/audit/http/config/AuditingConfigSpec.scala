@@ -21,14 +21,12 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 
-class AuditingConfigProviderSpec extends AnyWordSpec with Matchers with MockitoSugar {
+class AuditingConfigSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
-  private val appName = "app-name"
-
-  "LoadAuditingConfig" should {
-
+  "AuditingConfig.fromConfig" should {
     "load config" in {
-      val configuration = Configuration(
+      val config = Configuration(
+        "appName"                        -> "app-name",
         "auditing.enabled"               -> "true",
         "auditing.traceRequests"         -> "true",
         "auditing.consumer.baseUri.host" -> "localhost",
@@ -36,10 +34,10 @@ class AuditingConfigProviderSpec extends AnyWordSpec with Matchers with MockitoS
         "auditing.auditSentHeaders"      -> "false"
       )
 
-      new AuditingConfigProvider(configuration, appName).get() shouldBe AuditingConfig(
+      AuditingConfig.fromConfig(config) shouldBe AuditingConfig(
         consumer         = Some(Consumer(BaseUri("localhost", 8100, "http"))),
         enabled          = true,
-        auditSource      = appName,
+        auditSource      = "app-name",
         auditSentHeaders = false
       )
     }
@@ -49,7 +47,7 @@ class AuditingConfigProviderSpec extends AnyWordSpec with Matchers with MockitoS
         "auditing.enabled" -> "false"
       )
 
-      new AuditingConfigProvider(config, appName).get() shouldBe AuditingConfig(
+      AuditingConfig.fromConfig(config) shouldBe AuditingConfig(
         consumer         = None,
         enabled          = false,
         auditSource      = "auditing disabled",
