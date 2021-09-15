@@ -47,8 +47,34 @@ object Consumer {
 }
 
 case class AuditingConfig(
-  consumer   : Option[Consumer],
-  enabled    : Boolean,
-  auditSource: String,
+  consumer        : Option[Consumer],
+  enabled         : Boolean,
+  auditSource     : String,
   auditSentHeaders: Boolean
 )
+
+object AuditingConfig {
+  def fromConfig(configuration: play.api.Configuration): AuditingConfig =
+    if (configuration.get[Boolean]("auditing.enabled"))
+      AuditingConfig(
+        enabled           = true,
+        consumer          = Some(
+                              Consumer(
+                                BaseUri(
+                                  host     = configuration.get[String]("auditing.consumer.baseUri.host"),
+                                  port     = configuration.get[Int]("auditing.consumer.baseUri.port"),
+                                  protocol = configuration.getOptional[String]("auditing.consumer.baseUri.protocol").getOrElse("http")
+                                )
+                              )
+                            ),
+        auditSource       = configuration.get[String]("appName"),
+        auditSentHeaders  = configuration.get[Boolean]("auditing.auditSentHeaders")
+      )
+    else
+      AuditingConfig(
+        enabled          = false,
+        consumer         = None,
+        auditSource      = "auditing disabled",
+        auditSentHeaders = false
+      )
+}

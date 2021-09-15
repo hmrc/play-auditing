@@ -16,9 +16,7 @@
 
 package uk.gov.hmrc.audit.handler
 
-import java.io.IOException
 import java.net.URL
-import java.util.concurrent.TimeoutException
 
 import uk.gov.hmrc.audit.WSClient
 import org.slf4j.{Logger, LoggerFactory}
