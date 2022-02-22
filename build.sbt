@@ -21,29 +21,7 @@ lazy val library = (project in file("."))
     crossScalaVersions := Seq.empty
   )
   .aggregate(
-    playAuditingPlay26,
-    playAuditingPlay27,
     playAuditingPlay28
-  )
-
-lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditing-play-26"))
-  .settings(
-    commonSettings,
-    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
-    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
-    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay26 ++ LibDependencies.test
-  )
-
-lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditing-play-27"))
-  .settings(
-    commonSettings,
-    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
-    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
-    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay27 ++ LibDependencies.test
   )
 
 lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditing-play-28"))

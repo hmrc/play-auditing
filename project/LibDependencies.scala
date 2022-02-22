@@ -3,21 +3,13 @@ import sbt._
 object LibDependencies {
 
   val compileCommon = Seq(
-      "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
-      "org.slf4j"              %  "slf4j-api" % "1.7.30"
+    "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
+    "org.slf4j"              %  "slf4j-api" % "1.7.30"
   )
 
   // we depend on http-verbs just to integrate via the AuditHooks
   // http calls are made with the underlying play-ws
   val httpVerbsVersion = "13.3.0"
-
-  val compilePlay26 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-26" % httpVerbsVersion
-    )
-
-  val compilePlay27 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-27" % httpVerbsVersion
-    )
 
   val compilePlay28 = Seq(
       "uk.gov.hmrc" %% "http-verbs-play-28" % httpVerbsVersion

@@ -13,12 +13,20 @@ In your SBT build add:
 ```scala
 resolvers += Resolver.bintrayRepo("hmrc", "releases")
 
-libraryDependencies += "uk.gov.hmrc" %% "play-auditing-play-yy" % "x.x.x"
+libraryDependencies += "uk.gov.hmrc" %% "play-auditing-play-x" % "x.x.x"
 ```
 
-## Version Info
+Where play-xx is your version of Play (e.g. play-28).
 
-Since version 5, play-auditing is no longer build with the `sbt-play-cross-compilation` plugin (where the version of play was embedded in the version of the library). Instead, multiple modules are produced for different versions of play:
+## Changes
+
+### Version 7.11.0
+
+Drops support for Play 2.6 and 2.7. Only Play 2.8 is supported.
+
+### Version 5.0.0
+
+- play-auditing is no longer build with the `sbt-play-cross-compilation` plugin (where the version of play was embedded in the version of the library). Instead, multiple modules are produced for different versions of play:
 
 | Version | Play Version | Scala Version |
 |---------|--------------|---------------|
@@ -26,7 +34,7 @@ Since version 5, play-auditing is no longer build with the `sbt-play-cross-compi
 | play-auditing-play-26  | Play 2.6.x | 2.11, 2.12
 | play-auditing-play-25  | Play 2.5.x | 2.11
 
-Also since version 5, joda time has been replaced with java time internally.
+- joda time has been replaced with java time internally.
 
 ## Usage
 
