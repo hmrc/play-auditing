@@ -249,7 +249,7 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
       def throwException(): Future[AuditableEvent] = throw new RuntimeException(failureReason)
 
       val audit = new MockAudit(appName, auditConnector)
-      audit.asyncAs[AuditableEvent]((transactionName, "request body no key provided", transformer)) { throwException }
+      audit.asyncAs[AuditableEvent]((transactionName, "request body no key provided", transformer)) { () => throwException() }
 
       eventually {
         audit.verifyDataEvent(DataEvent(

@@ -36,4 +36,4 @@ class LoggingHandler(logger: Logger) extends AuditHandler {
   }
 }
 
-object LoggingHandler extends LoggingHandler(LoggerFactory.getLogger(getClass))
+object LoggingHandler extends LoggingHandler(LoggerFactory.getLogger(classOf[LoggingHandler]))

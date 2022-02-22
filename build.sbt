@@ -2,12 +2,14 @@
 import sbt.Keys._
 import sbt._
 
-val scala2_12 = "2.12.12"
+val scala2_12 = "2.12.15"
+val scala2_13 = "2.13.7"
 
 lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
   majorVersion := 7,
   scalaVersion := scala2_12,
+  crossScalaVersions := Seq(scala2_12, scala2_13),
   isPublicArtefact := true,
   scalacOptions ++= Seq("-feature")
 )
@@ -15,10 +17,7 @@ lazy val commonSettings = Seq(
 lazy val library = (project in file("."))
   .settings(
     commonSettings,
-    publish := {},
-    // by default this is Seq(scalaVersion) which doesn't play well and causes sbt
-    // to try an invalid cross-build for playAuditingPlay25
-    crossScalaVersions := Seq.empty
+    publish / skip := true
   )
   .aggregate(
     playAuditingPlay28

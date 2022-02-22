@@ -358,8 +358,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody) shouldBe sampleJson.toString.replaceAllLiterally("hide-me", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe response.body.replaceAllLiterally("hide-me", "########")
+      Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(sampleJson.toString.replaceAllLiterally("hide-me", "########"))
+      Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(response.body.replaceAllLiterally("hide-me", "########"))
     }
 
     "mask passwords in an OutboundCall using xml" in {

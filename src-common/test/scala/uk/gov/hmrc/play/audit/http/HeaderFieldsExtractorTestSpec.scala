@@ -27,12 +27,12 @@ class HeaderFieldsExtractorTestSpec
 
     "Return only surrogate header" in {
       val optionalFields =
-        HeaderFieldsExtractor.optionalAuditFieldsSeq(Map("Foo" -> "Bar", "Ehh" -> "Meh", "Surrogate" -> "Cool").mapValues(Seq(_)))
+        HeaderFieldsExtractor.optionalAuditFieldsSeq(Map("Foo" -> "Bar", "Ehh" -> "Meh", "Surrogate" -> "Cool").mapValues(Seq(_)).toMap)
       optionalFields shouldBe Map("surrogate" -> "Cool")
     }
 
     "Return no surrogate headers when none in headers" in {
-      val optionalFields = HeaderFieldsExtractor.optionalAuditFieldsSeq(Map("Foo" -> "Bar", "Ehh" -> "Meh").mapValues(Seq(_)))
+      val optionalFields = HeaderFieldsExtractor.optionalAuditFieldsSeq(Map("Foo" -> "Bar", "Ehh" -> "Meh").mapValues(Seq(_)).toMap)
       optionalFields shouldBe empty
     }
   }

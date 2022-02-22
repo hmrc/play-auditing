@@ -70,12 +70,12 @@ class DatastreamHandlerWireSpec
 
   val wireMock = new WireMockServer(datastreamTestPort)
 
-  override def beforeAll: Unit = {
+  override def beforeAll(): Unit = {
     WireMock.configureFor("localhost", datastreamTestPort)
     wireMock.start()
   }
 
-  override def afterEach: Unit = {
+  override def afterEach(): Unit = {
     WireMock.reset()
   }
 

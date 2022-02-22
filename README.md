@@ -22,7 +22,8 @@ Where play-xx is your version of Play (e.g. play-28).
 
 ### Version 7.11.0
 
-Drops support for Play 2.6 and 2.7. Only Play 2.8 is supported.
+- Drops support for Play 2.6 and 2.7. Only Play 2.8 is supported.
+- Cross compiles for 2.12 and 2.13
 
 ### Version 5.0.0
 
