@@ -17,11 +17,10 @@
 package uk.gov.hmrc.play.audit.model
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.audit.DatastreamMetricsMock
 import uk.gov.hmrc.http.HeaderNames._
@@ -47,9 +46,9 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
 
     def verifyDataEvent(expected: DataEvent): Unit = {
       this.capturedDataEvent.auditSource shouldBe expected.auditSource
-      this.capturedDataEvent.auditType shouldBe expected.auditType
-      this.capturedDataEvent.tags shouldBe expected.tags
-      this.capturedDataEvent.detail shouldBe expected.detail
+      this.capturedDataEvent.auditType   shouldBe expected.auditType
+      this.capturedDataEvent.tags        shouldBe expected.tags
+      this.capturedDataEvent.detail      shouldBe expected.detail
     }
   }
 
@@ -57,21 +56,21 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
 
   val transactionName = "transaction-name"
   val inputs = Map("body" -> "request body as a string")
-  val transformer: OutputTransformer[AuditableEvent] = (auditable: AuditableEvent) => {
-    TransactionSuccess("transactionId" -> auditable.transaction, "event" -> auditable.event)
-  }
+  val transformer: OutputTransformer[AuditableEvent] =
+    (auditable: AuditableEvent) =>
+      TransactionSuccess("transactionId" -> auditable.transaction, "event" -> auditable.event)
 
   val exampleRequestId = "12345"
   implicit val hc: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(exampleRequestId)))
 
   val auditConnector: AuditConnector = {
     val testconfig = AuditingConfig(
-      consumer = Some(Consumer(BaseUri("localhost", 11111, "http"))),
-      enabled = true,
-      auditSource = "the-project-name",
+      consumer         = Some(Consumer(BaseUri("localhost", 11111, "http"))),
+      enabled          = true,
+      auditSource      = "the-project-name",
       auditSentHeaders = false
     )
-    val testmaterializer = ActorMaterializer()(ActorSystem())
+    implicit val system = ActorSystem()
     val datastreamMetricsMock = mockDatastreamMetrics(Some("play.the-project-name"))
 
     new AuditConnector {
@@ -80,13 +79,10 @@ class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with Datas
       override def datastreamMetrics = datastreamMetricsMock
 
       override def auditChannel = new AuditChannel {
-        override def auditingConfig: AuditingConfig = testconfig
-
-        override def materializer: Materializer = testmaterializer
-
-        override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-
-        override def datastreamMetrics: DatastreamMetrics = datastreamMetricsMock
+        override def auditingConfig   : AuditingConfig       = testconfig
+        override def materializer     : Materializer         = implicitly
+        override def lifecycle        : ApplicationLifecycle = new DefaultApplicationLifecycle()
+        override def datastreamMetrics: DatastreamMetrics    = datastreamMetricsMock
       }
     }
   }

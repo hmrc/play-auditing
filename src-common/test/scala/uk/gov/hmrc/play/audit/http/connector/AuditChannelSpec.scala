@@ -17,15 +17,15 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
+import org.mockito.MockitoSugar
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.Json
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, WireMockUtils}
@@ -43,13 +43,12 @@ class AuditChannelSpec
 
   implicit val ec: ExecutionContext = RunInlineExecutionContext
   implicit val as: ActorSystem      = ActorSystem()
-  implicit val m: Materializer      = ActorMaterializer()//required for play 2.6
 
   private def createAuditChannel(config: AuditingConfig): AuditChannel = new AuditChannel with DatastreamMetricsMock {
-    override def auditingConfig: AuditingConfig = config
-    override def materializer: Materializer = implicitly
-    override def lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
-    override def datastreamMetrics: DatastreamMetrics = mockDatastreamMetrics(Some("play.the-project-name"))
+    override def auditingConfig   : AuditingConfig       = config
+    override def materializer     : Materializer         = implicitly
+    override def lifecycle        : ApplicationLifecycle = new DefaultApplicationLifecycle()
+    override def datastreamMetrics: DatastreamMetrics    = mockDatastreamMetrics(Some("play.the-project-name"))
   }
 
   "AuditConnector" should {

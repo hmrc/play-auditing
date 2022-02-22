@@ -18,16 +18,12 @@ package uk.gov.hmrc.play.audit.http.connector
 
 import java.time.Instant
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
-import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito._
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.captor.ArgCaptor
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{JsNull, JsObject, JsString, JsValue, Json}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
@@ -45,26 +41,27 @@ class AuditConnectorSpec
      with ScalaFutures
      with IntegrationPatience
      with MockitoSugar
+     with ArgumentMatchersSugar
      with OneInstancePerTest
      with DatastreamMetricsMock {
 
   implicit val ec: ExecutionContext = RunInlineExecutionContext
   implicit val as: ActorSystem      = ActorSystem()
-  implicit val m: Materializer      = ActorMaterializer()//required for play 2.6
 
   private val consumer = Consumer(BaseUri("datastream-base-url", 8080, "http"))
+
   private val enabledConfig = AuditingConfig(
-    consumer = Some(consumer),
-    enabled = true,
-    auditSource = "the-project-name",
+    consumer         = Some(consumer),
+    enabled          = true,
+    auditSource      = "the-project-name",
     auditSentHeaders = false
   )
   private val mockAuditChannel: AuditChannel = mock[AuditChannel]
 
   private def createConnector(config: AuditingConfig, metricsKey: Option[String] = Some("play.the-project-name")): AuditConnector =
     new AuditConnector {
-      override def auditingConfig = config
-      override def auditChannel = mockAuditChannel
+      override def auditingConfig    = config
+      override def auditChannel      = mockAuditChannel
       override def datastreamMetrics = mockDatastreamMetrics(metricsKey)
     }
 
@@ -101,10 +98,9 @@ class AuditConnectorSpec
 
       createConnector(enabledConfig).sendEvent(event)(headerCarrier, ec).futureValue mustBe AuditResult.Success
 
-      val captor = ArgumentCaptor.forClass(classOf[JsValue])
-      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      val tags = (captor.getValue \ "tags").as[JsObject]
-      (tags \ "X-Session-ID").as[String] mustBe "session-123"
+      val captor = ArgCaptor[JsValue]
+      verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+      (captor.value \ "tags" \ "X-Session-ID").as[String] mustBe "session-123"
     }
 
     "return Disabled if auditing is not enabled" in {
@@ -117,7 +113,7 @@ class AuditConnectorSpec
 
       createConnector(disabledConfig).sendEvent(event).futureValue must be(AuditResult.Disabled)
 
-      verifyNoInteractions(mockAuditChannel)
+      verifyNoMoreInteractions(mockAuditChannel)
     }
   }
 
@@ -131,9 +127,9 @@ class AuditConnectorSpec
 
       createConnector(enabledConfig).sendExtendedEvent(event).futureValue mustBe AuditResult.Success
 
-      val captor = ArgumentCaptor.forClass(classOf[JsValue])
-      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
+      val captor = ArgCaptor[JsValue]
+      verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+      (captor.value \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
     }
 
     "sendExplicitEvent Map[String,String]" should {
@@ -144,15 +140,13 @@ class AuditConnectorSpec
         val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
         createConnector(enabledConfig).sendExplicitAudit("theAuditType", Map("a" -> "1"))(headerCarrier, ec)
 
-        val captor = ArgumentCaptor.forClass(classOf[JsValue])
-        verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-        (captor.getValue \ "auditSource").as[String] mustBe "the-project-name"
-        val tags = (captor.getValue \ "tags").as[JsObject]
-        (tags \ "X-Session-ID").as[String] mustBe "session-123"
-        (tags \ "path").as[String] mustBe "/a/b/c"
-        (captor.getValue \ "detail").as[Map[String,String]] mustBe Map("a" -> "1")
-
-        (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
+        val captor = ArgCaptor[JsValue]
+        verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+        (captor.value \ "auditSource"            ).as[String]             mustBe "the-project-name"
+        (captor.value \ "tags" \ "X-Session-ID"  ).as[String]             mustBe "session-123"
+        (captor.value \ "tags" \ "path"          ).as[String]             mustBe "/a/b/c"
+        (captor.value \ "detail"                 ).as[Map[String,String]] mustBe Map("a" -> "1")
+        (captor.value \ "metadata" \ "metricsKey").as[JsString].value     mustBe "play.the-project-name"
       }
     }
 
@@ -165,17 +159,14 @@ class AuditConnectorSpec
         val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
         createConnector(enabledConfig).sendExplicitAudit("theAuditType", MyExampleAudit("Agent","123"))(headerCarrier, ec, writes)
 
-        val captor = ArgumentCaptor.forClass(classOf[JsValue])
-        verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-        (captor.getValue \ "auditSource").as[String] mustBe "the-project-name"
-        val tags = (captor.getValue \ "tags").as[JsObject]
-        (tags \ "X-Session-ID").as[String] mustBe "session-123"
-        (tags \ "path").as[String] mustBe "/a/b/c"
-        val detail = (captor.getValue \ "detail").as[JsObject]
-        (detail \ "userType").as[String] mustBe "Agent"
-        (detail \ "vrn").as[String] mustBe "123"
-
-        (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
+        val captor = ArgCaptor[JsValue]
+        verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+        (captor.value \ "auditSource"            ).as[String] mustBe "the-project-name"
+        (captor.value \ "tags" \ "X-Session-ID"  ).as[String] mustBe "session-123"
+        (captor.value \ "tags" \ "path"          ).as[String] mustBe "/a/b/c"
+        (captor.value \ "detail" \ "userType"    ).as[String] mustBe "Agent"
+        (captor.value \ "detail" \ "vrn"         ).as[String] mustBe "123"
+        (captor.value \ "metadata" \ "metricsKey").as[String] mustBe "play.the-project-name"
       }
     }
   }
@@ -188,25 +179,20 @@ class AuditConnectorSpec
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
 
-
       createConnector(enabledConfig).sendExplicitAudit("theAuditType", expectedDetail)(headerCarrier, ec)
 
-      val captor = ArgumentCaptor.forClass(classOf[JsValue])
-      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      (captor.getValue \ "auditSource").as[String] mustBe "the-project-name"
-      val tags = (captor.getValue \ "tags").as[JsObject]
-      (tags \ "X-Session-ID").as[String] mustBe "session-123"
-      (tags \ "path").as[String] mustBe "/a/b/c"
-      val detail = (captor.getValue \ "detail").as[JsObject]
-      detail mustBe expectedDetail
-
-      (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
+      val captor = ArgCaptor[JsValue]
+      verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+      (captor.value \ "auditSource"            ).as[String]   mustBe "the-project-name"
+      (captor.value \ "tags" \ "X-Session-ID"  ).as[String]   mustBe "session-123"
+      (captor.value \ "tags" \ "path"          ).as[String]   mustBe "/a/b/c"
+      (captor.value \ "detail"                 ).as[JsObject] mustBe expectedDetail
+      (captor.value \ "metadata" \ "metricsKey").as[String]   mustBe "play.the-project-name"
     }
   }
 
   "send" should {
     val expectedDetail = Json.obj("Address" -> Json.obj("line1" -> "Road", "postCode" -> "123"))
-    val headerCarrier = HeaderCarrier(sessionId = Some(SessionId("session-123")), otherHeaders = Seq("path" -> "/a/b/c"))
 
     "provide metricsKey metadata if available" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
@@ -214,9 +200,9 @@ class AuditConnectorSpec
 
       createConnector(enabledConfig, Some("play.the-project-name")).send("theAuditType", expectedDetail)(ec)
 
-      val captor = ArgumentCaptor.forClass(classOf[JsValue])
-      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
+      val captor = ArgCaptor[JsValue]
+      verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+      (captor.value \ "metadata" \ "metricsKey").as[JsString].value mustBe "play.the-project-name"
     }
 
     "provide null in metadata if metricsKey is not available" in {
@@ -225,9 +211,9 @@ class AuditConnectorSpec
 
       createConnector(enabledConfig, metricsKey = None).send("theAuditType", expectedDetail)(ec)
 
-      val captor = ArgumentCaptor.forClass(classOf[JsValue])
-      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      (captor.getValue \ "metadata" \ "metricsKey").as[JsValue] mustBe JsNull
+      val captor = ArgCaptor[JsValue]
+      verify(mockAuditChannel).send(any[String], captor)(any[ExecutionContext])
+      (captor.value \ "metadata" \ "metricsKey").as[JsValue] mustBe JsNull
     }
   }
 }

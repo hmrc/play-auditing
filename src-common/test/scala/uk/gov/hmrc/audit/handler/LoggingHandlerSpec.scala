@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.audit.handler
 
-import org.mockito.Mockito._
+import org.mockito.MockitoSugar
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import play.api.libs.json.JsString
 
