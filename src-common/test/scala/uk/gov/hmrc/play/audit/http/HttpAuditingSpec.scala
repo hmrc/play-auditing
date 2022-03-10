@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,13 @@ package uk.gov.hmrc.play.audit.http
 
 import java.time.Instant
 
-import org.mockito.ArgumentCaptor
+import org.mockito.captor.ArgCaptor
 import org.scalatest.matchers.should.Matchers
-import org.mockito.Mockito._
-import org.mockito.ArgumentMatchers.any
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.Inspectors
-import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -43,10 +41,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class HttpAuditingSpec
   extends AnyWordSpecLike
-  with Matchers
-  with Inspectors
-  with Eventually
-  with MockitoSugar {
+     with Matchers
+     with Inspectors
+     with Eventually
+     with MockitoSugar
+     with ArgumentMatchersSugar {
 
   private val outboundCallAuditType: String = "OutboundCall"
   private val requestDateTime: Instant      = Instant.now
@@ -358,8 +357,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody) shouldBe sampleJson.toString.replaceAllLiterally("hide-me", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe response.body.replaceAllLiterally("hide-me", "########")
+      Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(sampleJson.toString.replaceAllLiterally("hide-me", "########"))
+      Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(response.body.replaceAllLiterally("hide-me", "########"))
     }
 
     "mask passwords in an OutboundCall using xml" in {
@@ -445,7 +444,7 @@ class HttpAuditingSpec
 
         httpWithAudit.audit(request, response)
 
-        verifyNoInteractions(connector)
+        verifyNoMoreInteractions(connector)
       }
     }
 
@@ -458,7 +457,7 @@ class HttpAuditingSpec
         val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
         httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
-        verifyNoInteractions(connector)
+        verifyNoMoreInteractions(connector)
       }
     }
   }
@@ -500,7 +499,7 @@ class HttpAuditingSpec
 
       httpWithAudit.audit(request, response)
 
-      verifyNoInteractions(connector)
+      verifyNoMoreInteractions(connector)
     }
 
     "not generate an audit event when an exception has been thrown" in {
@@ -511,7 +510,7 @@ class HttpAuditingSpec
       val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
       httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
-      verifyNoInteractions(connector)
+      verifyNoMoreInteractions(connector)
     }
   }
 
@@ -529,7 +528,7 @@ class HttpAuditingSpec
 
       httpWithAudit.audit(request, response)
 
-      verifyNoInteractions(connector)
+      verifyNoMoreInteractions(connector)
     }
 
     "not generate an audit event when an exception has been thrown" in  {
@@ -540,12 +539,11 @@ class HttpAuditingSpec
       val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
       httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
 
-      verifyNoInteractions(connector)
+      verifyNoMoreInteractions(connector)
     }
   }
 
   "caseInsensitiveMap" should {
-
     "comma separate values for duplicate keys" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
@@ -596,12 +594,12 @@ class HttpAuditingSpec
   }
 
   def whenAuditSuccess(connector: AuditConnector): Unit =
-    when(connector.sendMergedEvent(any[MergedDataEvent]))
+    when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
       .thenReturn(Future.successful(Success))
 
   def verifyAndRetrieveEvent(connector: AuditConnector): MergedDataEvent = {
-    val captor = ArgumentCaptor.forClass(classOf[MergedDataEvent])
-    verify(connector).sendMergedEvent(captor.capture)(any[HeaderCarrier], any[ExecutionContext])
-    captor.getValue
+    val captor = ArgCaptor[MergedDataEvent]
+    verify(connector).sendMergedEvent(captor)(any[HeaderCarrier], any[ExecutionContext])
+    captor.value
   }
 }

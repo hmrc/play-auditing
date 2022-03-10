@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package uk.gov.hmrc.audit.handler
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, post, postRequestedFor, urlPathEqualTo}
@@ -34,7 +33,6 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 
-
 class DatastreamHandlerWireSpec
   extends AnyWordSpecLike
      with Inspectors
@@ -48,8 +46,8 @@ class DatastreamHandlerWireSpec
   val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
 
-  implicit val materializer   = ActorMaterializer()(ActorSystem())
-  implicit val lifecycle      = new DefaultApplicationLifecycle()
+  implicit val system    = ActorSystem()
+  implicit val lifecycle = new DefaultApplicationLifecycle()
 
   trait Test {
     val wsClient = WSClient(
@@ -70,12 +68,12 @@ class DatastreamHandlerWireSpec
 
   val wireMock = new WireMockServer(datastreamTestPort)
 
-  override def beforeAll: Unit = {
+  override def beforeAll(): Unit = {
     WireMock.configureFor("localhost", datastreamTestPort)
     wireMock.start()
   }
 
-  override def afterEach: Unit = {
+  override def afterEach(): Unit = {
     WireMock.reset()
   }
 

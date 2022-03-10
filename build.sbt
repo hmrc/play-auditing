@@ -2,12 +2,14 @@
 import sbt.Keys._
 import sbt._
 
-val scala2_12 = "2.12.12"
+val scala2_12 = "2.12.15"
+val scala2_13 = "2.13.7"
 
 lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
   majorVersion := 7,
   scalaVersion := scala2_12,
+  crossScalaVersions := Seq(scala2_12, scala2_13),
   isPublicArtefact := true,
   scalacOptions ++= Seq("-feature")
 )
@@ -15,35 +17,10 @@ lazy val commonSettings = Seq(
 lazy val library = (project in file("."))
   .settings(
     commonSettings,
-    publish := {},
-    // by default this is Seq(scalaVersion) which doesn't play well and causes sbt
-    // to try an invalid cross-build for playAuditingPlay25
-    crossScalaVersions := Seq.empty
+    publish / skip := true
   )
   .aggregate(
-    playAuditingPlay26,
-    playAuditingPlay27,
     playAuditingPlay28
-  )
-
-lazy val playAuditingPlay26 = Project("play-auditing-play-26", file("play-auditing-play-26"))
-  .settings(
-    commonSettings,
-    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
-    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
-    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay26 ++ LibDependencies.test
-  )
-
-lazy val playAuditingPlay27 = Project("play-auditing-play-27", file("play-auditing-play-27"))
-  .settings(
-    commonSettings,
-    Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "../src-common/main/resources",
-    Test    / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/test/scala",
-    Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
-    libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay27 ++ LibDependencies.test
   )
 
 lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditing-play-28"))

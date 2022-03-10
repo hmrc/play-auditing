@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.audit.handler
 
-import org.mockito.Mockito.{times, verify, verifyNoInteractions}
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import play.api.libs.json.{JsString, JsValue}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient}
@@ -35,6 +34,7 @@ class DatastreamHandlerUnitSpec
     with Matchers
     with ScalaFutures
     with MockitoSugar
+    with ArgumentMatchersSugar
     with DatastreamMetricsMock {
 
   trait Test {
@@ -65,8 +65,8 @@ class DatastreamHandlerUnitSpec
         result shouldBe HandlerResult.Success
         verify(metrics.successCounter, times(1)).inc()
 
-        verifyNoInteractions(metrics.rejectCounter)
-        verifyNoInteractions(metrics.failureCounter)
+        verifyNoMoreInteractions(metrics.rejectCounter)
+        verifyNoMoreInteractions(metrics.failureCounter)
       }
     }
 
@@ -79,8 +79,8 @@ class DatastreamHandlerUnitSpec
         verify(mockLogger).warn(s"AUDIT_REJECTED: received response with $code status code")
         verify(metrics.rejectCounter, times(1)).inc()
 
-        verifyNoInteractions(metrics.successCounter)
-        verifyNoInteractions(metrics.failureCounter)
+        verifyNoMoreInteractions(metrics.successCounter)
+        verifyNoMoreInteractions(metrics.failureCounter)
       }
     }
 
@@ -94,8 +94,8 @@ class DatastreamHandlerUnitSpec
           verify(mockLogger).warn(s"AUDIT_FAILURE: received response with $code status code")
           verify(metrics.failureCounter, times(1)).inc()
 
-          verifyNoInteractions(metrics.successCounter)
-          verifyNoInteractions(metrics.rejectCounter)
+          verifyNoMoreInteractions(metrics.successCounter)
+          verifyNoMoreInteractions(metrics.rejectCounter)
         }
       }
 
@@ -107,8 +107,8 @@ class DatastreamHandlerUnitSpec
       verify(mockLogger).warn("AUDIT_FAILURE: received malformed response")
       verify(metrics.failureCounter, times(1)).inc()
 
-      verifyNoInteractions(metrics.successCounter)
-      verifyNoInteractions(metrics.rejectCounter)
+      verifyNoMoreInteractions(metrics.successCounter)
+      verifyNoMoreInteractions(metrics.rejectCounter)
     }
 
     "Return Failure + log error + increment counter for any failure response (if error is available)" in new Test {
@@ -120,8 +120,8 @@ class DatastreamHandlerUnitSpec
       verify(mockLogger).warn("AUDIT_FAILURE: failed with error 'my error message'", error)
       verify(metrics.failureCounter, times(1)).inc()
 
-      verifyNoInteractions(metrics.successCounter)
-      verifyNoInteractions(metrics.rejectCounter)
+      verifyNoMoreInteractions(metrics.successCounter)
+      verifyNoMoreInteractions(metrics.rejectCounter)
     }
 
     "Return Failure + log error + increment counter for any failure response (if error is unavailable)" in new Test {
@@ -132,8 +132,8 @@ class DatastreamHandlerUnitSpec
       verify(mockLogger).warn("AUDIT_FAILURE: failed with error 'my error message'")
       verify(metrics.failureCounter, times(1)).inc()
 
-      verifyNoInteractions(metrics.successCounter)
-      verifyNoInteractions(metrics.rejectCounter)
+      verifyNoMoreInteractions(metrics.successCounter)
+      verifyNoMoreInteractions(metrics.rejectCounter)
     }
   }
 }
