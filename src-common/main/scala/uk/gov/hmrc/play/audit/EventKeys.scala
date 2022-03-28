@@ -26,4 +26,6 @@ object EventKeys {
   val TransactionName      = "transactionName"
   val RequestIsTruncated   = "requestIsTruncated"
   val ResponseIsTruncated  = "responseIsTruncated"
+  val RequestIsOmitted     = "requestIsOmitted"
+  val ResponseIsOmitted    = "responseIsOmitted"
 }

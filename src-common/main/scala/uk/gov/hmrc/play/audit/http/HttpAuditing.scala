@@ -88,9 +88,11 @@ trait HttpAuditing {
   private def dataEventFor(request: HttpRequest, response: ResponseData)(implicit hc: HeaderCarrier) = {
     val responseDetails =
       Map(
-        ResponseMessage     -> maskString(response.httpResponse.body),
-        StatusCode          -> response.httpResponse.status.toString,
-        ResponseIsTruncated -> response.isTruncated.toString
+        ResponseMessage     -> maskString(response.body),
+        StatusCode          -> response.status.toString,
+        // TODO we could not bother sending these if they are false?
+        ResponseIsTruncated -> response.bodyIsTruncated.toString,
+        ResponseIsOmitted   -> response.bodyIsOmitted.toString
       )
     buildDataEvent(request, responseDetails)
   }
