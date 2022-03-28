@@ -26,8 +26,8 @@ import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
-import uk.gov.hmrc.http.hooks.{HookData, HttpHook}
-import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames, HttpResponse}
+import uk.gov.hmrc.http.hooks.{HookData, HttpHook, ResponseData}
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
 import scala.collection.immutable.SortedMap
 import scala.xml._
@@ -60,10 +60,10 @@ trait HttpAuditing {
       url      : URL,
       headers  : Seq[(String, String)],
       body     : Option[HookData],
-      responseF: Future[HttpResponse]
+      responseF: Future[ResponseData]
     )(implicit
       hc: HeaderCarrier,
-      ec : ExecutionContext
+      ec: ExecutionContext
     ): Unit = {
       val request = HttpRequest(verb, url.toString, headers, body, now())
       responseF.map {
@@ -74,7 +74,7 @@ trait HttpAuditing {
     }
   }
 
-  private[http] def audit(request: HttpRequest, responseToAudit: HttpResponse)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
+  private[http] def audit(request: HttpRequest, responseToAudit: ResponseData)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
     if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
 
   private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
@@ -85,11 +85,12 @@ trait HttpAuditing {
     buildDataEvent(request, responseDetails)
   }
 
-  private def dataEventFor(request: HttpRequest, response: HttpResponse)(implicit hc: HeaderCarrier) = {
+  private def dataEventFor(request: HttpRequest, response: ResponseData)(implicit hc: HeaderCarrier) = {
     val responseDetails =
       Map(
-        ResponseMessage -> maskString(response.body),
-        StatusCode      -> response.status.toString
+        ResponseMessage     -> maskString(response.httpResponse.body),
+        StatusCode          -> response.httpResponse.status.toString,
+        ResponseIsTruncated -> response.isTruncated.toString
       )
     buildDataEvent(request, responseDetails)
   }
@@ -130,17 +131,26 @@ trait HttpAuditing {
       Method                    -> request.verb
     ) ++
       caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      request.body.map(b => RequestBody -> maskRequestBody(b)).toMap ++
+      request.body.fold(Map.empty[String, String])(body => Map(
+        RequestBody        -> maskRequestBody(body),
+        RequestIsTruncated -> isTruncated(body).toString
+      )) ++
       when(auditConnector.auditSentHeaders)(caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation)
   }
 
+  private def isTruncated(body: HookData): Boolean =
+    body match {
+      case HookData.FromMap(_)                 => false
+      case HookData.FromString(_, isTruncated) => isTruncated
+    }
+
   private def maskRequestBody(body: HookData): String =
     body match {
-      case HookData.FromMap(m)    => m.map {
-                                       case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
-                                       case other                                    => other
-                                     }.toString
-      case HookData.FromString(s) => maskString(s)
+      case HookData.FromMap(m)       => m.map {
+                                          case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
+                                          case other                                    => other
+                                        }.toString
+      case HookData.FromString(s, _) => maskString(s)
     }
 
   // a String could either be Json or XML
