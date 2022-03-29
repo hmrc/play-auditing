@@ -126,17 +126,18 @@ trait HttpAuditing {
       Method                    -> httpRequest.verb
     ) ++
       caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      AuditUtils.requestBodyToMap2(httpRequest.body)(maskRequestBody) ++
+      AuditUtils.requestBodyToMap(httpRequest.body)(maskRequestBody).filterNot(_ == RequestBody -> "") ++
       when(auditConnector.auditSentHeaders)(caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation)
   }
 
-  private def maskRequestBody(body: HookData): String =
+  private def maskRequestBody(body: Option[HookData]): String =
     body match {
-      case HookData.FromMap(m)    => m.map {
-                                       case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
-                                       case other                                    => other
-                                     }.toString
-      case HookData.FromString(s) => maskString(s)
+      case Some(HookData.FromMap(m))    => m.map {
+                                             case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
+                                             case other                                    => other
+                                           }.toString
+      case Some(HookData.FromString(s)) => maskString(s)
+      case None                         => ""
     }
 
   // a String could either be Json or XML
@@ -214,37 +215,29 @@ trait HttpAuditing {
   )
 }
 
-// TODO: Remove
+// Used by bootstrap-play
 object HeaderFieldsExtractor {
   def optionalAuditFieldsSeq(headers: Map[String, Seq[String]]): Map[String, String] =
     headers.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _.mkString(",")).toMap
 }
 
-// functions are reused in bootstrap's AuditFilter
+// functions are reused in bootstrap-play's AuditFilter
 object AuditUtils {
   def responseBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
-    // TODO not send ResponseMessage when Omitted?
     (body match {
-        case Body.Complete(b)  => Map(ResponseMessage -> maskFunction(b))
-        case Body.Truncated(b) => Map(ResponseMessage -> maskFunction(b), ResponseIsTruncated -> true.toString)
-        case Body.Omitted      => Map(ResponseMessage -> ""             , ResponseIsOmitted   -> true.toString)
+        case Body.Complete(b)  => Map(ResponseMessage     -> maskFunction(b))
+        case Body.Truncated(b) => Map(ResponseMessage     -> maskFunction(b),
+                                      ResponseIsTruncated -> true.toString
+                                  )
+        case Body.Omitted      => Map(ResponseIsOmitted   -> true.toString)
      })
 
   def requestBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
-    // TODO not send ResponseMessage when Omitted? We could then remove requestBodyToMap2, which only exists to suppress RequestBody when None
     (body match {
-        case Body.Complete (b) => Map(RequestBody -> maskFunction(b))
-        case Body.Truncated(b) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString)
-        case Body.Omitted      => Map(RequestBody -> ""             , RequestIsOmitted   -> true.toString)
-      })
-
-  private [http] def requestBodyToMap2(body: Body[Option[HookData]])(maskFunction: HookData => String): Map[String, String] =
-    // TODO not send ResponseMessage when Omitted?
-    (body match {
-        case Body.Complete (None   ) => Map.empty[String, String]
-        case Body.Complete (Some(b)) => Map(RequestBody -> maskFunction(b))
-        case Body.Truncated(None   ) => Map.empty[String, String]
-        case Body.Truncated(Some(b)) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString)
-        case Body.Omitted            => Map(RequestBody -> ""             , RequestIsOmitted   -> true.toString)
+        case Body.Complete (b) => Map(RequestBody        -> maskFunction(b))
+        case Body.Truncated(b) => Map(RequestBody        -> maskFunction(b),
+                                      RequestIsTruncated -> true.toString
+                                  )
+        case Body.Omitted      => Map(RequestIsOmitted   -> true.toString)
       })
 }

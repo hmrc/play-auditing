@@ -482,9 +482,9 @@ class HttpAuditingSpec
 
       val requestBody = "truncated body"
 
-      val reponseBody = "complete body"
+      val responseBody = "complete body"
       val response = ResponseData(
-        body    = Body.Complete(reponseBody),
+        body    = Body.Complete(responseBody),
         status  = 200,
         headers = Map.empty
       )
@@ -499,16 +499,16 @@ class HttpAuditingSpec
 
       dataEvent.request.detail(RequestBody)        shouldBe requestBody
       dataEvent.request.detail(RequestIsTruncated) shouldBe "true"
-      dataEvent.response.detail(ResponseMessage)   shouldBe reponseBody
+      dataEvent.response.detail(ResponseMessage)   shouldBe responseBody
     }
 
     "indicate if the request body was omitted" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val reponseBody = "complete body"
+      val responseBody = "complete body"
       val response = ResponseData(
-        body    = Body.Complete(reponseBody),
+        body    = Body.Complete(responseBody),
         status  = 200,
         headers = Map.empty
       )
@@ -521,9 +521,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody)      shouldBe ""
       dataEvent.request.detail(RequestIsOmitted) shouldBe "true"
-      dataEvent.response.detail(ResponseMessage) shouldBe reponseBody
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody
     }
 
     "indicate if the response body was truncated" in {
@@ -573,7 +572,6 @@ class HttpAuditingSpec
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      dataEvent.response.detail(ResponseMessage)   shouldBe ""
       dataEvent.response.detail(ResponseIsOmitted) shouldBe "true"
     }
   }
