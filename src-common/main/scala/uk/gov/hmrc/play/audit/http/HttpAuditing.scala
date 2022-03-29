@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
-import uk.gov.hmrc.http.hooks.{HookData, HttpHook, ResponseData}
+import uk.gov.hmrc.http.hooks.{Body, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
 import scala.collection.immutable.SortedMap
@@ -58,18 +58,17 @@ trait HttpAuditing {
     override def apply(
       verb     : String,
       url      : URL,
-      headers  : Seq[(String, String)],
-      body     : Option[HookData],
+      request  : RequestData,
       responseF: Future[ResponseData]
     )(implicit
       hc: HeaderCarrier,
       ec: ExecutionContext
     ): Unit = {
-      val request = HttpRequest(verb, url.toString, headers, body, now())
+      val httpRequest = HttpRequest(verb, url.toString, request.headers, request.body, now())
       responseF.map {
-        response => audit(request, response)
+        response => audit(httpRequest, response)
       }.recover {
-        case e: Throwable => auditRequestWithException(request, e.getMessage)
+        case e: Throwable => auditRequestWithException(httpRequest, e.getMessage)
       }
     }
   }
@@ -87,13 +86,7 @@ trait HttpAuditing {
 
   private def dataEventFor(request: HttpRequest, response: ResponseData)(implicit hc: HeaderCarrier) = {
     val responseDetails =
-      Map(
-        ResponseMessage     -> maskString(response.body),
-        StatusCode          -> response.status.toString,
-        // TODO we could not bother sending these if they are false?
-        ResponseIsTruncated -> response.bodyIsTruncated.toString,
-        ResponseIsOmitted   -> response.bodyIsOmitted.toString
-      )
+      AuditUtils.responseBodyToMap(response.body)(maskString) ++ Map(StatusCode -> response.status.toString)
     buildDataEvent(request, responseDetails)
   }
 
@@ -123,36 +116,27 @@ trait HttpAuditing {
     SortedMap()(Ordering.comparatorToOrdering(String.CASE_INSENSITIVE_ORDER)) ++
       headers.groupBy(_._1.toLowerCase).map{ case (_, hdrs) => hdrs.head._1 -> hdrs.map(_._2).mkString(",")}
 
-  private def requestDetails(request: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
-    val caseInsensitiveHeaders = caseInsensitiveMap(request.headers)
+  private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
+    val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
 
     Map(
       "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
       HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
-      Path                      -> request.url,
-      Method                    -> request.verb
+      Path                      -> httpRequest.url,
+      Method                    -> httpRequest.verb
     ) ++
       caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      request.body.fold(Map.empty[String, String])(body => Map(
-        RequestBody        -> maskRequestBody(body),
-        RequestIsTruncated -> isTruncated(body).toString
-      )) ++
+      AuditUtils.requestBodyToMap2(httpRequest.body)(maskRequestBody) ++
       when(auditConnector.auditSentHeaders)(caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation)
   }
 
-  private def isTruncated(body: HookData): Boolean =
-    body match {
-      case HookData.FromMap(_)                 => false
-      case HookData.FromString(_, isTruncated) => isTruncated
-    }
-
   private def maskRequestBody(body: HookData): String =
     body match {
-      case HookData.FromMap(m)       => m.map {
-                                          case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
-                                          case other                                    => other
-                                        }.toString
-      case HookData.FromString(s, _) => maskString(s)
+      case HookData.FromMap(m)    => m.map {
+                                       case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
+                                       case other                                    => other
+                                     }.toString
+      case HookData.FromString(s) => maskString(s)
     }
 
   // a String could either be Json or XML
@@ -225,7 +209,7 @@ trait HttpAuditing {
     verb       : String,
     url        : String,
     headers    : Seq[(String, String)],
-    body       : Option[HookData],
+    body       : Body[Option[HookData]],
     generatedAt: Instant
   )
 }
@@ -234,4 +218,35 @@ trait HttpAuditing {
 object HeaderFieldsExtractor {
   def optionalAuditFieldsSeq(headers: Map[String, Seq[String]]): Map[String, String] =
     headers.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _.mkString(",")).toMap
+}
+
+// functions are reused in bootstrap's AuditFilter
+object AuditUtils {
+  def responseBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
+    // TODO we could just not send the flags if they are false?
+    // Nor empty string when omitted
+    (body match {
+        case Body.Complete(b)  => Map(ResponseMessage -> maskFunction(b), ResponseIsTruncated -> false.toString, ResponseIsOmitted -> false.toString)
+        case Body.Truncated(b) => Map(ResponseMessage -> maskFunction(b), ResponseIsTruncated -> true.toString , ResponseIsOmitted -> false.toString)
+        case Body.Omitted      => Map(ResponseMessage -> ""             , ResponseIsTruncated -> false.toString, ResponseIsOmitted -> true.toString )
+     })
+
+  def requestBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
+    // TODO we could just not send the flags if they are false?
+    // Nor empty string when omitted? We could then remove requestBodyToMap2, which only exists to suppress RequestBody when None
+    (body match {
+        case Body.Complete (b) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> false.toString, RequestIsOmitted -> false.toString)
+        case Body.Truncated(b) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString , RequestIsOmitted -> false.toString)
+        case Body.Omitted      => Map(RequestBody -> ""             , RequestIsTruncated -> false.toString, RequestIsOmitted -> true.toString )
+      })
+
+  def requestBodyToMap2(body: Body[Option[HookData]])(maskFunction: HookData => String): Map[String, String] =
+    // TODO we could just not send the flags if they are false? // Nor empty string when omitted?
+    (body match {
+        case Body.Complete (None   ) => Map.empty[String, String]
+        case Body.Complete (Some(b)) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> false.toString, RequestIsOmitted -> false.toString)
+        case Body.Truncated(None   ) => Map.empty[String, String]
+        case Body.Truncated(Some(b)) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString , RequestIsOmitted -> false.toString)
+        case Body.Omitted            => Map(RequestBody -> ""             , RequestIsTruncated -> false.toString, RequestIsOmitted -> true.toString )
+      })
 }
