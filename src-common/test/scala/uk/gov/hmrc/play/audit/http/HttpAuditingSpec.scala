@@ -44,8 +44,7 @@ class HttpAuditingSpec
      with Inspectors
      with Eventually
      with MockitoSugar
-     with ArgumentMatchersSugar
-     with BodyValues {
+     with ArgumentMatchersSugar {
 
   private val outboundCallAuditType: String = "OutboundCall"
   private val requestDateTime: Instant      = Instant.now
@@ -109,12 +108,10 @@ class HttpAuditingSpec
         )
         dataEvent.request.generatedAt shouldBe requestDateTime
 
-        dataEvent.response.tags       shouldBe empty
-        dataEvent.response.detail     shouldBe Map(
-          ResponseMessage     -> responseBody,
-          ResponseIsTruncated -> "false",
-          ResponseIsOmitted   -> "false",
-          StatusCode          -> statusCode.toString
+        dataEvent.response.tags   shouldBe empty
+        dataEvent.response.detail shouldBe Map(
+          ResponseMessage -> responseBody,
+          StatusCode      -> statusCode.toString
         )
         dataEvent.response.generatedAt shouldBe responseDateTime
       }
@@ -193,9 +190,7 @@ class HttpAuditingSpec
           authorisation      -> "-",
           Path               -> serviceUri,
           Method             -> postVerb,
-          RequestBody        -> requestBody,
-          RequestIsTruncated -> "false",
-          RequestIsOmitted   -> "false"
+          RequestBody        -> requestBody
         )
         dataEvent.request.generatedAt shouldBe requestDateTime
 
@@ -245,10 +240,11 @@ class HttpAuditingSpec
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val requestBody = None
-      val request = httpWithAudit.buildRequest(getVerb, serviceUri, Seq(surrogate -> "true") , requestBody)
-      val response = ResponseData(
-                           body    = Body.Complete("the response body"),
+      val requestBody  = None
+      val request      = httpWithAudit.buildRequest(getVerb, serviceUri, Seq(surrogate -> "true"), Body.Complete(requestBody))
+      val responseBody = "the response body"
+      val response     = ResponseData(
+                           body    = Body.Complete(responseBody),
                            status  = 200,
                            headers = Map.empty
                          )
@@ -288,10 +284,8 @@ class HttpAuditingSpec
 
       dataEvent.response.tags   shouldBe empty
       dataEvent.response.detail shouldBe Map(
-        ResponseMessage     -> response.body.complete,
-        ResponseIsTruncated -> "false",
-        ResponseIsOmitted   -> "false",
-        StatusCode          -> response.status.toString
+        ResponseMessage -> responseBody,
+        StatusCode      -> response.status.toString
       )
       dataEvent.response.generatedAt shouldBe responseDateTime
     }
@@ -300,13 +294,14 @@ class HttpAuditingSpec
       val connector     = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody   = "The request body gets added to the audit details"
+      val responseBody  = "the response body"
       val response      = ResponseData(
-                             body    = Body.Complete("the response body"),
+                             body    = Body.Complete(responseBody),
                              status  = 200,
                              headers = Map.empty
                            )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -331,17 +326,13 @@ class HttpAuditingSpec
         authorisation      -> "-",
         Path               -> serviceUri,
         Method             -> postVerb,
-        RequestBody        -> requestBody,
-        RequestIsTruncated -> "false",
-        RequestIsOmitted   -> "false"
+        RequestBody        -> requestBody
       )
       dataEvent.request.generatedAt shouldBe requestDateTime
 
       dataEvent.response.tags shouldBe empty
       dataEvent.response.detail shouldBe Map(
-        ResponseMessage     -> response.body.complete,
-        ResponseIsTruncated -> "false",
-        ResponseIsOmitted   -> "false",
+        ResponseMessage     -> responseBody,
         StatusCode          -> response.status.toString
       )
       dataEvent.response.generatedAt shouldBe responseDateTime
@@ -357,13 +348,14 @@ class HttpAuditingSpec
         "passwordConfirmation" -> Seq("hide-me")
       )
 
+      val responseBody = Json.obj("password" -> "hide-me").toString
       val response = ResponseData(
-        body    = Body.Complete(Json.obj("password" -> "hide-me").toString),
+        body    = Body.Complete(responseBody),
         status  = 200,
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromMap(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromMap(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -372,22 +364,24 @@ class HttpAuditingSpec
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody) shouldBe requestBody.toString.replaceAllLiterally("List(hide-me)", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe response.body.complete.replaceAllLiterally("hide-me", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replaceAllLiterally("hide-me", "########")
     }
 
     "mask passwords in an OutboundCall using json" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val sampleJson = Json.obj("a" -> Json.arr(Json.obj("ok" -> 1, "password" -> "hide-me", "PASSWD" -> "hide-me")))
+      val sampleJson = Json.obj("a" -> Json.arr(Json.obj("ok" -> 1, "password" -> "hide-me", "PASSWD" -> "hide-me"))).toString
+      val requestBody = sampleJson
+      val responseBody = sampleJson
 
       val response = ResponseData(
-        body    = Body.Complete(Json.stringify(sampleJson)),
+        body    = Body.Complete(responseBody),
         status  = 200,
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(Json.stringify(sampleJson))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -395,8 +389,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(sampleJson.toString.replaceAllLiterally("hide-me", "########"))
-      Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(response.body.complete.replaceAllLiterally("hide-me", "########"))
+      Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(requestBody.replaceAllLiterally("hide-me", "########"))
+      Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(responseBody.replaceAllLiterally("hide-me", "########"))
     }
 
     "mask passwords in an OutboundCall using xml" in {
@@ -411,13 +405,16 @@ class HttpAuditingSpec
           |    </foo>
           |    <bar PassWord="hide-me" prefix:PASSWORD="hide-me"/>
           |</abc>""".stripMargin
+
+      val requestBody = sampleXml
+      val responseBody = sampleXml
       val response = ResponseData(
-                           body    = Body.Complete(sampleXml),
+                           body    = Body.Complete(responseBody),
                            status  = 200,
                            headers = Map.empty
                          )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(sampleXml)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -425,23 +422,24 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody) shouldBe sampleXml.toString.replaceAllLiterally("hide-me", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe response.body.complete.replaceAllLiterally("hide-me", "########")
+      dataEvent.request.detail(RequestBody)      shouldBe requestBody.replaceAllLiterally("hide-me", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replaceAllLiterally("hide-me", "########")
     }
 
     "handle an invalid xml request and response body" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val requestBody = "< this is not xml"
+      val requestBody  = "< this is not xml"
+      val responseBody = "< this is also not xml"
 
       val response = ResponseData(
-        body    = Body.Complete("< this is not xml"),
+        body    = Body.Complete(responseBody),
         status  = 200,
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -450,22 +448,23 @@ class HttpAuditingSpec
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)      shouldBe requestBody
-      dataEvent.response.detail(ResponseMessage) shouldBe response.body.complete
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody
     }
 
     "handle an invalid json request and response body" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val requestBody = "{ not json"
+      val requestBody  = "{ not json"
+      val responseBody = "{ also not json"
 
       val response = ResponseData(
-        body    = Body.Complete("{ not json"),
+        body    = Body.Complete(responseBody),
         status  = 200,
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -474,47 +473,23 @@ class HttpAuditingSpec
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)      shouldBe requestBody
-      dataEvent.response.detail(ResponseMessage) shouldBe response.body.complete
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody
     }
 
-    "indicate if the body was truncated" in {
+    "indicate if the request body was truncated" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
 
-      val requestBody = "{ not json"
+      val requestBody = "truncated body"
 
+      val reponseBody = "complete body"
       val response = ResponseData(
-        body    = Body.Truncated("truncated body"),
+        body    = Body.Complete(reponseBody),
         status  = 200,
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
-
-      whenAuditSuccess(connector)
-
-      httpWithAudit.audit(request, response)
-
-      val dataEvent = verifyAndRetrieveEvent(connector)
-
-      dataEvent.request.detail(RequestBody)          shouldBe requestBody
-      dataEvent.response.detail(ResponseMessage)     shouldBe response.body.truncated
-      dataEvent.response.detail(ResponseIsTruncated) shouldBe "true"
-    }
-
-    "indicate if the body was omitted" in {
-      val connector = mock[AuditConnector]
-      val httpWithAudit = new HttpWithAuditing(connector)
-
-      val requestBody = "{ not json"
-
-      val response = ResponseData(
-        body    = Body.Omitted,
-        status  = 200,
-        headers = Map.empty
-      )
-
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(HookData.FromString(requestBody)))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Truncated(Some(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -523,7 +498,82 @@ class HttpAuditingSpec
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      dataEvent.response.detail(ResponseMessage)   shouldBe response.body.omitted
+      dataEvent.request.detail(RequestIsTruncated) shouldBe "true"
+      dataEvent.response.detail(ResponseMessage)   shouldBe reponseBody
+    }
+
+    "indicate if the request body was omitted" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val reponseBody = "complete body"
+      val response = ResponseData(
+        body    = Body.Complete(reponseBody),
+        status  = 200,
+        headers = Map.empty
+      )
+
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Omitted)
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody)      shouldBe ""
+      dataEvent.request.detail(RequestIsOmitted) shouldBe "true"
+      dataEvent.response.detail(ResponseMessage) shouldBe reponseBody
+    }
+
+    "indicate if the response body was truncated" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = "complete body"
+
+      val responseBody = "truncated body"
+      val response = ResponseData(
+        body    = Body.Truncated(responseBody),
+        status  = 200,
+        headers = Map.empty
+      )
+
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody)          shouldBe requestBody
+      dataEvent.response.detail(ResponseMessage)     shouldBe responseBody
+      dataEvent.response.detail(ResponseIsTruncated) shouldBe "true"
+    }
+
+    "indicate if the response body was omitted" in {
+      val connector = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody = "complete body"
+
+      val response = ResponseData(
+        body    = Body.Omitted,
+        status  = 200,
+        headers = Map.empty
+      )
+
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+
+      whenAuditSuccess(connector)
+
+      httpWithAudit.audit(request, response)
+
+      val dataEvent = verifyAndRetrieveEvent(connector)
+
+      dataEvent.request.detail(RequestBody)        shouldBe requestBody
+      dataEvent.response.detail(ResponseMessage)   shouldBe ""
       dataEvent.response.detail(ResponseIsOmitted) shouldBe "true"
     }
   }
@@ -548,7 +598,7 @@ class HttpAuditingSpec
           headers = Map.empty
         )
 
-        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
         httpWithAudit.audit(request, response)
 
@@ -562,7 +612,7 @@ class HttpAuditingSpec
         val httpWithAudit = new HttpWithAuditing(connector)
         val requestBody   = None
 
-        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
         httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
         verifyNoMoreInteractions(connector)
@@ -586,7 +636,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
       whenAuditSuccess(connector)
 
@@ -615,7 +665,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
       httpWithAudit.audit(request, response)
 
@@ -627,7 +677,7 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody   = None
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
       httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
 
       verifyNoMoreInteractions(connector)
@@ -650,7 +700,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
       httpWithAudit.audit(request, response)
 
@@ -662,7 +712,7 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody   = None
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
       httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
 
       verifyNoMoreInteractions(connector)
@@ -740,9 +790,9 @@ class HttpAuditingSpec
       else responseDateTime
     }
 
-    def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Option[HookData]): HttpRequest = {
+    def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Body[Option[HookData]]): HttpRequest = {
       now_call_count = 1
-      HttpRequest(verb, url, headers, Body.Complete(body), requestDateTime)
+      HttpRequest(verb, url, headers, body, requestDateTime)
     }
   }
 

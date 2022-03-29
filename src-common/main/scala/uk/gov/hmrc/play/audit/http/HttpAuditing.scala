@@ -223,30 +223,28 @@ object HeaderFieldsExtractor {
 // functions are reused in bootstrap's AuditFilter
 object AuditUtils {
   def responseBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
-    // TODO we could just not send the flags if they are false?
-    // Nor empty string when omitted
+    // TODO not send ResponseMessage when Omitted?
     (body match {
-        case Body.Complete(b)  => Map(ResponseMessage -> maskFunction(b), ResponseIsTruncated -> false.toString, ResponseIsOmitted -> false.toString)
-        case Body.Truncated(b) => Map(ResponseMessage -> maskFunction(b), ResponseIsTruncated -> true.toString , ResponseIsOmitted -> false.toString)
-        case Body.Omitted      => Map(ResponseMessage -> ""             , ResponseIsTruncated -> false.toString, ResponseIsOmitted -> true.toString )
+        case Body.Complete(b)  => Map(ResponseMessage -> maskFunction(b))
+        case Body.Truncated(b) => Map(ResponseMessage -> maskFunction(b), ResponseIsTruncated -> true.toString)
+        case Body.Omitted      => Map(ResponseMessage -> ""             , ResponseIsOmitted   -> true.toString)
      })
 
   def requestBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
-    // TODO we could just not send the flags if they are false?
-    // Nor empty string when omitted? We could then remove requestBodyToMap2, which only exists to suppress RequestBody when None
+    // TODO not send ResponseMessage when Omitted? We could then remove requestBodyToMap2, which only exists to suppress RequestBody when None
     (body match {
-        case Body.Complete (b) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> false.toString, RequestIsOmitted -> false.toString)
-        case Body.Truncated(b) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString , RequestIsOmitted -> false.toString)
-        case Body.Omitted      => Map(RequestBody -> ""             , RequestIsTruncated -> false.toString, RequestIsOmitted -> true.toString )
+        case Body.Complete (b) => Map(RequestBody -> maskFunction(b))
+        case Body.Truncated(b) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString)
+        case Body.Omitted      => Map(RequestBody -> ""             , RequestIsOmitted   -> true.toString)
       })
 
-  def requestBodyToMap2(body: Body[Option[HookData]])(maskFunction: HookData => String): Map[String, String] =
-    // TODO we could just not send the flags if they are false? // Nor empty string when omitted?
+  private [http] def requestBodyToMap2(body: Body[Option[HookData]])(maskFunction: HookData => String): Map[String, String] =
+    // TODO not send ResponseMessage when Omitted?
     (body match {
         case Body.Complete (None   ) => Map.empty[String, String]
-        case Body.Complete (Some(b)) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> false.toString, RequestIsOmitted -> false.toString)
+        case Body.Complete (Some(b)) => Map(RequestBody -> maskFunction(b))
         case Body.Truncated(None   ) => Map.empty[String, String]
-        case Body.Truncated(Some(b)) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString , RequestIsOmitted -> false.toString)
-        case Body.Omitted            => Map(RequestBody -> ""             , RequestIsTruncated -> false.toString, RequestIsOmitted -> true.toString )
+        case Body.Truncated(Some(b)) => Map(RequestBody -> maskFunction(b), RequestIsTruncated -> true.toString)
+        case Body.Omitted            => Map(RequestBody -> ""             , RequestIsOmitted   -> true.toString)
       })
 }
