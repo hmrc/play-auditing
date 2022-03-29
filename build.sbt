@@ -3,11 +3,11 @@ import sbt.Keys._
 import sbt._
 
 val scala2_12 = "2.12.15"
-val scala2_13 = "2.13.7"
+val scala2_13 = "2.13.8"
 
 lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
-  majorVersion := 7,
+  majorVersion := 8,
   scalaVersion := scala2_12,
   crossScalaVersions := Seq(scala2_12, scala2_13),
   isPublicArtefact := true,
