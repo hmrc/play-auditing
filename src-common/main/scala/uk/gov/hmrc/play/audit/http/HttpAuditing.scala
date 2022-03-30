@@ -21,6 +21,7 @@ import java.time.Instant
 
 import com.fasterxml.jackson.core.JsonParseException
 import javax.xml.parsers.SAXParserFactory
+import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
@@ -74,21 +75,25 @@ trait HttpAuditing {
   }
 
   private[http] def audit(request: HttpRequest, responseToAudit: ResponseData)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
-    if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
+    if (isAuditable(request.url))
+      auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
 
   private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
-    if (isAuditable(request.url)) auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
+    if (isAuditable(request.url))
+      auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
 
-  private def dataEventFor(request: HttpRequest, errorMesssage: String)(implicit hc: HeaderCarrier) = {
-    val responseDetails = Map(FailedRequestMessage -> errorMesssage)
-    buildDataEvent(request, responseDetails)
-  }
+  private def dataEventFor(request: HttpRequest, errorMesssage: String)(implicit hc: HeaderCarrier) =
+    buildDataEvent(
+      request         = request,
+      responseDetails = Map(FailedRequestMessage -> errorMesssage)
+    )
 
-  private def dataEventFor(request: HttpRequest, response: ResponseData)(implicit hc: HeaderCarrier) = {
-    val responseDetails =
-      AuditUtils.responseBodyToMap(response.body)(maskString) ++ Map(StatusCode -> response.status.toString)
-    buildDataEvent(request, responseDetails)
-  }
+  private def dataEventFor(httpRequest: HttpRequest, response: ResponseData)(implicit hc: HeaderCarrier) =
+    buildDataEvent(
+      request         = httpRequest,
+      responseDetails = AuditUtils.responseBodyToMap(s"Outbound ${httpRequest.verb} ${httpRequest.url}", response.body)(maskString) ++
+                          Map(StatusCode -> response.status.toString)
+    )
 
   private def buildDataEvent(request: HttpRequest, responseDetails: Map[String, String])(implicit hc: HeaderCarrier) = {
     import AuditExtensions._
@@ -126,8 +131,10 @@ trait HttpAuditing {
       Method                    -> httpRequest.verb
     ) ++
       caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      AuditUtils.requestBodyToMap(httpRequest.body)(maskRequestBody).filterNot(_ == RequestBody -> "") ++
-      when(auditConnector.auditSentHeaders)(caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation)
+      AuditUtils.requestBodyToMap(s"Outbound ${httpRequest.verb} ${httpRequest.url}", httpRequest.body)(maskRequestBody).filterNot(_ == RequestBody -> "") ++
+      when(auditConnector.auditSentHeaders)(
+        caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation
+      )
   }
 
   private def maskRequestBody(body: Option[HookData]): String =
@@ -142,13 +149,13 @@ trait HttpAuditing {
 
   // a String could either be Json or XML
   private def maskString(text: String) =
-    if (text.startsWith("{")) {
+    if (text.startsWith("{"))
       try {
         Json.stringify(maskJsonFields(Json.parse(text)))
       } catch {
         case _: JsonParseException => text
       }
-    } else if (text.startsWith("<")) {
+    else if (text.startsWith("<"))
       try {
         val builder = new StringBuilder
         PrettyPrinter.format(maskXMLFields(xxeResistantParser.loadString(text)), builder)
@@ -156,9 +163,8 @@ trait HttpAuditing {
       } catch {
         case _: SAXParseException => text
       }
-    } else {
+    else
       text
-    }
 
   private def maskJsonFields(json: JsValue): JsValue =
     json match {
@@ -223,19 +229,23 @@ object HeaderFieldsExtractor {
 
 // functions are reused in bootstrap-play's AuditFilter
 object AuditUtils {
-  def responseBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
+  def responseBodyToMap[A](loggingContext: String, body: Body[A])(maskFunction: A => String): Map[String, String] =
     (body match {
         case Body.Complete(b)  => Map(ResponseMessage     -> maskFunction(b))
-        case Body.Truncated(b) => Map(ResponseMessage     -> maskFunction(b),
+        case Body.Truncated(b) => logger.warn(s"$loggingContext response body was truncated for auditing")
+                                  Map(ResponseMessage     -> maskFunction(b),
                                       ResponseIsTruncated -> true.toString
                                   )
         case Body.Omitted      => Map(ResponseIsOmitted   -> true.toString)
      })
 
-  def requestBodyToMap[A](body: Body[A])(maskFunction: A => String): Map[String, String] =
+  def requestBodyToMap[A](loggingContext: String, body: Body[A])(maskFunction: A => String): Map[String, String] =
     (body match {
         case Body.Complete (b) => Map(RequestBody        -> maskFunction(b))
-        case Body.Truncated(b) => Map(RequestBody        -> maskFunction(b),
+        case Body.Truncated(b) => logger.warn(s"$loggingContext request body was truncated for auditing")
+                                  Map(RequestBody        -> maskFunction(b),
                                       RequestIsTruncated -> true.toString
                                   )
         case Body.Omitted      => Map(RequestIsOmitted   -> true.toString)
