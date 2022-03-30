@@ -58,6 +58,7 @@ class HttpAuditingSpec
 
     "handle the happy path with a valid audit event passing through" in {
       val connector = mock[AuditConnector]
+      when(connector.isEnabled).thenReturn(true)
       when(connector.auditSentHeaders).thenReturn(true)
       val httpWithAudit = new HttpWithAuditing(connector)
 
@@ -119,6 +120,7 @@ class HttpAuditingSpec
 
     "not audit extra headers by default" in {
       val connector = mock[AuditConnector]
+      when(connector.isEnabled).thenReturn(true)
       when(connector.auditSentHeaders).thenReturn(false)
       val httpWithAudit = new HttpWithAuditing(connector)
 
@@ -155,6 +157,7 @@ class HttpAuditingSpec
     "handle the case of an exception being raised inside the future and still send an audit message" in {
       val hc            = HeaderCarrier(deviceID = Some(deviceID))
       val connector     = mock[AuditConnector]
+      when(connector.isEnabled).thenReturn(true)
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody  = "the infamous request body"
@@ -217,6 +220,9 @@ class HttpAuditingSpec
       when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
         .thenThrow(new IllegalArgumentException("any exception"))
 
+      when(connector.isEnabled)
+        .thenReturn(true)
+
       when(connector.auditSentHeaders)
         .thenReturn(false)
 
@@ -224,6 +230,7 @@ class HttpAuditingSpec
 
       eventually(timeout(Span(1, Seconds))) {
         verify(connector, times(1)).sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext])
+        verify(connector).isEnabled
         verify(connector).auditSentHeaders
         verifyNoMoreInteractions(connector)
       }

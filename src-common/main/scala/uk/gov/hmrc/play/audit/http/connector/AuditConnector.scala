@@ -95,6 +95,9 @@ trait AuditConnector {
       )
     }
 
+  private[http] def isEnabled: Boolean =
+    auditingConfig.enabled
+
   private def ifEnabled(send: => Future[HandlerResult])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AuditResult] =
     if (auditingConfig.enabled) {
       send.map(AuditResult.fromHandlerResult)

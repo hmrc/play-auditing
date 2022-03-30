@@ -22,7 +22,7 @@ Where play-xx is your version of Play (e.g. play-28).
 
 ### Version 8.0.0
 
-Bumps http-verbs, which indicates whether payloads provided for auditing have been truncated or omitted.
+Bumps `http-verbs`, which indicates whether payloads provided for auditing have been truncated or omitted.
 This should not affect most clients, as long as a compatible library versions are used. It is generally expected that clients only depend on `bootstrap-play` which will transitively provide compatible versions.
 
 

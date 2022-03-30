@@ -36,6 +36,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
 trait HttpAuditing {
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
   val outboundCallAuditType: String = "OutboundCall"
 
   private val MaskValue = "########"
@@ -64,14 +66,18 @@ trait HttpAuditing {
     )(implicit
       hc: HeaderCarrier,
       ec: ExecutionContext
-    ): Unit = {
-      val httpRequest = HttpRequest(verb, url.toString, request.headers, request.body, now())
-      responseF.map {
-        response => audit(httpRequest, response)
-      }.recover {
-        case e: Throwable => auditRequestWithException(httpRequest, e.getMessage)
-      }
-    }
+    ): Unit =
+      // short-circuit the payload creation (and truncation log warning)
+      if (auditConnector.isEnabled) {
+        val httpRequest = HttpRequest(verb, url.toString, request.headers, request.body, now())
+        responseF.map {
+          response => audit(httpRequest, response)
+        }.recover {
+          case e: Throwable => auditRequestWithException(httpRequest, e.getMessage)
+        }
+      } else
+        // TODO is this needed? (Would have been logged if we hadn't short-circuited)
+        logger.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
   }
 
   private[http] def audit(request: HttpRequest, responseToAudit: ResponseData)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
