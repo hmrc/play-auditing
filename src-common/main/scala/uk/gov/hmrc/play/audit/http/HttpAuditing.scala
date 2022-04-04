@@ -240,7 +240,7 @@ object AuditUtils {
   def responseBodyToMap[A](loggingContext: String, body: Body[A])(maskFunction: A => String): Map[String, String] =
     (body match {
         case Body.Complete(b)  => Map(ResponseMessage     -> maskFunction(b))
-        case Body.Truncated(b) => logger.warn(s"$loggingContext response body was truncated for auditing")
+        case Body.Truncated(b) => logger.info(s"$loggingContext response body was truncated for auditing")
                                   Map(ResponseMessage     -> maskFunction(b),
                                       ResponseIsTruncated -> true.toString
                                   )
@@ -250,7 +250,7 @@ object AuditUtils {
   def requestBodyToMap[A](loggingContext: String, body: Body[A])(maskFunction: A => String): Map[String, String] =
     (body match {
         case Body.Complete (b) => Map(RequestBody        -> maskFunction(b))
-        case Body.Truncated(b) => logger.warn(s"$loggingContext request body was truncated for auditing")
+        case Body.Truncated(b) => logger.info(s"$loggingContext request body was truncated for auditing")
                                   Map(RequestBody        -> maskFunction(b),
                                       RequestIsTruncated -> true.toString
                                   )
