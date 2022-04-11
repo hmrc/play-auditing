@@ -18,15 +18,40 @@ package uk.gov.hmrc.audit.serialiser
 
 import java.time.Instant
 
-import play.api.libs.json.JsString
+import play.api.libs.json.{Json, JsString}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent}
+import uk.gov.hmrc.audit.BuildInfo
+import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent, TruncationLog}
 
 class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
 
   "AuditSerialiser" should {
     "serialise DataEvent" in {
+      testDataEvent(None, "")
+    }
+
+    "serialise DataEvent with truncationLog" in {
+      testDataEvent(
+        truncationLog =
+          Some(TruncationLog(
+            truncatedFields = List("request.detail.requestdetailkey"),
+            timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
+          )),
+        expectedTruncationJson = s""",
+          "dataPipeline": {
+            "truncation": {
+              "truncationLog": [{
+                "truncatedFields": ["request.detail.requestdetailkey"],
+                "timestamp"      : "2007-12-03T10:16:31.124+0000",
+                "code"           : "play-auditing",
+                "version"        : "${BuildInfo.version}"
+              }]
+            }
+          }"""
+      )
+    }
+    def testDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
       AuditSerialiser.serialise(DataEvent(
         auditSource = "myapp",
         auditType   = "RequestReceived",
@@ -34,36 +59,115 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         tags        = Map("tagkey" -> "tagval"),
         detail      = Map("detailkey" -> "detailval"),
         generatedAt = Instant.parse("2007-12-03T10:15:30.123Z")
-      )).toString shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","tags":{"tagkey":"tagval"},"detail":{"detailkey":"detailval"},"generatedAt":"2007-12-03T10:15:30.123+0000"}"""
-    }
+      )) shouldBe Json.parse("""{
+        "auditSource": "myapp",
+        "auditType"  : "RequestReceived",
+        "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        "tags"       : {"tagkey": "tagval"},
+        "detail"     : {"detailkey": "detailval"},
+        "generatedAt": "2007-12-03T10:15:30.123+0000"
+      }""")
 
     "serialise ExtendedDataEvent" in {
-      AuditSerialiser.serialise(ExtendedDataEvent(
-        auditSource = "myapp",
-        auditType   = "RequestReceived",
-        eventId     = "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
-        tags        = Map("tagkey" -> "tagval"),
-        detail      = JsString("detail"),
-        generatedAt = Instant.parse("2007-12-03T10:15:30.123Z")
-      )).toString shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","tags":{"tagkey":"tagval"},"detail":"detail","generatedAt":"2007-12-03T10:15:30.123+0000"}"""
+      testExtendedDataEvent(None, "")
     }
 
-    "serialise MergedDataEvent" in {
-      AuditSerialiser.serialise(MergedDataEvent(
-        auditSource = "myapp",
-        auditType   = "RequestReceived",
-        eventId     = "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
-        request     = DataCall(
-                        tags   = Map("requesttagkey" -> "requesttagval"),
-                        detail = Map("requestdetailkey" -> "requestdetailval"),
-                        generatedAt = Instant.parse("2007-12-03T10:15:30.123Z")
-                      ),
-        response    = DataCall(
-                        tags   = Map("responsetagkey" -> "responsetagval"),
-                        detail = Map("responsedetailkey" -> "responsedetailval"),
-                        generatedAt = Instant.parse("2007-12-03T10:16:31.123Z")
-                      )
-      )).toString shouldBe """{"auditSource":"myapp","auditType":"RequestReceived","eventId":"cb5ebe82-cf3c-4f15-bd92-39a6baa1f929","request":{"tags":{"requesttagkey":"requesttagval"},"detail":{"requestdetailkey":"requestdetailval"},"generatedAt":"2007-12-03T10:15:30.123+0000"},"response":{"tags":{"responsetagkey":"responsetagval"},"detail":{"responsedetailkey":"responsedetailval"},"generatedAt":"2007-12-03T10:16:31.123+0000"}}"""
+    "serialise ExtendedDataEvent with truncationLog" in {
+      testExtendedDataEvent(
+        truncationLog =
+          Some(TruncationLog(
+            truncatedFields = List("request.detail.requestdetailkey"),
+            timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
+          )),
+        expectedTruncationJson = s""",
+          "dataPipeline": {
+            "truncation": {
+              "truncationLog": [{
+                "truncatedFields": ["request.detail.requestdetailkey"],
+                "timestamp"      : "2007-12-03T10:16:31.124+0000",
+                "code"           : "play-auditing",
+                "version"        : "${BuildInfo.version}"
+              }]
+            }
+          }"""
+      )
     }
+
+    def testExtendedDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
+      AuditSerialiser.serialise(ExtendedDataEvent(
+        auditSource   = "myapp",
+        auditType     = "RequestReceived",
+        eventId       = "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        tags          = Map("tagkey" -> "tagval"),
+        detail        = JsString("detail"),
+        generatedAt   = Instant.parse("2007-12-03T10:15:30.123Z"),
+        truncationLog = truncationLog
+      )) shouldBe Json.parse(s"""{
+        "auditSource": "myapp",
+        "auditType"  : "RequestReceived",
+        "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        "tags"       : {"tagkey": "tagval"},
+        "detail"     : "detail",
+        "generatedAt": "2007-12-03T10:15:30.123+0000"
+        $expectedTruncationJson
+      }""")
+
+    "serialise MergedDataEvent" in {
+      testMergedDataEvent(None, "")
+    }
+
+    "serialise MergedDataEvent with truncationLog" in {
+      testMergedDataEvent(
+        truncationLog =
+          Some(TruncationLog(
+            truncatedFields = List("request.detail.requestdetailkey"),
+            timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
+          )),
+        expectedTruncationJson = s""",
+          "dataPipeline": {
+            "truncation": {
+              "truncationLog": [{
+                "truncatedFields": ["request.detail.requestdetailkey"],
+                "timestamp"      : "2007-12-03T10:16:31.124+0000",
+                "code"           : "play-auditing",
+                "version"        : "${BuildInfo.version}"
+              }]
+            }
+          }"""
+      )
+    }
+
+    def testMergedDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
+      AuditSerialiser.serialise(MergedDataEvent(
+        auditSource   = "myapp",
+        auditType     = "RequestReceived",
+        eventId       = "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        request       = DataCall(
+                          tags   = Map("requesttagkey" -> "requesttagval"),
+                          detail = Map("requestdetailkey" -> "requestdetailval"),
+                          generatedAt = Instant.parse("2007-12-03T10:15:30.123Z")
+                        ),
+        response      = DataCall(
+                          tags   = Map("responsetagkey" -> "responsetagval"),
+                          detail = Map("responsedetailkey" -> "responsedetailval"),
+                          generatedAt = Instant.parse("2007-12-03T10:16:31.123Z")
+                        ),
+        truncationLog = truncationLog
+      )) shouldBe Json.parse(s"""{
+        "auditSource": "myapp",
+        "auditType"  : "RequestReceived",
+        "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        "request"    : {
+                         "tags": {"requesttagkey": "requesttagval"},
+                         "detail": {"requestdetailkey": "requestdetailval"},
+                         "generatedAt": "2007-12-03T10:15:30.123+0000"
+                       },
+        "response"   : {
+                         "tags": {"responsetagkey": "responsetagval"},
+                         "detail": {"responsedetailkey": "responsedetailval"},
+                         "generatedAt": "2007-12-03T10:16:31.123+0000"
+                       }
+        $expectedTruncationJson
+      }""")
   }
 }

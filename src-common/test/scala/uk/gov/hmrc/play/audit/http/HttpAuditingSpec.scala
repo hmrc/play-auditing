@@ -264,7 +264,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -312,7 +312,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -366,7 +366,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -392,7 +392,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -425,7 +425,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -450,7 +450,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -475,7 +475,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -500,12 +500,12 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      dataEvent.request.detail(RequestIsTruncated) shouldBe "true"
+      dataEvent.truncationLog.get.truncatedFields shouldBe List("request.detail.requestBody")
       dataEvent.response.detail(ResponseMessage)   shouldBe responseBody
     }
 
@@ -524,11 +524,11 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestIsOmitted) shouldBe "true"
+      //dataEvent.request.detail(RequestIsOmitted) shouldBe "true"
       dataEvent.response.detail(ResponseMessage) shouldBe responseBody
     }
 
@@ -549,13 +549,13 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)          shouldBe requestBody
       dataEvent.response.detail(ResponseMessage)     shouldBe responseBody
-      dataEvent.response.detail(ResponseIsTruncated) shouldBe "true"
+      dataEvent.truncationLog.get.truncatedFields shouldBe List("response.detail.responseMessage")
     }
 
     "indicate if the response body was omitted" in {
@@ -574,12 +574,12 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      dataEvent.response.detail(ResponseIsOmitted) shouldBe "true"
+      //dataEvent.response.detail(ResponseIsOmitted) shouldBe "true"
     }
   }
 
@@ -605,7 +605,7 @@ class HttpAuditingSpec
 
         val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
-        httpWithAudit.audit(request, response)
+        httpWithAudit.audit(request, Right(response))
 
         verifyNoMoreInteractions(connector)
       }
@@ -618,7 +618,7 @@ class HttpAuditingSpec
         val requestBody   = None
 
         val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
-        httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
+        httpWithAudit.audit(request, Left("An exception occurred when calling sendevent datastream"))
 
         verifyNoMoreInteractions(connector)
       }
@@ -645,7 +645,7 @@ class HttpAuditingSpec
 
       whenAuditSuccess(connector)
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
@@ -672,7 +672,7 @@ class HttpAuditingSpec
 
       val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       verifyNoMoreInteractions(connector)
     }
@@ -683,7 +683,7 @@ class HttpAuditingSpec
       val requestBody   = None
 
       val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
-      httpWithAudit.auditRequestWithException(request, "An exception occurred when calling sendevent datastream")
+      httpWithAudit.audit(request, Left("An exception occurred when calling sendevent datastream"))
 
       verifyNoMoreInteractions(connector)
     }
@@ -707,7 +707,7 @@ class HttpAuditingSpec
 
       val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
 
-      httpWithAudit.audit(request, response)
+      httpWithAudit.audit(request, Right(response))
 
       verifyNoMoreInteractions(connector)
     }
@@ -718,7 +718,7 @@ class HttpAuditingSpec
       val requestBody   = None
 
       val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
-      httpWithAudit.auditRequestWithException(request, "An exception occured when calling sendevent datastream")
+      httpWithAudit.audit(request, Left("An exception occured when calling sendevent datastream"))
 
       verifyNoMoreInteractions(connector)
     }

@@ -24,6 +24,7 @@ lazy val library = (project in file("."))
   )
 
 lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditing-play-28"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(
     commonSettings,
     Compile / unmanagedSourceDirectories   += baseDirectory.value / "../src-common/main/scala",
@@ -32,3 +33,7 @@ lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditi
     Test    / unmanagedResourceDirectories += baseDirectory.value / "../src-common/test/resources",
     libraryDependencies ++= LibDependencies.compileCommon ++ LibDependencies.compilePlay28 ++ LibDependencies.test
   )
+  .settings( // https://github.com/sbt/sbt-buildinfo
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "uk.gov.hmrc.audit"
+   )

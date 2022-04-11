@@ -125,19 +125,11 @@ trait HttpAuditing {
                         detail      = responseDetails,
                         generatedAt = now()
                       ),
-      truncationLog = // TODO or a single TruncationLog with multiple truncatedFields?
-                      (if (isRequestTruncated)
-                        List(TruncationLog(
-                          truncatedFields = List("request.detail.requestBody"),
-                          timestamp       = now()
-                        ))
-                      else List.empty) ++
-                      (if (isResponseTruncated)
-                        List(TruncationLog(
-                          truncatedFields = List("response.detail.responseMessage"),
-                          timestamp       = now()
-                        ))
-                      else List.empty)
+      truncationLog = { val truncatedFields =
+                          (if (isRequestTruncated) List("request.detail.requestBody") else List.empty) ++
+                          (if (isResponseTruncated) List("response.detail.responseMessage") else List.empty)
+                        if (truncatedFields.nonEmpty) Some(TruncationLog(truncatedFields, now())) else None
+                      }
     )
   }
 

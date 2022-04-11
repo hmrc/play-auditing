@@ -18,11 +18,13 @@ package uk.gov.hmrc.audit.serialiser
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsObject, JsString, JsValue, Json, Writes, __}
+import uk.gov.hmrc.audit.BuildInfo
 import uk.gov.hmrc.play.audit.model._
 import java.time.{Instant, ZoneId}
 import java.time.format.DateTimeFormatter
 
 object DateWriter {
+  // TODO this looks unnecessary now
   // Datastream does not support default X offset (i.e. `Z` must be `+0000`)
   implicit def instantWrites = new Writes[Instant] {
     private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
@@ -42,40 +44,44 @@ class AuditSerialiser extends AuditSerialiserLike {
   private implicit val dateWriter: Writes[Instant] =
     DateWriter.instantWrites
 
-  private implicit val dataEventWriter: Writes[DataEvent]
-    = Json.writes[DataEvent]
-
-  private implicit val dataCallWriter: Writes[DataCall] =
-    Json.writes[DataCall]
-
   private implicit val truncationLogWriter: Writes[TruncationLog] =
     ( (__ \ "truncatedFields").write[List[String]]
-    ~ (__ \ "timestamp"      ).write[Instant] // TODO confirm this can use `Z` rather than `+0000`
+    ~ (__ \ "timestamp"      ).write[Instant]
     )(unlift(TruncationLog.unapply))
       .transform { (js: JsObject) =>
           js +
-          ("code" -> JsString("play-auditing")) +
-          ("version" -> JsString("TODO"))
+          ("code"      -> JsString("play-auditing")) +
+          ("version"   -> JsString(BuildInfo.version)) //+
+          //("timestamp" -> dateWriter.writes(Instant.now)) // or makes it hard to test?
       }
-/*
 
-{
-  "dataPipeline": {
-    "truncation": {
-      "truncationLog": [{
-  		"truncatedFields": ["request.detail.requestBody"],
-	    "code": "play-auditing",
-	    "timestamp": "2022-04-01T12:23:37.411Z",
-	    "version": "x.x.x"
-      }]
-    }
-  }
-}
+  private implicit val dataEventWriter: Writes[DataEvent] =
+    ( (__ \ "auditSource"                                  ).write[String]
+    ~ (__ \ "auditType"                                    ).write[String]
+    ~ (__ \ "eventId"                                      ).write[String]
+    ~ (__ \ "tags"                                         ).write[Map[String, String]]
+    ~ (__ \ "detail"                                       ).write[Map[String, String]]
+    ~ (__ \ "generatedAt"                                  ).write[Instant]
+    ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
+                                                            .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
+    )(unlift(DataEvent.unapply))
 
-*/
+  private implicit val dataCallWriter: Writes[DataCall] =
+    ( (__ \ "tags"       ).write[Map[String, String]]
+    ~ (__ \ "detail"     ).write[Map[String, String]]
+    ~ (__ \ "generatedAt").write[Instant]
+    )(unlift(DataCall.unapply))
 
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] =
-    Json.writes[ExtendedDataEvent]
+    ( (__ \ "auditSource"                                  ).write[String]
+    ~ (__ \ "auditType"                                    ).write[String]
+    ~ (__ \ "eventId"                                      ).write[String]
+    ~ (__ \ "tags"                                         ).write[Map[String, String]]
+    ~ (__ \ "detail"                                       ).write[JsValue]
+    ~ (__ \ "generatedAt"                                  ).write[Instant]
+    ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
+                                                            .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
+    )(unlift(ExtendedDataEvent.unapply))
 
   private implicit val mergedDataEventWriter  : Writes[MergedDataEvent]   =
     ( (__ \ "auditSource"                                  ).write[String]
@@ -84,7 +90,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "request"                                      ).write[DataCall]
     ~ (__ \ "response"                                     ).write[DataCall]
     ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
-                                                            .contramap[List[TruncationLog]](l => Some(l).filterNot(_.forall(_.truncatedFields.isEmpty)))
+                                                            .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
     )(unlift(MergedDataEvent.unapply))
 
 
