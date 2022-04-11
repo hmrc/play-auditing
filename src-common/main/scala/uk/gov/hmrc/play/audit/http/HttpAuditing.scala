@@ -24,9 +24,9 @@ import javax.xml.parsers.SAXParserFactory
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
-import uk.gov.hmrc.play.audit.EventKeys._
+import uk.gov.hmrc.play.audit.EventKeys
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent}
+import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, TruncationLog}
 import uk.gov.hmrc.http.hooks.{Body, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
@@ -70,53 +70,74 @@ trait HttpAuditing {
       // short-circuit the payload creation (and truncation log warning)
       if (auditConnector.isEnabled) {
         val httpRequest = HttpRequest(verb, url.toString, request.headers, request.body, now())
-        responseF.map {
-          response => audit(httpRequest, response)
-        }.recover {
-          case e: Throwable => auditRequestWithException(httpRequest, e.getMessage)
-        }
+        responseF
+          .map(Right.apply)
+          .recover { case e: Throwable => Left(e.getMessage) }
+          .map(audit(httpRequest, _))
       } else
         // TODO is this needed? (Would have been logged if we hadn't short-circuited)
         logger.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
   }
 
-  private[http] def audit(request: HttpRequest, responseToAudit: ResponseData)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
+  private[http] def audit(request: HttpRequest, responseToAudit: Either[String, ResponseData])(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
     if (isAuditable(request.url))
-      auditConnector.sendMergedEvent(dataEventFor(request, responseToAudit))
+      auditConnector.sendMergedEvent(
+        buildDataEvent(
+          request  = request,
+          response = responseToAudit
+        )
+      )
 
-  private[http] def auditRequestWithException(request: HttpRequest, errorMessage: String)(implicit hc: HeaderCarrier, ex: ExecutionContext): Unit =
-    if (isAuditable(request.url))
-      auditConnector.sendMergedEvent(dataEventFor(request, errorMessage))
-
-  private def dataEventFor(request: HttpRequest, errorMesssage: String)(implicit hc: HeaderCarrier) =
-    buildDataEvent(
-      request         = request,
-      responseDetails = Map(FailedRequestMessage -> errorMesssage)
-    )
-
-  private def dataEventFor(httpRequest: HttpRequest, response: ResponseData)(implicit hc: HeaderCarrier) =
-    buildDataEvent(
-      request         = httpRequest,
-      responseDetails = AuditUtils.responseBodyToMap(s"Outbound ${httpRequest.verb} ${httpRequest.url}", response.body)(maskString) ++
-                          Map(StatusCode -> response.status.toString)
-    )
-
-  private def buildDataEvent(request: HttpRequest, responseDetails: Map[String, String])(implicit hc: HeaderCarrier) = {
+  private def buildDataEvent(
+    request            : HttpRequest,
+    response           : Either[String, ResponseData]
+  )(implicit hc: HeaderCarrier) = {
     import AuditExtensions._
-
+    val isRequestTruncated =
+      AuditUtils.isTruncated(request.body)
+    val (responseDetails, isResponseTruncated) =
+      response match {
+        case Left(errorMessage) => (Map(EventKeys.FailedRequestMessage -> errorMessage), false)
+        case Right(response)    => val isResponseTruncated =
+                                     AuditUtils.isTruncated(response.body)
+                                   val responseBody =
+                                     AuditUtils.extractFromBody(
+                                       s"Outbound ${request.verb} ${request.url} response",
+                                       response.body.map(maskString)
+                                     )
+                                   (Map(
+                                      EventKeys.StatusCode      -> response.status.toString,
+                                      EventKeys.ResponseMessage -> responseBody
+                                    ),
+                                    isResponseTruncated
+                                   )
+      }
     MergedDataEvent(
-      auditSource = appName,
-      auditType   = outboundCallAuditType,
-      request     = DataCall(
-                      tags        = hc.toAuditTags(request.url),
-                      detail      = requestDetails(request),
-                      generatedAt = request.generatedAt
-                    ),
-      response    = DataCall(
-                      tags        = Map.empty,
-                      detail      = responseDetails,
-                      generatedAt = now()
-                    )
+      auditSource   = appName,
+      auditType     = outboundCallAuditType,
+      request       = DataCall(
+                        tags        = hc.toAuditTags(request.url),
+                        detail      = requestDetails(request),
+                        generatedAt = request.generatedAt
+                      ),
+      response      = DataCall(
+                        tags        = Map.empty,
+                        detail      = responseDetails,
+                        generatedAt = now()
+                      ),
+      truncationLog = // TODO or a single TruncationLog with multiple truncatedFields?
+                      (if (isRequestTruncated)
+                        List(TruncationLog(
+                          truncatedFields = List("request.detail.requestBody"),
+                          timestamp       = now()
+                        ))
+                      else List.empty) ++
+                      (if (isResponseTruncated)
+                        List(TruncationLog(
+                          truncatedFields = List("response.detail.responseMessage"),
+                          timestamp       = now()
+                        ))
+                      else List.empty)
     )
   }
 
@@ -130,14 +151,20 @@ trait HttpAuditing {
   private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
     val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
 
+    val requestBody =
+      AuditUtils.extractFromBody(
+        s"Outbound ${httpRequest.verb} ${httpRequest.url} request",
+        httpRequest.body.map(maskRequestBody)
+      )
+
     Map(
       "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
       HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
-      Path                      -> httpRequest.url,
-      Method                    -> httpRequest.verb
+      EventKeys.Path            -> httpRequest.url,
+      EventKeys.Method          -> httpRequest.verb
     ) ++
       caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      AuditUtils.requestBodyToMap(s"Outbound ${httpRequest.verb} ${httpRequest.url}", httpRequest.body)(maskRequestBody).filterNot(_ == RequestBody -> "") ++
+      when(requestBody != "")(Map(EventKeys.RequestBody -> requestBody)) ++
       when(auditConnector.auditSentHeaders)(
         caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation
       )
@@ -237,23 +264,19 @@ object HeaderFieldsExtractor {
 object AuditUtils {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  def responseBodyToMap[A](loggingContext: String, body: Body[A])(maskFunction: A => String): Map[String, String] =
+  // TODO move onto Body?
+  def extractFromBody(loggingContext: String, body: Body[String]): String =
     (body match {
-        case Body.Complete(b)  => Map(ResponseMessage     -> maskFunction(b))
-        case Body.Truncated(b) => logger.info(s"$loggingContext response body was truncated for auditing")
-                                  Map(ResponseMessage     -> maskFunction(b),
-                                      ResponseIsTruncated -> true.toString
-                                  )
-        case Body.Omitted      => Map(ResponseIsOmitted   -> true.toString)
-     })
+      case Body.Complete (b) => b
+      case Body.Truncated(b) => logger.info(s"$loggingContext request body was truncated for auditing")
+                                b
+      case Body.Omitted      => ""
+    })
 
-  def requestBodyToMap[A](loggingContext: String, body: Body[A])(maskFunction: A => String): Map[String, String] =
+  def isTruncated[A](body: Body[A]): Boolean =
     (body match {
-        case Body.Complete (b) => Map(RequestBody        -> maskFunction(b))
-        case Body.Truncated(b) => logger.info(s"$loggingContext request body was truncated for auditing")
-                                  Map(RequestBody        -> maskFunction(b),
-                                      RequestIsTruncated -> true.toString
-                                  )
-        case Body.Omitted      => Map(RequestIsOmitted   -> true.toString)
-      })
+      case Body.Complete (b) => false
+      case Body.Truncated(b) => true
+      case Body.Omitted      => true // TODO still truncationLog?
+    })
 }

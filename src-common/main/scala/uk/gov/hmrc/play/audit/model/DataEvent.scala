@@ -46,9 +46,15 @@ case class DataCall(
 )
 
 case class MergedDataEvent(
-  auditSource: String,
-  auditType  : String,
-  eventId    : String = UUID.randomUUID().toString,
-  request    : DataCall,
-  response   : DataCall
+  auditSource  : String,
+  auditType    : String,
+  eventId      : String = UUID.randomUUID().toString,
+  request      : DataCall,
+  response     : DataCall,
+  truncationLog: List[TruncationLog]
+)
+
+case class TruncationLog(
+  truncatedFields: List[String],
+	timestamp      : Instant
 )
