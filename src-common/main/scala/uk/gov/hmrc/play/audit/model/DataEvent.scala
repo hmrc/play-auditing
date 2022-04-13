@@ -27,7 +27,7 @@ case class DataEvent(
   eventId      : String                = UUID.randomUUID().toString,
   tags         : Map[String, String]   = Map.empty,
   detail       : Map[String, String]   = Map.empty,
-  generatedAt  : Instant               = Instant.now,
+  generatedAt  : Instant               = Instant.now(),
   truncationLog: Option[TruncationLog] = None
 )
 
@@ -37,7 +37,7 @@ case class ExtendedDataEvent(
   eventId      : String                = UUID.randomUUID().toString,
   tags         : Map[String, String]   = Map.empty,
   detail       : JsValue               = JsString(""),
-  generatedAt  : Instant               = Instant.now,
+  generatedAt  : Instant               = Instant.now(),
   truncationLog: Option[TruncationLog] = None
 )
 
@@ -58,5 +58,5 @@ case class MergedDataEvent(
 
 case class TruncationLog(
   truncatedFields: List[String],
-	timestamp      : Instant             = Instant.now
+	timestamp      : Instant             = Instant.now()
 )

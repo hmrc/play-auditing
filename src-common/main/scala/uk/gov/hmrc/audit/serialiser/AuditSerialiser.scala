@@ -51,12 +51,6 @@ class AuditSerialiser extends AuditSerialiserLike {
                                                             .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
     )(unlift(DataEvent.unapply))
 
-  private implicit val dataCallWriter: Writes[DataCall] =
-    ( (__ \ "tags"       ).write[Map[String, String]]
-    ~ (__ \ "detail"     ).write[Map[String, String]]
-    ~ (__ \ "generatedAt").write[Instant]
-    )(unlift(DataCall.unapply))
-
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] =
     ( (__ \ "auditSource"                                  ).write[String]
     ~ (__ \ "auditType"                                    ).write[String]
@@ -67,6 +61,12 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
                                                             .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
     )(unlift(ExtendedDataEvent.unapply))
+
+  private implicit val dataCallWriter: Writes[DataCall] =
+    ( (__ \ "tags"       ).write[Map[String, String]]
+    ~ (__ \ "detail"     ).write[Map[String, String]]
+    ~ (__ \ "generatedAt").write[Instant]
+    )(unlift(DataCall.unapply))
 
   private implicit val mergedDataEventWriter  : Writes[MergedDataEvent]   =
     ( (__ \ "auditSource"                                  ).write[String]

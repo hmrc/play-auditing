@@ -370,8 +370,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody) shouldBe requestBody.toString.replaceAllLiterally("List(hide-me)", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replaceAllLiterally("hide-me", "########")
+      dataEvent.request.detail(RequestBody) shouldBe requestBody.toString.replace("List(hide-me)", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replace("hide-me", "########")
     }
 
     "mask passwords in an OutboundCall using json" in {
@@ -396,8 +396,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(requestBody.replaceAllLiterally("hide-me", "########"))
-      Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(responseBody.replaceAllLiterally("hide-me", "########"))
+      Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(requestBody.replace("hide-me", "########"))
+      Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(responseBody.replace("hide-me", "########"))
     }
 
     "mask passwords in an OutboundCall using xml" in {
@@ -429,8 +429,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody)      shouldBe requestBody.replaceAllLiterally("hide-me", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replaceAllLiterally("hide-me", "########")
+      dataEvent.request.detail(RequestBody)      shouldBe requestBody.replace("hide-me", "########")
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replace("hide-me", "########")
     }
 
     "handle an invalid xml request and response body" in {
