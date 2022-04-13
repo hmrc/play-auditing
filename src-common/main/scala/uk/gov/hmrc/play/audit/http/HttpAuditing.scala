@@ -94,12 +94,12 @@ trait HttpAuditing {
   )(implicit hc: HeaderCarrier) = {
     import AuditExtensions._
     val isRequestTruncated =
-      AuditUtils.isTruncated(request.body)
+      request.body.isTruncated
     val (responseDetails, isResponseTruncated) =
       response match {
         case Left(errorMessage) => (Map(EventKeys.FailedRequestMessage -> errorMessage), false)
         case Right(response)    => val isResponseTruncated =
-                                     AuditUtils.isTruncated(response.body)
+                                     response.body.isTruncated
                                    val responseBody =
                                      AuditUtils.extractFromBody(
                                        s"Outbound ${request.verb} ${request.url} response",
@@ -256,19 +256,10 @@ object HeaderFieldsExtractor {
 object AuditUtils {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  // TODO move onto Body?
   def extractFromBody(loggingContext: String, body: Body[String]): String =
-    (body match {
+    body match {
       case Body.Complete (b) => b
       case Body.Truncated(b) => logger.info(s"$loggingContext request body was truncated for auditing")
                                 b
-      case Body.Omitted      => ""
-    })
-
-  def isTruncated[A](body: Body[A]): Boolean =
-    (body match {
-      case Body.Complete (b) => false
-      case Body.Truncated(b) => true
-      case Body.Omitted      => true // TODO still truncationLog?
-    })
+    }
 }
