@@ -58,5 +58,5 @@ case class MergedDataEvent(
 
 case class TruncationLog(
   truncatedFields: List[String],
-	timestamp      : Instant // TODO do we need in the model?
+	timestamp      : Instant             = Instant.now
 )

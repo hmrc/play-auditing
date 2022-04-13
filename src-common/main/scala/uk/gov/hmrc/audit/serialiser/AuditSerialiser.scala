@@ -17,22 +17,10 @@
 package uk.gov.hmrc.audit.serialiser
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsObject, JsString, JsValue, Json, Writes, __}
+import play.api.libs.json.{JsObject, JsValue, Json, Writes, __}
 import uk.gov.hmrc.audit.BuildInfo
 import uk.gov.hmrc.play.audit.model._
-import java.time.{Instant, ZoneId}
-import java.time.format.DateTimeFormatter
-
-object DateWriter {
-  // TODO this looks unnecessary now
-  // Datastream does not support default X offset (i.e. `Z` must be `+0000`)
-  implicit def instantWrites = new Writes[Instant] {
-    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-
-    def writes(instant: Instant): JsValue =
-      JsString(dateFormat.withZone(ZoneId.of("UTC")).format(instant))
-  }
-}
+import java.time.Instant
 
 trait AuditSerialiserLike {
   def serialise(event: DataEvent): JsObject
@@ -41,18 +29,15 @@ trait AuditSerialiserLike {
 }
 
 class AuditSerialiser extends AuditSerialiserLike {
-  private implicit val dateWriter: Writes[Instant] =
-    DateWriter.instantWrites
-
   private implicit val truncationLogWriter: Writes[TruncationLog] =
     ( (__ \ "truncatedFields").write[List[String]]
     ~ (__ \ "timestamp"      ).write[Instant]
     )(unlift(TruncationLog.unapply))
       .transform { (js: JsObject) =>
-          js +
-          ("code"      -> JsString("play-auditing")) +
-          ("version"   -> JsString(BuildInfo.version)) //+
-          //("timestamp" -> dateWriter.writes(Instant.now)) // or makes it hard to test?
+          js ++ Json.obj(
+            "code"      -> "play-auditing",
+            "version"   -> BuildInfo.version
+          )
       }
 
   private implicit val dataEventWriter: Writes[DataEvent] =

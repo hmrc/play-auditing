@@ -43,7 +43,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
             "truncation": {
               "truncationLog": [{
                 "truncatedFields": ["request.detail.requestdetailkey"],
-                "timestamp"      : "2007-12-03T10:16:31.124+0000",
+                "timestamp"      : "2007-12-03T10:16:31.124Z",
                 "code"           : "play-auditing",
                 "version"        : "${BuildInfo.version}"
               }]
@@ -65,7 +65,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
         "tags"       : {"tagkey": "tagval"},
         "detail"     : {"detailkey": "detailval"},
-        "generatedAt": "2007-12-03T10:15:30.123+0000"
+        "generatedAt": "2007-12-03T10:15:30.123Z"
       }""")
 
     "serialise ExtendedDataEvent" in {
@@ -84,7 +84,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
             "truncation": {
               "truncationLog": [{
                 "truncatedFields": ["request.detail.requestdetailkey"],
-                "timestamp"      : "2007-12-03T10:16:31.124+0000",
+                "timestamp"      : "2007-12-03T10:16:31.124Z",
                 "code"           : "play-auditing",
                 "version"        : "${BuildInfo.version}"
               }]
@@ -108,7 +108,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
         "tags"       : {"tagkey": "tagval"},
         "detail"     : "detail",
-        "generatedAt": "2007-12-03T10:15:30.123+0000"
+        "generatedAt": "2007-12-03T10:15:30.123Z"
         $expectedTruncationJson
       }""")
 
@@ -128,7 +128,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
             "truncation": {
               "truncationLog": [{
                 "truncatedFields": ["request.detail.requestdetailkey"],
-                "timestamp"      : "2007-12-03T10:16:31.124+0000",
+                "timestamp"      : "2007-12-03T10:16:31.124Z",
                 "code"           : "play-auditing",
                 "version"        : "${BuildInfo.version}"
               }]
@@ -160,12 +160,12 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         "request"    : {
                          "tags": {"requesttagkey": "requesttagval"},
                          "detail": {"requestdetailkey": "requestdetailval"},
-                         "generatedAt": "2007-12-03T10:15:30.123+0000"
+                         "generatedAt": "2007-12-03T10:15:30.123Z"
                        },
         "response"   : {
                          "tags": {"responsetagkey": "responsetagval"},
                          "detail": {"responsedetailkey": "responsedetailval"},
-                         "generatedAt": "2007-12-03T10:16:31.123+0000"
+                         "generatedAt": "2007-12-03T10:16:31.123Z"
                        }
         $expectedTruncationJson
       }""")
