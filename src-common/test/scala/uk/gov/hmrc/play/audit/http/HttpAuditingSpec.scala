@@ -509,29 +509,6 @@ class HttpAuditingSpec
       dataEvent.response.detail(ResponseMessage)   shouldBe responseBody
     }
 
-    "indicate if the request body was omitted" in {
-      val connector = mock[AuditConnector]
-      val httpWithAudit = new HttpWithAuditing(connector)
-
-      val responseBody = "complete body"
-      val response = ResponseData(
-        body    = Body.Complete(responseBody),
-        status  = 200,
-        headers = Map.empty
-      )
-
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Omitted)
-
-      whenAuditSuccess(connector)
-
-      httpWithAudit.audit(request, Right(response))
-
-      val dataEvent = verifyAndRetrieveEvent(connector)
-
-      //dataEvent.request.detail(RequestIsOmitted) shouldBe "true"
-      dataEvent.response.detail(ResponseMessage) shouldBe responseBody
-    }
-
     "indicate if the response body was truncated" in {
       val connector = mock[AuditConnector]
       val httpWithAudit = new HttpWithAuditing(connector)
@@ -556,30 +533,6 @@ class HttpAuditingSpec
       dataEvent.request.detail(RequestBody)          shouldBe requestBody
       dataEvent.response.detail(ResponseMessage)     shouldBe responseBody
       dataEvent.truncationLog.get.truncatedFields shouldBe List("response.detail.responseMessage")
-    }
-
-    "indicate if the response body was omitted" in {
-      val connector = mock[AuditConnector]
-      val httpWithAudit = new HttpWithAuditing(connector)
-
-      val requestBody = "complete body"
-
-      val response = ResponseData(
-        body    = Body.Omitted,
-        status  = 200,
-        headers = Map.empty
-      )
-
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
-
-      whenAuditSuccess(connector)
-
-      httpWithAudit.audit(request, Right(response))
-
-      val dataEvent = verifyAndRetrieveEvent(connector)
-
-      dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      //dataEvent.response.detail(ResponseIsOmitted) shouldBe "true"
     }
   }
 
