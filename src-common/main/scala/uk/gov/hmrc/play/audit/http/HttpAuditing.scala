@@ -36,6 +36,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
 trait HttpAuditing {
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
   val outboundCallAuditType: String = "OutboundCall"
 
   private val MaskValue = "########"
@@ -94,20 +96,20 @@ trait HttpAuditing {
     val (responseDetails, isResponseTruncated) =
       response match {
         case Left(errorMessage) => (Map(EventKeys.FailedRequestMessage -> errorMessage), false)
-        case Right(response)    => val isResponseTruncated =
-                                     response.body.isTruncated
-                                   val responseBody =
-                                     AuditUtils.extractFromBody(
-                                       s"Outbound ${request.verb} ${request.url} response",
-                                       response.body.map(maskString)
-                                     )
-                                   (Map(
+        case Right(response)    => (Map(
                                       EventKeys.StatusCode      -> response.status.toString,
-                                      EventKeys.ResponseMessage -> responseBody
+                                      EventKeys.ResponseMessage -> maskString(extractFromBody(response.body))
                                     ),
-                                    isResponseTruncated
+                                    response.body.isTruncated
                                    )
       }
+
+    val truncatedFields =
+      (if (isRequestTruncated) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
+      (if (isResponseTruncated) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
+    if (truncatedFields.nonEmpty)
+    logger.info(s"Outbound ${request.verb} ${request.url} - the following fields were truncated for auditing: ${truncatedFields.mkString(", ")}")
+
     MergedDataEvent(
       auditSource   = appName,
       auditType     = outboundCallAuditType,
@@ -121,11 +123,7 @@ trait HttpAuditing {
                         detail      = responseDetails,
                         generatedAt = now()
                       ),
-      truncationLog = { val truncatedFields =
-                          (if (isRequestTruncated) List("request.detail.requestBody") else List.empty) ++
-                          (if (isResponseTruncated) List("response.detail.responseMessage") else List.empty)
-                        if (truncatedFields.nonEmpty) Some(TruncationLog(truncatedFields, now())) else None
-                      }
+      truncationLog = Some(TruncationLog(truncatedFields))
     )
   }
 
@@ -138,13 +136,7 @@ trait HttpAuditing {
 
   private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
     val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
-
-    val requestBody =
-      AuditUtils.extractFromBody(
-        s"Outbound ${httpRequest.verb} ${httpRequest.url} request",
-        httpRequest.body.map(maskRequestBody)
-      )
-
+    val requestBody            = extractFromBody(httpRequest.body.map(maskRequestBody))
     Map(
       "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
       HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
@@ -240,22 +232,16 @@ trait HttpAuditing {
     body       : Body[Option[HookData]],
     generatedAt: Instant
   )
+
+  private def extractFromBody(body: Body[String]): String =
+    body match {
+      case Body.Complete (b) => b
+      case Body.Truncated(b) => b
+    }
 }
 
 // Used by bootstrap-play
 object HeaderFieldsExtractor {
   def optionalAuditFieldsSeq(headers: Map[String, Seq[String]]): Map[String, String] =
     headers.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _.mkString(",")).toMap
-}
-
-// functions are reused in bootstrap-play's AuditFilter
-object AuditUtils {
-  private val logger: Logger = LoggerFactory.getLogger(getClass)
-
-  def extractFromBody(loggingContext: String, body: Body[String]): String =
-    body match {
-      case Body.Complete (b) => b
-      case Body.Truncated(b) => logger.info(s"$loggingContext request body was truncated for auditing")
-                                b
-    }
 }

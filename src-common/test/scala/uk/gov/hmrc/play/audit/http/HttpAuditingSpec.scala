@@ -505,7 +505,7 @@ class HttpAuditingSpec
       val dataEvent = verifyAndRetrieveEvent(connector)
 
       dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      dataEvent.truncationLog.get.truncatedFields shouldBe List("request.detail.requestBody")
+      dataEvent.truncationLog.get.truncatedFields  shouldBe List("request.detail.requestBody")
       dataEvent.response.detail(ResponseMessage)   shouldBe responseBody
     }
 
@@ -532,7 +532,7 @@ class HttpAuditingSpec
 
       dataEvent.request.detail(RequestBody)          shouldBe requestBody
       dataEvent.response.detail(ResponseMessage)     shouldBe responseBody
-      dataEvent.truncationLog.get.truncatedFields shouldBe List("response.detail.responseMessage")
+      dataEvent.truncationLog.get.truncatedFields    shouldBe List("response.detail.responseMessage")
     }
   }
 
