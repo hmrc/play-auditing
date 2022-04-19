@@ -80,7 +80,7 @@ class HttpAuditingSpec
         "authorization"    -> "token",
         "allowlist-header" -> "test-value"
       )
-      val request = RequestData(headers = sentHeaders, body = Body.Complete(requestBody))
+      val request = RequestData(headers = sentHeaders, body = requestBody)
 
       httpWithAudit.auditRequestWithResponseF(getVerb, serviceUri, request, responseF)(hc)
 
@@ -143,7 +143,7 @@ class HttpAuditingSpec
       )
       val request = RequestData(
         headers = sentHeaders,
-        body    = Body.Complete(requestBody)
+        body    = requestBody
       )
 
       httpWithAudit.auditRequestWithResponseF(getVerb, serviceUri, request, responseF)(hc)
@@ -168,7 +168,7 @@ class HttpAuditingSpec
 
       val request = RequestData(
         headers = Seq.empty,
-        body    = Body.Complete(Some(HookData.FromString(requestBody)))
+        body    = Some(Body.Complete(HookData.FromString(requestBody)))
       )
 
       httpWithAudit.auditRequestWithResponseF(postVerb, serviceUri, request, responseF)(hc)
@@ -214,7 +214,7 @@ class HttpAuditingSpec
 
       val request = RequestData(
         headers = Seq.empty,
-        body    = Body.Complete(Some(HookData.FromString(requestBody)))
+        body    = Some(Body.Complete(HookData.FromString(requestBody)))
       )
 
       when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
@@ -248,7 +248,7 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
 
       val requestBody  = None
-      val request      = httpWithAudit.buildRequest(getVerb, serviceUri, Seq(surrogate -> "true"), Body.Complete(requestBody))
+      val request      = httpWithAudit.buildRequest(getVerb, serviceUri, Seq(surrogate -> "true"), requestBody)
       val responseBody = "the response body"
       val response     = ResponseData(
                            body    = Body.Complete(responseBody),
@@ -308,7 +308,7 @@ class HttpAuditingSpec
                              headers = Map.empty
                            )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -362,7 +362,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromMap(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromMap(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -388,7 +388,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -421,7 +421,7 @@ class HttpAuditingSpec
                            headers = Map.empty
                          )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -446,7 +446,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -471,7 +471,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -496,7 +496,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Truncated(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Truncated(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -522,7 +522,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Body.Complete(Some(HookData.FromString(requestBody))))
+      val request = httpWithAudit.buildRequest(postVerb, serviceUri, Seq.empty, Some(Body.Complete(HookData.FromString(requestBody))))
 
       whenAuditSuccess(connector)
 
@@ -556,7 +556,7 @@ class HttpAuditingSpec
           headers = Map.empty
         )
 
-        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
         httpWithAudit.audit(request, Right(response))
 
@@ -570,7 +570,7 @@ class HttpAuditingSpec
         val httpWithAudit = new HttpWithAuditing(connector)
         val requestBody   = None
 
-        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+        val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
         httpWithAudit.audit(request, Left("An exception occurred when calling sendevent datastream"))
 
         verifyNoMoreInteractions(connector)
@@ -594,7 +594,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
       whenAuditSuccess(connector)
 
@@ -623,7 +623,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
       httpWithAudit.audit(request, Right(response))
 
@@ -635,7 +635,7 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody   = None
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
       httpWithAudit.audit(request, Left("An exception occurred when calling sendevent datastream"))
 
       verifyNoMoreInteractions(connector)
@@ -658,7 +658,7 @@ class HttpAuditingSpec
         headers = Map.empty
       )
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
 
       httpWithAudit.audit(request, Right(response))
 
@@ -670,7 +670,7 @@ class HttpAuditingSpec
       val httpWithAudit = new HttpWithAuditing(connector)
       val requestBody   = None
 
-      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, Body.Complete(requestBody))
+      val request = httpWithAudit.buildRequest(getVerb, auditUri, Seq.empty, requestBody)
       httpWithAudit.audit(request, Left("An exception occured when calling sendevent datastream"))
 
       verifyNoMoreInteractions(connector)
@@ -748,7 +748,7 @@ class HttpAuditingSpec
       else responseDateTime
     }
 
-    def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Body[Option[HookData]]): HttpRequest = {
+    def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Option[Body[HookData]]): HttpRequest = {
       now_call_count = 1
       HttpRequest(verb, url, headers, body, requestDateTime)
     }

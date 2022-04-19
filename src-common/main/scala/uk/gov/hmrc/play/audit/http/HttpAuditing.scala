@@ -92,7 +92,7 @@ trait HttpAuditing {
   )(implicit hc: HeaderCarrier) = {
     import AuditExtensions._
     val isRequestTruncated =
-      request.body.isTruncated
+      request.body.exists(_.isTruncated)
     val (responseDetails, isResponseTruncated) =
       response match {
         case Left(errorMessage) => (Map(EventKeys.FailedRequestMessage -> errorMessage), false)
@@ -108,7 +108,7 @@ trait HttpAuditing {
       (if (isRequestTruncated) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
       (if (isResponseTruncated) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
     if (truncatedFields.nonEmpty)
-    logger.info(s"Outbound ${request.verb} ${request.url} - the following fields were truncated for auditing: ${truncatedFields.mkString(", ")}")
+      logger.info(s"Outbound ${request.verb} ${request.url} - the following fields were truncated for auditing: ${truncatedFields.mkString(", ")}")
 
     MergedDataEvent(
       auditSource   = appName,
@@ -136,7 +136,6 @@ trait HttpAuditing {
 
   private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
     val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
-    val requestBody            = extractFromBody(httpRequest.body.map(maskRequestBody))
     Map(
       "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
       HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
@@ -144,20 +143,21 @@ trait HttpAuditing {
       EventKeys.Method          -> httpRequest.verb
     ) ++
       caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      when(requestBody != "")(Map(EventKeys.RequestBody -> requestBody)) ++
+      httpRequest.body.fold(Map.empty[String, String])(b =>
+         Map(EventKeys.RequestBody -> extractFromBody(b.map(maskRequestBody)))
+      ) ++
       when(auditConnector.auditSentHeaders)(
         caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation
       )
   }
 
-  private def maskRequestBody(body: Option[HookData]): String =
+  private def maskRequestBody(body: HookData): String =
     body match {
-      case Some(HookData.FromMap(m))    => m.map {
-                                             case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
-                                             case other                                    => other
-                                           }.toString
-      case Some(HookData.FromString(s)) => maskString(s)
-      case None                         => ""
+      case HookData.FromMap(m)    => m.map {
+                                       case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
+                                       case other                                    => other
+                                     }.toString
+      case HookData.FromString(s) => maskString(s)
     }
 
   // a String could either be Json or XML
@@ -229,7 +229,7 @@ trait HttpAuditing {
     verb       : String,
     url        : String,
     headers    : Seq[(String, String)],
-    body       : Body[Option[HookData]],
+    body       : Option[Body[HookData]],
     generatedAt: Instant
   )
 
