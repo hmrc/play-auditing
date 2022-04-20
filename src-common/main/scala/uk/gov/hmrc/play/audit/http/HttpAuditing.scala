@@ -67,7 +67,7 @@ trait HttpAuditing {
       hc: HeaderCarrier,
       ec: ExecutionContext
     ): Unit =
-      // short-circuit the payload creation (and truncation log warning)
+      // short-circuit the payload creation
       if (auditConnector.isEnabled) {
         val httpRequest = HttpRequest(verb, url.toString, request.headers, request.body, now())
         responseF
