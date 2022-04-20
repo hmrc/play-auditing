@@ -95,13 +95,18 @@ trait AuditConnector {
       )
     }
 
-  private def ifEnabled(send: => Future[HandlerResult])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AuditResult] =
-    if (auditingConfig.enabled) {
+  private[http] lazy val isEnabled: Boolean = {
+    val enabled = auditingConfig.enabled
+    if (!enabled)
+      logger.warn(s"auditing disabled for AuditConnector $getClass")
+    enabled
+  }
+
+  private def ifEnabled(send: => Future[HandlerResult])(implicit ec: ExecutionContext): Future[AuditResult] =
+    if (isEnabled)
       send.map(AuditResult.fromHandlerResult)
-    } else {
-      logger.info(s"auditing disabled for request-id ${hc.requestId}, session-id: ${hc.sessionId}")
+    else
       Future.successful(AuditResult.Disabled)
-    }
 
   private[connector] def send(path:String, audit:JsObject)(implicit ec: ExecutionContext): Future[HandlerResult] = {
     val metadata = Json.obj("metadata" -> Json.obj("metricsKey" -> datastreamMetrics.metricsKey))

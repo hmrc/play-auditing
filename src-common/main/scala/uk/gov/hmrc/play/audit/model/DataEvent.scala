@@ -22,21 +22,23 @@ import java.time.Instant
 import play.api.libs.json._
 
 case class DataEvent(
-  auditSource: String,
-  auditType  : String,
-  eventId    : String              = UUID.randomUUID().toString,
-  tags       : Map[String, String] = Map.empty,
-  detail     : Map[String, String] = Map.empty,
-  generatedAt: Instant             = Instant.now
+  auditSource  : String,
+  auditType    : String,
+  eventId      : String                = UUID.randomUUID().toString,
+  tags         : Map[String, String]   = Map.empty,
+  detail       : Map[String, String]   = Map.empty,
+  generatedAt  : Instant               = Instant.now(),
+  truncationLog: Option[TruncationLog] = None
 )
 
 case class ExtendedDataEvent(
-  auditSource: String,
-  auditType  : String,
-  eventId    : String              = UUID.randomUUID().toString,
-  tags       : Map[String, String] = Map.empty,
-  detail     : JsValue             = JsString(""),
-  generatedAt: Instant             = Instant.now
+  auditSource  : String,
+  auditType    : String,
+  eventId      : String                = UUID.randomUUID().toString,
+  tags         : Map[String, String]   = Map.empty,
+  detail       : JsValue               = JsString(""),
+  generatedAt  : Instant               = Instant.now(),
+  truncationLog: Option[TruncationLog] = None
 )
 
 case class DataCall(
@@ -46,9 +48,15 @@ case class DataCall(
 )
 
 case class MergedDataEvent(
-  auditSource: String,
-  auditType  : String,
-  eventId    : String = UUID.randomUUID().toString,
-  request    : DataCall,
-  response   : DataCall
+  auditSource  : String,
+  auditType    : String,
+  eventId      : String                = UUID.randomUUID().toString,
+  request      : DataCall,
+  response     : DataCall,
+  truncationLog: Option[TruncationLog] = None
+)
+
+case class TruncationLog(
+  truncatedFields: List[String],
+	timestamp      : Instant             = Instant.now()
 )

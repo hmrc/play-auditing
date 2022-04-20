@@ -1,6 +1,6 @@
 # play-auditing
 
-[![Build Status](https://travis-ci.org/hmrc/play-auditing.svg?branch=master)](https://travis-ci.org/hmrc/play-auditing) [ ![Download](https://api.bintray.com/packages/hmrc/releases/play-auditing/images/download.svg) ](https://bintray.com/hmrc/releases/play-auditing/_latestVersion)
+![](https://img.shields.io/github/v/release/hmrc/play-auditing)
 
 play-auditing contains code to facilitate creation of audit events and their publication to Datastream. This includes both explicit events and implicit events.
 
@@ -11,7 +11,7 @@ Explicit events are where your code creates an audit event and asks for it to be
 In your SBT build add:
 
 ```scala
-resolvers += Resolver.bintrayRepo("hmrc", "releases")
+resolvers += MavenRepository("HMRC-open-artefacts-maven2", "https://open.artefacts.tax.service.gov.uk/maven2")
 
 libraryDependencies += "uk.gov.hmrc" %% "play-auditing-play-x" % "x.x.x"
 ```
@@ -19,6 +19,12 @@ libraryDependencies += "uk.gov.hmrc" %% "play-auditing-play-x" % "x.x.x"
 Where play-xx is your version of Play (e.g. play-28).
 
 ## Changes
+
+### Version 8.0.0
+
+Bumps `http-verbs`, which indicates whether payloads provided for auditing have been truncated or omitted.
+This should not affect most clients, as long as a compatible library versions are used. It is generally expected that clients only depend on `bootstrap-play` which will transitively provide compatible versions.
+
 
 ### Version 7.11.0
 

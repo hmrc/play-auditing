@@ -17,11 +17,11 @@
 package uk.gov.hmrc.play.audit
 
 object EventKeys {
-  val StatusCode = "statusCode"
+  val StatusCode           = "statusCode"
   val FailedRequestMessage = "failedRequestReason"
-  val ResponseMessage = "responseMessage"
-  val Path = "path"
-  val Method = "method"
-  val RequestBody = "requestBody"
-  val TransactionName = "transactionName"
+  val ResponseMessage      = "responseMessage"
+  val Path                 = "path"
+  val Method               = "method"
+  val RequestBody          = "requestBody"
+  val TransactionName      = "transactionName"
 }
