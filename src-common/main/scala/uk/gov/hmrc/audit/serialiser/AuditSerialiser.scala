@@ -21,6 +21,8 @@ import play.api.libs.json.{JsObject, JsValue, Json, Writes, __}
 import uk.gov.hmrc.audit.BuildInfo
 import uk.gov.hmrc.play.audit.model._
 import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
 
 trait AuditSerialiserLike {
   def serialise(event: DataEvent): JsObject
@@ -29,6 +31,12 @@ trait AuditSerialiserLike {
 }
 
 class AuditSerialiser extends AuditSerialiserLike {
+  // Datastream requires the .000 ms
+  private implicit def instantWrites =
+    Writes.temporalWrites[Instant, DateTimeFormatter](
+      new DateTimeFormatterBuilder().appendInstant(3).toFormatter
+    )
+
   private implicit val truncationLogWriter: Writes[TruncationLog] =
     ( (__ \ "truncatedFields").write[List[String]]
     ~ (__ \ "timestamp"      ).write[Instant]
