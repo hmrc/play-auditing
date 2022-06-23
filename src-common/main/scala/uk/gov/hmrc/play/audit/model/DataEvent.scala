@@ -28,7 +28,8 @@ case class DataEvent(
   tags         : Map[String, String]   = Map.empty,
   detail       : Map[String, String]   = Map.empty,
   generatedAt  : Instant               = Instant.now(),
-  truncationLog: Option[TruncationLog] = None
+  truncationLog: Option[TruncationLog] = None,
+  redaction    : Redaction             = Redaction.empty
 )
 
 case class ExtendedDataEvent(
@@ -38,7 +39,8 @@ case class ExtendedDataEvent(
   tags         : Map[String, String]   = Map.empty,
   detail       : JsValue               = JsString(""),
   generatedAt  : Instant               = Instant.now(),
-  truncationLog: Option[TruncationLog] = None
+  truncationLog: Option[TruncationLog] = None,
+  redaction    : Redaction             = Redaction.empty
 )
 
 case class DataCall(
@@ -53,10 +55,28 @@ case class MergedDataEvent(
   eventId      : String                = UUID.randomUUID().toString,
   request      : DataCall,
   response     : DataCall,
-  truncationLog: Option[TruncationLog] = None
+  truncationLog: Option[TruncationLog] = None,
+  redaction    : Redaction             = Redaction.empty
 )
 
 case class TruncationLog(
   truncatedFields: List[String],
 	timestamp      : Instant             = Instant.now()
+)
+
+case class Redaction(redactionLog: List[RedactionLog]) {
+
+  lazy val containsRedactions: Boolean =
+    redactionLog.nonEmpty
+}
+
+object Redaction {
+
+  val empty: Redaction =
+    Redaction(List.empty)
+}
+
+case class RedactionLog(
+  redactedFields: List[String],
+  timestamp     : Instant = Instant.now()
 )

@@ -17,21 +17,29 @@
 package uk.gov.hmrc.audit.serialiser
 
 import java.time.Instant
-
-import play.api.libs.json.{Json, JsString}
+import play.api.libs.json.{JsString, Json}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.audit.BuildInfo
-import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent, TruncationLog}
+import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent, Redaction, RedactionLog, TruncationLog}
 
 class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
 
   "AuditSerialiser" should {
     "serialise DataEvent" in {
-      testDataEvent(None, "")
+      testDataEvent(
+        truncationLog = None,
+        expectedTruncationJson = "",
+        redaction = Redaction.empty,
+        expectedRedactionJson = s"""
+          "redaction": {
+            "containsRedactions": false,
+            "redactionLog"      : []
+          }"""
+      )
     }
 
-    "serialise DataEvent with truncationLog" in {
+    "serialise DataEvent with truncationLog & redactions" in {
       testDataEvent(
         truncationLog =
           Some(TruncationLog(
@@ -39,19 +47,37 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
             timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
           )),
         expectedTruncationJson = s""",
-          "dataPipeline": {
-            "truncation": {
-              "truncationLog": [{
-                "truncatedFields": ["request.detail.requestdetailkey"],
-                "timestamp"      : "2007-12-03T10:16:31.124Z",
-                "code"           : "play-auditing",
-                "version"        : "${BuildInfo.version}"
-              }]
-            }
-          }"""
+          "truncation": {
+            "truncationLog": [{
+              "truncatedFields": ["request.detail.requestdetailkey"],
+              "timestamp"      : "2007-12-03T10:16:31.124Z",
+              "code"           : "play-auditing",
+              "version"        : "${BuildInfo.version}"
+            }]
+          }""",
+        redaction =
+          Redaction(List(RedactionLog(
+            redactedFields = List("request.detail.requestBody"),
+            timestamp      = Instant.parse("2007-12-03T10:16:31.124Z")
+          ))),
+        expectedRedactionJson = s"""
+          "redaction": {
+            "containsRedactions": true,
+            "redactionLog": [{
+              "redactedFields": ["request.detail.requestBody"],
+              "timestamp"     : "2007-12-03T10:16:31.124Z",
+              "code"          : "play-auditing",
+              "version"       : "${BuildInfo.version}"
+            }]
+          }""",
       )
     }
-    def testDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
+    def testDataEvent(
+      truncationLog: Option[TruncationLog],
+      expectedTruncationJson: String,
+      redaction: Redaction,
+      expectedRedactionJson: String
+    ) =
       AuditSerialiser.serialise(DataEvent(
         auditSource   = "myapp",
         auditType     = "RequestReceived",
@@ -59,22 +85,35 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         tags          = Map("tagkey" -> "tagval"),
         detail        = Map("detailkey" -> "detailval"),
         generatedAt   = Instant.parse("2007-12-03T10:15:30.000Z"),
-        truncationLog = truncationLog
+        truncationLog = truncationLog,
+        redaction     = redaction
       )) shouldBe Json.parse(s"""{
-        "auditSource": "myapp",
-        "auditType"  : "RequestReceived",
-        "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
-        "tags"       : {"tagkey": "tagval"},
-        "detail"     : {"detailkey": "detailval"},
-        "generatedAt": "2007-12-03T10:15:30.000Z"
-        $expectedTruncationJson
+        "auditSource" : "myapp",
+        "auditType"   : "RequestReceived",
+        "eventId"     : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        "tags"        : {"tagkey": "tagval"},
+        "detail"      : {"detailkey": "detailval"},
+        "generatedAt" : "2007-12-03T10:15:30.000Z",
+        "dataPipeline": {
+          $expectedRedactionJson
+          $expectedTruncationJson
+        }
       }""")
 
     "serialise ExtendedDataEvent" in {
-      testExtendedDataEvent(None, "")
+      testExtendedDataEvent(
+        truncationLog = None,
+        expectedTruncationJson = "",
+        redaction = Redaction.empty,
+        expectedRedactionJson = s"""
+          "redaction": {
+            "containsRedactions": false,
+            "redactionLog"      : []
+          }"""
+      )
     }
 
-    "serialise ExtendedDataEvent with truncationLog" in {
+    "serialise ExtendedDataEvent with truncationLog & redactions" in {
       testExtendedDataEvent(
         truncationLog =
           Some(TruncationLog(
@@ -82,20 +121,38 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
             timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
           )),
         expectedTruncationJson = s""",
-          "dataPipeline": {
-            "truncation": {
-              "truncationLog": [{
-                "truncatedFields": ["request.detail.requestdetailkey"],
-                "timestamp"      : "2007-12-03T10:16:31.124Z",
-                "code"           : "play-auditing",
-                "version"        : "${BuildInfo.version}"
-              }]
-            }
-          }"""
+          "truncation": {
+            "truncationLog": [{
+              "truncatedFields": ["request.detail.requestdetailkey"],
+              "timestamp"      : "2007-12-03T10:16:31.124Z",
+              "code"           : "play-auditing",
+              "version"        : "${BuildInfo.version}"
+            }]
+          }""",
+        redaction =
+          Redaction(List(RedactionLog(
+            redactedFields = List("request.detail.requestBody"),
+            timestamp      = Instant.parse("2007-12-03T10:16:31.124Z")
+          ))),
+        expectedRedactionJson = s"""
+          "redaction": {
+            "containsRedactions": true,
+            "redactionLog": [{
+              "redactedFields": ["request.detail.requestBody"],
+              "timestamp"     : "2007-12-03T10:16:31.124Z",
+              "code"          : "play-auditing",
+              "version"       : "${BuildInfo.version}"
+            }]
+          }""",
       )
     }
 
-    def testExtendedDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
+    def testExtendedDataEvent(
+      truncationLog: Option[TruncationLog],
+      expectedTruncationJson: String,
+      redaction: Redaction,
+      expectedRedactionJson: String
+    ) =
       AuditSerialiser.serialise(ExtendedDataEvent(
         auditSource   = "myapp",
         auditType     = "RequestReceived",
@@ -103,19 +160,32 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         tags          = Map("tagkey" -> "tagval"),
         detail        = JsString("detail"),
         generatedAt   = Instant.parse("2007-12-03T10:15:30.000Z"),
-        truncationLog = truncationLog
+        truncationLog = truncationLog,
+        redaction     = redaction
       )) shouldBe Json.parse(s"""{
-        "auditSource": "myapp",
-        "auditType"  : "RequestReceived",
-        "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
-        "tags"       : {"tagkey": "tagval"},
-        "detail"     : "detail",
-        "generatedAt": "2007-12-03T10:15:30.000Z"
-        $expectedTruncationJson
+        "auditSource" : "myapp",
+        "auditType"   : "RequestReceived",
+        "eventId"     : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        "tags"        : {"tagkey": "tagval"},
+        "detail"      : "detail",
+        "generatedAt" : "2007-12-03T10:15:30.000Z",
+        "dataPipeline": {
+          $expectedRedactionJson
+          $expectedTruncationJson
+        }
       }""")
 
     "serialise MergedDataEvent" in {
-      testMergedDataEvent(None, "")
+      testMergedDataEvent(
+        truncationLog = None,
+        expectedTruncationJson = "",
+        redaction = Redaction.empty,
+        expectedRedactionJson = s"""
+          "redaction": {
+            "containsRedactions": false,
+            "redactionLog"      : []
+          }"""
+      )
     }
 
     "serialise MergedDataEvent with truncationLog" in {
@@ -126,20 +196,38 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
             timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
           )),
         expectedTruncationJson = s""",
-          "dataPipeline": {
-            "truncation": {
-              "truncationLog": [{
-                "truncatedFields": ["request.detail.requestdetailkey"],
-                "timestamp"      : "2007-12-03T10:16:31.124Z",
-                "code"           : "play-auditing",
-                "version"        : "${BuildInfo.version}"
-              }]
-            }
-          }"""
+          "truncation": {
+            "truncationLog": [{
+              "truncatedFields": ["request.detail.requestdetailkey"],
+              "timestamp"      : "2007-12-03T10:16:31.124Z",
+              "code"           : "play-auditing",
+              "version"        : "${BuildInfo.version}"
+            }]
+          }""",
+        redaction =
+          Redaction(List(RedactionLog(
+            redactedFields = List("request.detail.requestBody"),
+            timestamp      = Instant.parse("2007-12-03T10:16:31.124Z")
+          ))),
+        expectedRedactionJson = s"""
+          "redaction": {
+            "containsRedactions": true,
+            "redactionLog": [{
+              "redactedFields": ["request.detail.requestBody"],
+              "timestamp"     : "2007-12-03T10:16:31.124Z",
+              "code"          : "play-auditing",
+              "version"       : "${BuildInfo.version}"
+            }]
+          }""",
       )
     }
 
-    def testMergedDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
+    def testMergedDataEvent(
+      truncationLog: Option[TruncationLog],
+      expectedTruncationJson: String,
+      redaction: Redaction,
+      expectedRedactionJson: String
+    ) =
       AuditSerialiser.serialise(MergedDataEvent(
         auditSource   = "myapp",
         auditType     = "RequestReceived",
@@ -154,22 +242,26 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
                           detail = Map("responsedetailkey" -> "responsedetailval"),
                           generatedAt = Instant.parse("2007-12-03T10:16:31.123Z")
                         ),
-        truncationLog = truncationLog
+        truncationLog = truncationLog,
+        redaction     = redaction
       )) shouldBe Json.parse(s"""{
-        "auditSource": "myapp",
-        "auditType"  : "RequestReceived",
-        "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
-        "request"    : {
-                         "tags": {"requesttagkey": "requesttagval"},
-                         "detail": {"requestdetailkey": "requestdetailval"},
-                         "generatedAt": "2007-12-03T10:15:30.123Z"
-                       },
-        "response"   : {
-                         "tags": {"responsetagkey": "responsetagval"},
-                         "detail": {"responsedetailkey": "responsedetailval"},
-                         "generatedAt": "2007-12-03T10:16:31.123Z"
-                       }
-        $expectedTruncationJson
+        "auditSource" : "myapp",
+        "auditType"   : "RequestReceived",
+        "eventId"     : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        "request"     : {
+                          "tags": {"requesttagkey": "requesttagval"},
+                          "detail": {"requestdetailkey": "requestdetailval"},
+                          "generatedAt": "2007-12-03T10:15:30.123Z"
+                        },
+        "response"    : {
+                          "tags": {"responsetagkey": "responsetagval"},
+                          "detail": {"responsedetailkey": "responsedetailval"},
+                          "generatedAt": "2007-12-03T10:16:31.123Z"
+                        },
+        "dataPipeline": {
+          $expectedRedactionJson
+          $expectedTruncationJson
+        }
       }""")
   }
 }
