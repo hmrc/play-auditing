@@ -53,19 +53,21 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     }
     def testDataEvent(truncationLog: Option[TruncationLog], expectedTruncationJson: String) =
       AuditSerialiser.serialise(DataEvent(
-        auditSource = "myapp",
-        auditType   = "RequestReceived",
-        eventId     = "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
-        tags        = Map("tagkey" -> "tagval"),
-        detail      = Map("detailkey" -> "detailval"),
-        generatedAt = Instant.parse("2007-12-03T10:15:30.000Z")
-      )) shouldBe Json.parse("""{
+        auditSource   = "myapp",
+        auditType     = "RequestReceived",
+        eventId       = "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
+        tags          = Map("tagkey" -> "tagval"),
+        detail        = Map("detailkey" -> "detailval"),
+        generatedAt   = Instant.parse("2007-12-03T10:15:30.000Z"),
+        truncationLog = truncationLog
+      )) shouldBe Json.parse(s"""{
         "auditSource": "myapp",
         "auditType"  : "RequestReceived",
         "eventId"    : "cb5ebe82-cf3c-4f15-bd92-39a6baa1f929",
         "tags"       : {"tagkey": "tagval"},
         "detail"     : {"detailkey": "detailval"},
         "generatedAt": "2007-12-03T10:15:30.000Z"
+        $expectedTruncationJson
       }""")
 
     "serialise ExtendedDataEvent" in {
