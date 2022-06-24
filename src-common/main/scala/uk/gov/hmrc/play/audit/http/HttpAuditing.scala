@@ -30,12 +30,10 @@ import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, Redaction, Redac
 import uk.gov.hmrc.http.hooks.{Body, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
-import scala.collection.generic.CanBuildFrom
 import scala.collection.immutable.SortedMap
 import scala.xml._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
-import scala.language.higherKinds
 
 trait HttpAuditing {
   private val logger: Logger = LoggerFactory.getLogger(getClass)
@@ -95,9 +93,9 @@ trait HttpAuditing {
     import AuditExtensions._
     val isRequestTruncated =
       request.body.exists(_.isTruncated)
-    val (maskedResponseDetails, isResponseTruncated) =
+    val (responseDetailsData, isResponseTruncated) =
       response match {
-        case Left(errorMessage) => (Masked.ignore(Map(EventKeys.FailedRequestMessage -> errorMessage)), false)
+        case Left(errorMessage) => (Data.pure(Map(EventKeys.FailedRequestMessage -> errorMessage)), false)
         case Right(response)    => (maskString(extractFromBody(response.body)).map { maskedResponseMessage =>
                                      Map(
                                        EventKeys.StatusCode      -> response.status.toString,
@@ -113,24 +111,24 @@ trait HttpAuditing {
     if (truncatedFields.nonEmpty)
       logger.info(s"Outbound ${request.verb} ${request.url} - the following fields were truncated for auditing: ${truncatedFields.mkString(", ")}")
 
-    val maskedRequestDetails =
+    val requestDetailsData =
       requestDetails(request)
 
     val redactedFields =
-      (if (maskedRequestDetails.isMasked) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
-        (if (maskedResponseDetails.isMasked) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
+      (if (requestDetailsData.isRedacted) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
+        (if (responseDetailsData.isRedacted) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
 
     MergedDataEvent(
       auditSource   = appName,
       auditType     = outboundCallAuditType,
       request       = DataCall(
                         tags        = hc.toAuditTags(request.url),
-                        detail      = maskedRequestDetails.value,
+                        detail      = requestDetailsData.value,
                         generatedAt = request.generatedAt
                       ),
       response      = DataCall(
                         tags        = Map.empty,
-                        detail      = maskedResponseDetails.value,
+                        detail      = responseDetailsData.value,
                         generatedAt = now()
                       ),
       truncationLog = Some(TruncationLog(truncatedFields)),
@@ -145,9 +143,9 @@ trait HttpAuditing {
     SortedMap()(Ordering.comparatorToOrdering(String.CASE_INSENSITIVE_ORDER)) ++
       headers.groupBy(_._1.toLowerCase).map{ case (_, hdrs) => hdrs.head._1 -> hdrs.map(_._2).mkString(",")}
 
-  private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Masked[Map[String, String]] = {
+  private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Data[Map[String, String]] = {
     val maskedRequestBody =
-      httpRequest.body.fold(Masked.ignore(Map.empty[String, String]))(b =>
+      httpRequest.body.fold(Data.pure(Map.empty[String, String]))(b =>
         extractFromBody(b.map(maskRequestBody)).map(mrb => Map(EventKeys.RequestBody -> mrb))
       )
 
@@ -168,24 +166,24 @@ trait HttpAuditing {
 
   }
 
-  private def maskRequestBody(body: HookData): Masked[String] =
+  private def maskRequestBody(body: HookData): Data[String] =
     body match {
       case HookData.FromMap(m) =>
-        Masked.traverse(m) {
-          case (key, _) if shouldMaskField(key) => Masked.mask(key -> MaskValue)
-          case other                            => Masked.ignore(other)
+        Data.traverse(m.toSeq) {
+          case (key, _) if shouldMaskField(key) => Data.redacted(key -> MaskValue)
+          case other                            => Data.pure(other)
         }.map(_.toMap.toString())
       case HookData.FromString(s) =>
         maskString(s)
     }
 
   // a String could either be Json or XML
-  private def maskString(text: String): Masked[String] =
+  private def maskString(text: String): Data[String] =
     if (text.startsWith("{"))
       try {
         maskJsonFields(Json.parse(text)).map(Json.stringify)
       } catch {
-        case _: JsonParseException => Masked.ignore(text)
+        case _: JsonParseException => Data.pure(text)
       }
     else if (text.startsWith("<"))
       try {
@@ -196,46 +194,46 @@ trait HttpAuditing {
             builder.toString()
           }
       } catch {
-        case _: SAXParseException => Masked.ignore(text)
+        case _: SAXParseException => Data.pure(text)
       }
     else
-      Masked.ignore(text)
+      Data.pure(text)
 
-  private def maskJsonFields(json: JsValue): Masked[JsValue] =
+  private def maskJsonFields(json: JsValue): Data[JsValue] =
     json match {
       case JsObject(fields) =>
-          Masked.traverse(fields.toSeq) { case (key, value) =>
+          Data.traverse(fields.toSeq) { case (key, value) =>
             if (shouldMaskField(key))
-              Masked.mask(key -> JsString(MaskValue))
+              Data.redacted(key -> JsString(MaskValue))
             else
               maskJsonFields(value).map(key -> _)
           }.map(JsObject(_))
       case JsArray(values)   =>
-        Masked.traverse(values)(maskJsonFields).map(JsArray(_))
+        Data.traverse(values.toSeq)(maskJsonFields).map(JsArray(_))
       case other =>
-        Masked.ignore(other)
+        Data.pure(other)
     }
 
-  private def maskXMLFields(node: Node): Masked[Node] =
+  private def maskXMLFields(node: Node): Data[Node] =
     node match {
       case e: Elem =>
         for {
           child      <- if (shouldMaskField(e.label))
-                          Masked.mask(Seq(Text(MaskValue)))
+                          Data.redacted(Seq(Text(MaskValue)))
                         else
-                          Masked.traverse(e.child.toSeq)(maskXMLFields)
+                          Data.traverse(e.child.toSeq)(maskXMLFields)
           attributes <- maskXMLAttributes(e.attributes)
         } yield e.copy(child = child, attributes = attributes)
       case other =>
-        Masked.ignore(other)
+        Data.pure(other)
     }
 
-  private def maskXMLAttributes(attributes: MetaData): Masked[MetaData] =
-    attributes.foldLeft(Masked.ignore(Null: scala.xml.MetaData)) { (previous, attr) =>
+  private def maskXMLAttributes(attributes: MetaData): Data[MetaData] =
+    attributes.foldLeft(Data.pure(Null: scala.xml.MetaData)) { (previous, attr) =>
       attr match {
-        case a: PrefixedAttribute   if shouldMaskField(a.key) => Masked.mask(new PrefixedAttribute(a.pre, a.key, MaskValue, previous.value))
-        case a: UnprefixedAttribute if shouldMaskField(a.key) => Masked.mask(new UnprefixedAttribute(a.key, MaskValue, previous.value))
-        case other                                            => previous.flatMap(_ => Masked.ignore(other))
+        case a: PrefixedAttribute   if shouldMaskField(a.key) => Data.redacted(new PrefixedAttribute(a.pre, a.key, MaskValue, previous.value))
+        case a: UnprefixedAttribute if shouldMaskField(a.key) => Data.redacted(new UnprefixedAttribute(a.key, MaskValue, previous.value))
+        case other                                            => previous.flatMap(_ => Data.pure(other))
       }
     }
 
@@ -273,43 +271,31 @@ object HeaderFieldsExtractor {
     headers.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _.mkString(",")).toMap
 }
 
-private [http] sealed trait Masked[+A] {
+final case class Data[+A](value: A, isRedacted: Boolean) {
 
-  def value: A
+  def map[B](f: A => B): Data[B] =
+    flatMap(a => Data.pure(f(a)))
 
-  final def map[B](f: A => B): Masked[B] =
-    flatMap(a => Masked.ignore(f(a)))
+  def map2[B, C](data: Data[B])(f: (A, B) => C): Data[C] =
+    flatMap(a => data.map(b => f(a, b)))
 
-  final def map2[B, C](mb: Masked[B])(f: (A, B) => C): Masked[C] =
-    flatMap(a => mb.map(b => f(a, b)))
-
-  final def flatMap[B](f: A => Masked[B]): Masked[B] =
-    this match {
-      case Masked.Mask(a)   => Masked.mask(f(a).value)
-      case Masked.Ignore(a) => f(a)
-    }
-
-  final def isMasked: Boolean =
-    this match {
-      case Masked.Mask(_)   => true
-      case Masked.Ignore(_) => false
-    }
+  def flatMap[B](f: A => Data[B]): Data[B] = {
+    val dataB = f(value)
+    Data(
+      value      = dataB.value,
+      isRedacted = isRedacted || dataB.isRedacted
+    )
+  }
 }
 
-private [http] object Masked {
+object Data {
 
-  final case class Mask[A](value: A) extends Masked[A]
+  def pure[A](value: A): Data[A] =
+    Data(value, isRedacted = false)
 
-  final case class Ignore[A](value: A) extends Masked[A]
+  def redacted[A](value: A): Data[A] =
+    Data(value, isRedacted = true)
 
-  def mask[A](value: A): Masked[A] =
-    Mask(value)
-
-  def ignore[A](value: A): Masked[A] =
-    Ignore(value)
-
-  def traverse[A, B, M[X] <: TraversableOnce[X]](in: M[A])(f: A => Masked[B])(
-    implicit cbf: CanBuildFrom[M[A], B, M[B]]
-  ): Masked[M[B]] =
-    in.foldLeft(Masked.ignore(cbf(in)))((acc, x) => acc.map2(f(x))(_ += _)).map(_.result())
+  def traverse[A, B](seq: Seq[A])(f: A => Data[B]): Data[Seq[B]] =
+    seq.foldLeft(Data.pure(Seq.empty[B]))((acc, x) => acc.map2(f(x))(_ :+ _))
 }
