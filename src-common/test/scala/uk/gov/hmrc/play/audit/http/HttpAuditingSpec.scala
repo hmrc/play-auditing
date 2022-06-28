@@ -17,7 +17,6 @@
 package uk.gov.hmrc.play.audit.http
 
 import java.time.Instant
-
 import org.mockito.captor.ArgCaptor
 import org.scalatest.matchers.should.Matchers
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
@@ -29,7 +28,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
-import uk.gov.hmrc.play.audit.model.MergedDataEvent
+import uk.gov.hmrc.play.audit.model.{MergedDataEvent, RedactionLog}
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.http.hooks.{Body, HookData, RequestData, ResponseData}
@@ -344,7 +343,7 @@ class HttpAuditingSpec
       )
       dataEvent.response.generatedAt shouldBe responseDateTime
 
-      dataEvent.redaction.containsRedactions shouldBe false
+      dataEvent.redactionLog shouldBe RedactionLog.Empty
     }
 
     "mask passwords in an OutboundCall using form values" in {
@@ -375,8 +374,7 @@ class HttpAuditingSpec
       dataEvent.request.detail(RequestBody) shouldBe requestBody.toString.replace("List(hide-me)", "########")
       dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replace("hide-me", "########")
 
-      val redactedFields = dataEvent.redaction.redactionLog.flatMap(_.redactedFields)
-      redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
+      dataEvent.redactionLog.redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
     }
 
     "mask passwords in an OutboundCall using json" in {
@@ -404,8 +402,7 @@ class HttpAuditingSpec
       Json.parse(dataEvent.request.detail(RequestBody)) shouldBe Json.parse(requestBody.replace("hide-me", "########"))
       Json.parse(dataEvent.response.detail(ResponseMessage)) shouldBe Json.parse(responseBody.replace("hide-me", "########"))
 
-      val redactedFields = dataEvent.redaction.redactionLog.flatMap(_.redactedFields)
-      redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
+      dataEvent.redactionLog.redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
     }
 
     "mask passwords in an OutboundCall using xml" in {
@@ -440,8 +437,7 @@ class HttpAuditingSpec
       dataEvent.request.detail(RequestBody)      shouldBe requestBody.replace("hide-me", "########")
       dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replace("hide-me", "########")
 
-      val redactedFields = dataEvent.redaction.redactionLog.flatMap(_.redactedFields)
-      redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
+      dataEvent.redactionLog.redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
     }
 
     "handle an invalid xml request and response body" in {

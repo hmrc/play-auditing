@@ -21,7 +21,7 @@ import play.api.libs.json.{JsString, Json}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.audit.BuildInfo
-import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent, Redaction, RedactionLog, TruncationLog}
+import uk.gov.hmrc.play.audit.model.{DataCall, DataEvent, ExtendedDataEvent, MergedDataEvent, RedactionLog, TruncationLog}
 
 class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
 
@@ -30,11 +30,10 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
       testDataEvent(
         truncationLog = None,
         expectedTruncationJson = "",
-        redaction = Redaction.empty,
+        redactionLog = RedactionLog.Empty,
         expectedRedactionJson = s"""
           "redaction": {
-            "containsRedactions": false,
-            "redactionLog"      : []
+            "containsRedactions": false
           }"""
       )
     }
@@ -55,11 +54,11 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
               "version"        : "${BuildInfo.version}"
             }]
           }""",
-        redaction =
-          Redaction(List(RedactionLog(
+        redactionLog =
+          RedactionLog.Entry(
             redactedFields = List("request.detail.requestBody"),
             timestamp      = Instant.parse("2007-12-03T10:16:31.124Z")
-          ))),
+          ),
         expectedRedactionJson = s"""
           "redaction": {
             "containsRedactions": true,
@@ -75,7 +74,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     def testDataEvent(
       truncationLog: Option[TruncationLog],
       expectedTruncationJson: String,
-      redaction: Redaction,
+      redactionLog: RedactionLog,
       expectedRedactionJson: String
     ) =
       AuditSerialiser.serialise(DataEvent(
@@ -86,7 +85,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         detail        = Map("detailkey" -> "detailval"),
         generatedAt   = Instant.parse("2007-12-03T10:15:30.000Z"),
         truncationLog = truncationLog,
-        redaction     = redaction
+        redactionLog  = redactionLog
       )) shouldBe Json.parse(s"""{
         "auditSource" : "myapp",
         "auditType"   : "RequestReceived",
@@ -104,11 +103,10 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
       testExtendedDataEvent(
         truncationLog = None,
         expectedTruncationJson = "",
-        redaction = Redaction.empty,
+        redactionLog = RedactionLog.Empty,
         expectedRedactionJson = s"""
           "redaction": {
-            "containsRedactions": false,
-            "redactionLog"      : []
+            "containsRedactions": false
           }"""
       )
     }
@@ -129,11 +127,11 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
               "version"        : "${BuildInfo.version}"
             }]
           }""",
-        redaction =
-          Redaction(List(RedactionLog(
+        redactionLog =
+          RedactionLog.Entry(
             redactedFields = List("request.detail.requestBody"),
             timestamp      = Instant.parse("2007-12-03T10:16:31.124Z")
-          ))),
+          ),
         expectedRedactionJson = s"""
           "redaction": {
             "containsRedactions": true,
@@ -150,7 +148,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     def testExtendedDataEvent(
       truncationLog: Option[TruncationLog],
       expectedTruncationJson: String,
-      redaction: Redaction,
+      redactionLog: RedactionLog,
       expectedRedactionJson: String
     ) =
       AuditSerialiser.serialise(ExtendedDataEvent(
@@ -161,7 +159,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
         detail        = JsString("detail"),
         generatedAt   = Instant.parse("2007-12-03T10:15:30.000Z"),
         truncationLog = truncationLog,
-        redaction     = redaction
+        redactionLog  = redactionLog
       )) shouldBe Json.parse(s"""{
         "auditSource" : "myapp",
         "auditType"   : "RequestReceived",
@@ -179,11 +177,10 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
       testMergedDataEvent(
         truncationLog = None,
         expectedTruncationJson = "",
-        redaction = Redaction.empty,
+        redactionLog = RedactionLog.Empty,
         expectedRedactionJson = s"""
           "redaction": {
-            "containsRedactions": false,
-            "redactionLog"      : []
+            "containsRedactions": false
           }"""
       )
     }
@@ -204,11 +201,11 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
               "version"        : "${BuildInfo.version}"
             }]
           }""",
-        redaction =
-          Redaction(List(RedactionLog(
+        redactionLog =
+          RedactionLog.Entry(
             redactedFields = List("request.detail.requestBody"),
             timestamp      = Instant.parse("2007-12-03T10:16:31.124Z")
-          ))),
+          ),
         expectedRedactionJson = s"""
           "redaction": {
             "containsRedactions": true,
@@ -225,7 +222,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     def testMergedDataEvent(
       truncationLog: Option[TruncationLog],
       expectedTruncationJson: String,
-      redaction: Redaction,
+      redactionLog: RedactionLog,
       expectedRedactionJson: String
     ) =
       AuditSerialiser.serialise(MergedDataEvent(
@@ -243,7 +240,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
                           generatedAt = Instant.parse("2007-12-03T10:16:31.123Z")
                         ),
         truncationLog = truncationLog,
-        redaction     = redaction
+        redactionLog  = redactionLog
       )) shouldBe Json.parse(s"""{
         "auditSource" : "myapp",
         "auditType"   : "RequestReceived",

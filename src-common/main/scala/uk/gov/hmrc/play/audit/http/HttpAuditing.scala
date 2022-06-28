@@ -26,7 +26,7 @@ import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, Redaction, RedactionLog, TruncationLog}
+import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, RedactionLog, TruncationLog}
 import uk.gov.hmrc.http.hooks.{Body, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
@@ -132,7 +132,7 @@ trait HttpAuditing {
                         generatedAt = now()
                       ),
       truncationLog = Some(TruncationLog(truncatedFields)),
-      redaction     = Redaction(if (redactedFields.nonEmpty) List(RedactionLog(redactedFields)) else List.empty)
+      redactionLog  = RedactionLog.of(redactedFields)
     )
   }
 

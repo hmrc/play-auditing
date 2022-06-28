@@ -20,6 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsObject, JsValue, Json, Writes, __}
 import uk.gov.hmrc.audit.BuildInfo
 import uk.gov.hmrc.play.audit.model._
+
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
@@ -48,21 +49,21 @@ class AuditSerialiser extends AuditSerialiserLike {
           )
       }
 
-  private implicit val redactionLogWriter: Writes[RedactionLog] =
-    ( (__ \ "redactedFields").write[List[String]]
-    ~ (__ \ "timestamp"   ).write[Instant]
-    )(unlift(RedactionLog.unapply))
-      .transform { (js: JsObject) =>
-        js ++ Json.obj(
-          "code"      -> "play-auditing",
-          "version"   -> BuildInfo.version
-        )
-      }
-
-  private implicit val redactionWriter: Writes[Redaction] =
-    ( (__ \ "containsRedactions").write[Boolean]
-    ~ (__ \ "redactionLog"      ).write[List[RedactionLog]]
-    )(r => (r.containsRedactions, r.redactionLog))
+  private implicit val redactionLogWriter: Writes[RedactionLog] = {
+    Writes[RedactionLog] {
+      case RedactionLog.Empty =>
+        Json.obj("containsRedactions" -> false)
+      case RedactionLog.Entry(redactedFields, timestamp) =>
+        Json.obj(
+          "containsRedactions" -> true,
+          "redactionLog" -> Json.arr(Json.obj(
+            "redactedFields" -> redactedFields,
+            "timestamp" -> timestamp,
+            "code" -> "play-auditing",
+            "version" -> BuildInfo.version))
+      )
+    }
+  }
 
   private implicit val dataEventWriter: Writes[DataEvent] =
     ( (__ \ "auditSource"                                  ).write[String]
@@ -73,7 +74,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "generatedAt"                                  ).write[Instant]
     ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
                                                             .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
-    ~ (__ \ "dataPipeline" \ "redaction"                   ).write[Redaction]
+    ~ (__ \ "dataPipeline" \ "redaction"                   ).write[RedactionLog]
     )(unlift(DataEvent.unapply))
 
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] =
@@ -85,7 +86,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "generatedAt"                                  ).write[Instant]
     ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
                                                             .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
-    ~ (__ \ "dataPipeline" \ "redaction"                   ).write[Redaction]
+    ~ (__ \ "dataPipeline" \ "redaction"                   ).write[RedactionLog]
     )(unlift(ExtendedDataEvent.unapply))
 
   private implicit val dataCallWriter: Writes[DataCall] =
@@ -102,7 +103,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "response"                                     ).write[DataCall]
     ~ (__ \ "dataPipeline" \ "truncation" \ "truncationLog").writeNullable[List[TruncationLog]]
                                                             .contramap[Option[TruncationLog]](_.filterNot(_.truncatedFields.isEmpty).map(List(_)))
-    ~ (__ \ "dataPipeline" \ "redaction"                   ).write[Redaction]
+    ~ (__ \ "dataPipeline" \ "redaction"                   ).write[RedactionLog]
     )(unlift(MergedDataEvent.unapply))
 
 

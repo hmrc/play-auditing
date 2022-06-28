@@ -29,7 +29,7 @@ case class DataEvent(
   detail       : Map[String, String]   = Map.empty,
   generatedAt  : Instant               = Instant.now(),
   truncationLog: Option[TruncationLog] = None,
-  redaction    : Redaction             = Redaction.empty
+  redactionLog : RedactionLog          = RedactionLog.Empty
 )
 
 case class ExtendedDataEvent(
@@ -40,7 +40,7 @@ case class ExtendedDataEvent(
   detail       : JsValue               = JsString(""),
   generatedAt  : Instant               = Instant.now(),
   truncationLog: Option[TruncationLog] = None,
-  redaction    : Redaction             = Redaction.empty
+  redactionLog : RedactionLog          = RedactionLog.Empty
 )
 
 case class DataCall(
@@ -56,7 +56,7 @@ case class MergedDataEvent(
   request      : DataCall,
   response     : DataCall,
   truncationLog: Option[TruncationLog] = None,
-  redaction    : Redaction             = Redaction.empty
+  redactionLog : RedactionLog          = RedactionLog.Empty
 )
 
 case class TruncationLog(
@@ -64,19 +64,21 @@ case class TruncationLog(
 	timestamp      : Instant             = Instant.now()
 )
 
-case class Redaction(redactionLog: List[RedactionLog]) {
-
-  lazy val containsRedactions: Boolean =
-    redactionLog.nonEmpty
+sealed trait RedactionLog {
+  def redactedFields: List[String]
 }
 
-object Redaction {
+object RedactionLog {
 
-  val empty: Redaction =
-    Redaction(List.empty)
+  final case object Empty extends RedactionLog {
+    val redactedFields: List[String] = List.empty
+  }
+
+  final case class Entry(redactedFields: List[String], timestamp: Instant = Instant.now()) extends RedactionLog
+
+  def of(redactedFields: List[String]): RedactionLog =
+    if (redactedFields.nonEmpty)
+      RedactionLog.Entry(redactedFields)
+    else
+      RedactionLog.Empty
 }
-
-case class RedactionLog(
-  redactedFields: List[String],
-  timestamp     : Instant = Instant.now()
-)
