@@ -27,7 +27,7 @@ import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, RedactionLog, TruncationLog}
-import uk.gov.hmrc.http.hooks.{Body, HookData, HttpHook, RequestData, ResponseData}
+import uk.gov.hmrc.http.hooks.{Data, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
 import scala.collection.immutable.SortedMap
@@ -91,28 +91,30 @@ trait HttpAuditing {
     response           : Either[String, ResponseData]
   )(implicit hc: HeaderCarrier) = {
     import AuditExtensions._
-    val isRequestTruncated =
-      request.body.exists(_.isTruncated)
-    val (responseDetailsData, isResponseTruncated) =
+    val requestDetailsData =
+      requestDetails(request)
+
+    val responseDetailsData =
       response match {
-        case Left(errorMessage) => (Data.pure(Map(EventKeys.FailedRequestMessage -> errorMessage)), false)
-        case Right(response)    => (maskString(extractFromBody(response.body)).map { maskedResponseMessage =>
-                                     Map(
-                                       EventKeys.StatusCode      -> response.status.toString,
-                                       EventKeys.ResponseMessage -> maskedResponseMessage
-                                     ) },
-                                     response.body.isTruncated
-                                   )
+        case Left(errorMessage) =>
+          Data.pure(Map(EventKeys.FailedRequestMessage -> errorMessage))
+        case Right(response) =>
+          for {
+            responseBody <- response.body
+            maskedResponseBody <- maskString(responseBody)
+          } yield
+            Map(
+              EventKeys.StatusCode      -> response.status.toString,
+              EventKeys.ResponseMessage -> maskedResponseBody
+            )
       }
 
     val truncatedFields =
-      (if (isRequestTruncated) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
-        (if (isResponseTruncated) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
+      (if (requestDetailsData.isTruncated) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
+        (if (responseDetailsData.isTruncated) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
     if (truncatedFields.nonEmpty)
       logger.info(s"Outbound ${request.verb} ${request.url} - the following fields were truncated for auditing: ${truncatedFields.mkString(", ")}")
 
-    val requestDetailsData =
-      requestDetails(request)
 
     val redactedFields =
       (if (requestDetailsData.isRedacted) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
@@ -146,7 +148,7 @@ trait HttpAuditing {
   private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Data[Map[String, String]] = {
     val maskedRequestBody =
       httpRequest.body.fold(Data.pure(Map.empty[String, String]))(b =>
-        extractFromBody(b.map(maskRequestBody)).map(mrb => Map(EventKeys.RequestBody -> mrb))
+        b.flatMap(maskRequestBody).map(mrb => Map(EventKeys.RequestBody -> mrb))
       )
 
     maskedRequestBody.map { mrb =>
@@ -254,48 +256,13 @@ trait HttpAuditing {
     verb       : String,
     url        : String,
     headers    : Seq[(String, String)],
-    body       : Option[Body[HookData]],
+    body       : Option[Data[HookData]],
     generatedAt: Instant
   )
-
-  private def extractFromBody[A](body: Body[A]): A =
-    body match {
-      case Body.Complete (b) => b
-      case Body.Truncated(b) => b
-    }
 }
 
 // Used by bootstrap-play
 object HeaderFieldsExtractor {
   def optionalAuditFieldsSeq(headers: Map[String, Seq[String]]): Map[String, String] =
     headers.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _.mkString(",")).toMap
-}
-
-final case class Data[+A](value: A, isRedacted: Boolean) {
-
-  def map[B](f: A => B): Data[B] =
-    flatMap(a => Data.pure(f(a)))
-
-  def map2[B, C](data: Data[B])(f: (A, B) => C): Data[C] =
-    flatMap(a => data.map(b => f(a, b)))
-
-  def flatMap[B](f: A => Data[B]): Data[B] = {
-    val dataB = f(value)
-    Data(
-      value      = dataB.value,
-      isRedacted = isRedacted || dataB.isRedacted
-    )
-  }
-}
-
-object Data {
-
-  def pure[A](value: A): Data[A] =
-    Data(value, isRedacted = false)
-
-  def redacted[A](value: A): Data[A] =
-    Data(value, isRedacted = true)
-
-  def traverse[A, B](seq: Seq[A])(f: A => Data[B]): Data[Seq[B]] =
-    seq.foldLeft(Data.pure(Seq.empty[B]))((acc, x) => acc.map2(f(x))(_ :+ _))
 }
