@@ -28,7 +28,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
   "AuditSerialiser" should {
     "serialise DataEvent" in {
       testDataEvent(
-        truncationLog = None,
+        truncationLog = TruncationLog.Empty,
         expectedTruncationJson = "",
         redactionLog = RedactionLog.Empty,
         expectedRedactionJson = s"""
@@ -41,10 +41,10 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     "serialise DataEvent with truncationLog & redactions" in {
       testDataEvent(
         truncationLog =
-          Some(TruncationLog(
+          TruncationLog.Entry(
             truncatedFields = List("request.detail.requestdetailkey"),
             timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
-          )),
+          ),
         expectedTruncationJson = s""",
           "truncation": {
             "truncationLog": [{
@@ -72,7 +72,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
       )
     }
     def testDataEvent(
-      truncationLog: Option[TruncationLog],
+      truncationLog: TruncationLog,
       expectedTruncationJson: String,
       redactionLog: RedactionLog,
       expectedRedactionJson: String
@@ -101,7 +101,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
 
     "serialise ExtendedDataEvent" in {
       testExtendedDataEvent(
-        truncationLog = None,
+        truncationLog = TruncationLog.Empty,
         expectedTruncationJson = "",
         redactionLog = RedactionLog.Empty,
         expectedRedactionJson = s"""
@@ -114,10 +114,10 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     "serialise ExtendedDataEvent with truncationLog & redactions" in {
       testExtendedDataEvent(
         truncationLog =
-          Some(TruncationLog(
+          TruncationLog.Entry(
             truncatedFields = List("request.detail.requestdetailkey"),
             timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
-          )),
+          ),
         expectedTruncationJson = s""",
           "truncation": {
             "truncationLog": [{
@@ -146,7 +146,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     }
 
     def testExtendedDataEvent(
-      truncationLog: Option[TruncationLog],
+      truncationLog: TruncationLog,
       expectedTruncationJson: String,
       redactionLog: RedactionLog,
       expectedRedactionJson: String
@@ -175,7 +175,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
 
     "serialise MergedDataEvent" in {
       testMergedDataEvent(
-        truncationLog = None,
+        truncationLog = TruncationLog.Empty,
         expectedTruncationJson = "",
         redactionLog = RedactionLog.Empty,
         expectedRedactionJson = s"""
@@ -188,10 +188,10 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     "serialise MergedDataEvent with truncationLog" in {
       testMergedDataEvent(
         truncationLog =
-          Some(TruncationLog(
+          TruncationLog.Entry(
             truncatedFields = List("request.detail.requestdetailkey"),
             timestamp       = Instant.parse("2007-12-03T10:16:31.124Z")
-          )),
+          ),
         expectedTruncationJson = s""",
           "truncation": {
             "truncationLog": [{
@@ -220,7 +220,7 @@ class AuditSerialiserSpec extends AnyWordSpecLike with Matchers {
     }
 
     def testMergedDataEvent(
-      truncationLog: Option[TruncationLog],
+      truncationLog: TruncationLog,
       expectedTruncationJson: String,
       redactionLog: RedactionLog,
       expectedRedactionJson: String

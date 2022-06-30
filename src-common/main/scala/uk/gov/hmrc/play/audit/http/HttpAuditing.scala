@@ -131,7 +131,7 @@ trait HttpAuditing {
                         detail      = responseDetailsData.value,
                         generatedAt = now()
                       ),
-      truncationLog = Some(TruncationLog(truncatedFields)),
+      truncationLog = TruncationLog.of(truncatedFields),
       redactionLog  = RedactionLog.of(redactedFields)
     )
   }

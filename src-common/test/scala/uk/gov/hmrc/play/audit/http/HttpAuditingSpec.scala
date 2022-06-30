@@ -511,9 +511,9 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody)        shouldBe requestBody
-      dataEvent.truncationLog.get.truncatedFields  shouldBe List("request.detail.requestBody")
-      dataEvent.response.detail(ResponseMessage)   shouldBe responseBody
+      dataEvent.request.detail(RequestBody)      shouldBe requestBody
+      dataEvent.truncationLog.truncatedFields    shouldBe List("request.detail.requestBody")
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody
     }
 
     "indicate if the response body was truncated" in {
@@ -537,9 +537,9 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody)          shouldBe requestBody
-      dataEvent.response.detail(ResponseMessage)     shouldBe responseBody
-      dataEvent.truncationLog.get.truncatedFields    shouldBe List("response.detail.responseMessage")
+      dataEvent.request.detail(RequestBody)      shouldBe requestBody
+      dataEvent.response.detail(ResponseMessage) shouldBe responseBody
+      dataEvent.truncationLog.truncatedFields    shouldBe List("response.detail.responseMessage")
     }
   }
 

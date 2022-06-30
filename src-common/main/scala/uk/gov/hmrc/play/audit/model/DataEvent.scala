@@ -24,23 +24,23 @@ import play.api.libs.json._
 case class DataEvent(
   auditSource  : String,
   auditType    : String,
-  eventId      : String                = UUID.randomUUID().toString,
-  tags         : Map[String, String]   = Map.empty,
-  detail       : Map[String, String]   = Map.empty,
-  generatedAt  : Instant               = Instant.now(),
-  truncationLog: Option[TruncationLog] = None,
-  redactionLog : RedactionLog          = RedactionLog.Empty
+  eventId      : String              = UUID.randomUUID().toString,
+  tags         : Map[String, String] = Map.empty,
+  detail       : Map[String, String] = Map.empty,
+  generatedAt  : Instant             = Instant.now(),
+  truncationLog: TruncationLog       = TruncationLog.Empty,
+  redactionLog : RedactionLog        = RedactionLog.Empty
 )
 
 case class ExtendedDataEvent(
   auditSource  : String,
   auditType    : String,
-  eventId      : String                = UUID.randomUUID().toString,
-  tags         : Map[String, String]   = Map.empty,
-  detail       : JsValue               = JsString(""),
-  generatedAt  : Instant               = Instant.now(),
-  truncationLog: Option[TruncationLog] = None,
-  redactionLog : RedactionLog          = RedactionLog.Empty
+  eventId      : String              = UUID.randomUUID().toString,
+  tags         : Map[String, String] = Map.empty,
+  detail       : JsValue             = JsString(""),
+  generatedAt  : Instant             = Instant.now(),
+  truncationLog: TruncationLog       = TruncationLog.Empty,
+  redactionLog : RedactionLog        = RedactionLog.Empty
 )
 
 case class DataCall(
@@ -52,17 +52,41 @@ case class DataCall(
 case class MergedDataEvent(
   auditSource  : String,
   auditType    : String,
-  eventId      : String                = UUID.randomUUID().toString,
+  eventId      : String        = UUID.randomUUID().toString,
   request      : DataCall,
   response     : DataCall,
-  truncationLog: Option[TruncationLog] = None,
-  redactionLog : RedactionLog          = RedactionLog.Empty
+  truncationLog: TruncationLog = TruncationLog.Empty,
+  redactionLog : RedactionLog  = RedactionLog.Empty
 )
 
-case class TruncationLog(
-  truncatedFields: List[String],
-	timestamp      : Instant             = Instant.now()
-)
+sealed trait TruncationLog {
+  def truncatedFields: List[String]
+
+  final def asEntry: Option[TruncationLog.Entry] =
+    this match {
+      case TruncationLog.Empty => None
+      case entry @ TruncationLog.Entry(truncatedFields, _) =>
+        if (truncatedFields.nonEmpty)
+          Some(entry)
+        else
+          None
+    }
+}
+
+object TruncationLog {
+
+  final case object Empty extends TruncationLog {
+    override val truncatedFields: List[String] = List.empty
+  }
+
+  final case class Entry(truncatedFields: List[String], timestamp: Instant = Instant.now()) extends TruncationLog
+
+  def of(truncatedFields: List[String]): TruncationLog =
+    if (truncatedFields.nonEmpty)
+      TruncationLog.Entry(truncatedFields)
+    else
+      TruncationLog.Empty
+}
 
 sealed trait RedactionLog {
   def redactedFields: List[String]
@@ -71,7 +95,7 @@ sealed trait RedactionLog {
 object RedactionLog {
 
   final case object Empty extends RedactionLog {
-    val redactedFields: List[String] = List.empty
+    override val redactedFields: List[String] = List.empty
   }
 
   final case class Entry(redactedFields: List[String], timestamp: Instant = Instant.now()) extends RedactionLog
