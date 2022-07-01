@@ -18,16 +18,16 @@ package uk.gov.hmrc.play.audit.http
 
 import java.net.URL
 import java.time.Instant
-
 import com.fasterxml.jackson.core.JsonParseException
+
 import javax.xml.parsers.SAXParserFactory
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, TruncationLog}
-import uk.gov.hmrc.http.hooks.{Body, HookData, HttpHook, RequestData, ResponseData}
+import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, RedactionLog, TruncationLog}
+import uk.gov.hmrc.http.hooks.{Data, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 
 import scala.collection.immutable.SortedMap
@@ -91,39 +91,50 @@ trait HttpAuditing {
     response           : Either[String, ResponseData]
   )(implicit hc: HeaderCarrier) = {
     import AuditExtensions._
-    val isRequestTruncated =
-      request.body.exists(_.isTruncated)
-    val (responseDetails, isResponseTruncated) =
+    val requestDetailsData =
+      requestDetails(request)
+
+    val responseDetailsData =
       response match {
-        case Left(errorMessage) => (Map(EventKeys.FailedRequestMessage -> errorMessage), false)
-        case Right(response)    => (Map(
-                                      EventKeys.StatusCode      -> response.status.toString,
-                                      EventKeys.ResponseMessage -> maskString(extractFromBody(response.body))
-                                    ),
-                                    response.body.isTruncated
-                                   )
+        case Left(errorMessage) =>
+          Data.pure(Map(EventKeys.FailedRequestMessage -> errorMessage))
+        case Right(response) =>
+          for {
+            responseBody <- response.body
+            maskedResponseBody <- maskString(responseBody)
+          } yield
+            Map(
+              EventKeys.StatusCode      -> response.status.toString,
+              EventKeys.ResponseMessage -> maskedResponseBody
+            )
       }
 
     val truncatedFields =
-      (if (isRequestTruncated) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
-      (if (isResponseTruncated) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
+      (if (requestDetailsData.isTruncated) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
+        (if (responseDetailsData.isTruncated) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
     if (truncatedFields.nonEmpty)
       logger.info(s"Outbound ${request.verb} ${request.url} - the following fields were truncated for auditing: ${truncatedFields.mkString(", ")}")
+
+
+    val redactedFields =
+      (if (requestDetailsData.isRedacted) List(s"request.detail.${EventKeys.RequestBody}") else List.empty) ++
+        (if (responseDetailsData.isRedacted) List(s"response.detail.${EventKeys.ResponseMessage}") else List.empty)
 
     MergedDataEvent(
       auditSource   = appName,
       auditType     = outboundCallAuditType,
       request       = DataCall(
                         tags        = hc.toAuditTags(request.url),
-                        detail      = requestDetails(request),
+                        detail      = requestDetailsData.value,
                         generatedAt = request.generatedAt
                       ),
       response      = DataCall(
                         tags        = Map.empty,
-                        detail      = responseDetails,
+                        detail      = responseDetailsData.value,
                         generatedAt = now()
                       ),
-      truncationLog = Some(TruncationLog(truncatedFields))
+      truncationLog = TruncationLog.of(truncatedFields),
+      redactionLog  = RedactionLog.of(redactedFields)
     )
   }
 
@@ -134,81 +145,97 @@ trait HttpAuditing {
     SortedMap()(Ordering.comparatorToOrdering(String.CASE_INSENSITIVE_ORDER)) ++
       headers.groupBy(_._1.toLowerCase).map{ case (_, hdrs) => hdrs.head._1 -> hdrs.map(_._2).mkString(",")}
 
-  private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Map[String, String] = {
-    val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
-    Map(
-      "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
-      HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
-      EventKeys.Path            -> httpRequest.url,
-      EventKeys.Method          -> httpRequest.verb
-    ) ++
-      caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++
-      httpRequest.body.fold(Map.empty[String, String])(b =>
-         Map(EventKeys.RequestBody -> extractFromBody(b.map(maskRequestBody)))
-      ) ++
-      when(auditConnector.auditSentHeaders)(
-        caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation
+  private def requestDetails(httpRequest: HttpRequest)(implicit hc: HeaderCarrier): Data[Map[String, String]] = {
+    val maskedRequestBody =
+      httpRequest.body.fold(Data.pure(Map.empty[String, String]))(b =>
+        b.flatMap(maskRequestBody).map(mrb => Map(EventKeys.RequestBody -> mrb))
       )
+
+    maskedRequestBody.map { mrb =>
+      val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
+      Map(
+        "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
+        HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
+        EventKeys.Path            -> httpRequest.url,
+        EventKeys.Method          -> httpRequest.verb
+      ) ++
+        caseInsensitiveHeaders.get(HeaderNames.surrogate).map(HeaderNames.surrogate.toLowerCase -> _).toMap ++ mrb ++
+        when(auditConnector.auditSentHeaders)(
+          caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation
+        )
+
+    }
+
   }
 
-  private def maskRequestBody(body: HookData): String =
+  private def maskRequestBody(body: HookData): Data[String] =
     body match {
-      case HookData.FromMap(m)    => m.map {
-                                       case (key: String, _) if shouldMaskField(key) => (key, MaskValue)
-                                       case other                                    => other
-                                     }.toString
-      case HookData.FromString(s) => maskString(s)
+      case HookData.FromMap(m) =>
+        Data.traverse(m.toSeq) {
+          case (key, _) if shouldMaskField(key) => Data.redacted(key -> MaskValue)
+          case other                            => Data.pure(other)
+        }.map(_.toMap.toString())
+      case HookData.FromString(s) =>
+        maskString(s)
     }
 
   // a String could either be Json or XML
-  private def maskString(text: String) =
+  private def maskString(text: String): Data[String] =
     if (text.startsWith("{"))
       try {
-        Json.stringify(maskJsonFields(Json.parse(text)))
+        maskJsonFields(Json.parse(text)).map(Json.stringify)
       } catch {
-        case _: JsonParseException => text
+        case _: JsonParseException => Data.pure(text)
       }
     else if (text.startsWith("<"))
       try {
-        val builder = new StringBuilder
-        PrettyPrinter.format(maskXMLFields(xxeResistantParser.loadString(text)), builder)
-        builder.toString()
+        maskXMLFields(xxeResistantParser.loadString(text))
+          .map { node =>
+            val builder = new StringBuilder
+            PrettyPrinter.format(node, builder)
+            builder.toString()
+          }
       } catch {
-        case _: SAXParseException => text
+        case _: SAXParseException => Data.pure(text)
       }
     else
-      text
+      Data.pure(text)
 
-  private def maskJsonFields(json: JsValue): JsValue =
+  private def maskJsonFields(json: JsValue): Data[JsValue] =
     json match {
-      case JsObject(fields) => JsObject(
-                                 fields.map { case (key, value) =>
-                                   (key,
-                                    if (shouldMaskField(key)) JsString(MaskValue)
-                                    else maskJsonFields(value)
-                                   )
-                                 }
-                               )
-      case JsArray(values)  => JsArray(values.map(maskJsonFields))
-      case other            => other
+      case JsObject(fields) =>
+          Data.traverse(fields.toSeq) { case (key, value) =>
+            if (shouldMaskField(key))
+              Data.redacted(key -> JsString(MaskValue))
+            else
+              maskJsonFields(value).map(key -> _)
+          }.map(JsObject(_))
+      case JsArray(values)   =>
+        Data.traverse(values.toSeq)(maskJsonFields).map(JsArray(_))
+      case other =>
+        Data.pure(other)
     }
 
-  private def maskXMLFields(node: Node): Node =
+  private def maskXMLFields(node: Node): Data[Node] =
     node match {
-      case e: Elem   => e.copy(
-                          child      = if (shouldMaskField(e.label)) Seq(Text(MaskValue))
-                                       else e.child.map(maskXMLFields),
-                          attributes = maskXMLAttributes(e.attributes)
-                        )
-      case other     => other
+      case e: Elem =>
+        for {
+          child      <- if (shouldMaskField(e.label))
+                          Data.redacted(Seq(Text(MaskValue)))
+                        else
+                          Data.traverse(e.child.toSeq)(maskXMLFields)
+          attributes <- maskXMLAttributes(e.attributes)
+        } yield e.copy(child = child, attributes = attributes)
+      case other =>
+        Data.pure(other)
     }
 
-  private def maskXMLAttributes(attributes: MetaData): MetaData =
-    attributes.foldLeft(Null: scala.xml.MetaData) { (previous, attr) =>
+  private def maskXMLAttributes(attributes: MetaData): Data[MetaData] =
+    attributes.foldLeft(Data.pure(Null: scala.xml.MetaData)) { (previous, attr) =>
       attr match {
-        case a: PrefixedAttribute   if shouldMaskField(a.key) => new PrefixedAttribute(a.pre, a.key, MaskValue, previous)
-        case a: UnprefixedAttribute if shouldMaskField(a.key) => new UnprefixedAttribute(a.key, MaskValue, previous)
-        case other                                            => other
+        case a: PrefixedAttribute   if shouldMaskField(a.key) => Data.redacted(new PrefixedAttribute(a.pre, a.key, MaskValue, previous.value))
+        case a: UnprefixedAttribute if shouldMaskField(a.key) => Data.redacted(new UnprefixedAttribute(a.key, MaskValue, previous.value))
+        case other                                            => previous.flatMap(_ => Data.pure(other))
       }
     }
 
@@ -229,15 +256,9 @@ trait HttpAuditing {
     verb       : String,
     url        : String,
     headers    : Seq[(String, String)],
-    body       : Option[Body[HookData]],
+    body       : Option[Data[HookData]],
     generatedAt: Instant
   )
-
-  private def extractFromBody(body: Body[String]): String =
-    body match {
-      case Body.Complete (b) => b
-      case Body.Truncated(b) => b
-    }
 }
 
 // Used by bootstrap-play
