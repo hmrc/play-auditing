@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.audit.handler
 
-import java.net.URL
-
-import uk.gov.hmrc.audit.WSClient
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.JsValue
+import uk.gov.hmrc.audit.WSClient
+import uk.gov.hmrc.play.http.logging.Mdc
 
+import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -43,9 +43,10 @@ class HttpHandler(
   def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
     try {
       logger.debug(s"Sending audit request to URL ${endpointUrl.toString}")
-
-      wsClient.url(endpointUrl.toString)
-        .post(event)
+      Mdc.preservingMdc(
+        wsClient.url(endpointUrl.toString)
+          .post(event)
+      )
         .map { response =>
           val httpStatusCode = response.status
           logger.debug(s"Got status code : $httpStatusCode")
