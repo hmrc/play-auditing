@@ -9,14 +9,13 @@ object LibDependencies {
 
   // we depend on http-verbs just to integrate via the AuditHooks
   // http calls are made with the underlying play-ws
-  val httpVerbsVersion = "14.3.0"
+  val httpVerbsVersion = "14.6.0"
 
   val compilePlay28 = Seq(
-      "uk.gov.hmrc" %% "http-verbs-play-28" % httpVerbsVersion
-    )
+    "uk.gov.hmrc" %% "http-verbs-play-28" % httpVerbsVersion
+  )
 
   val test = Seq(
-    "commons-codec"          %  "commons-codec"           % "1.14"    % Test,
     "org.scalatest"          %% "scalatest"               % "3.2.3"   % Test,
     "com.vladsch.flexmark"   %  "flexmark-all"            % "0.35.10" % Test,
     "org.scalacheck"         %% "scalacheck"              % "1.15.2"  % Test,
