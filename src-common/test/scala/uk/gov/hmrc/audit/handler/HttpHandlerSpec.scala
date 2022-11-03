@@ -19,7 +19,6 @@ package uk.gov.hmrc.audit.handler
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.JsString
