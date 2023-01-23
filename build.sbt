@@ -1,8 +1,8 @@
 import sbt.Keys._
 import sbt._
 
-val scala2_12 = "2.12.15"
-val scala2_13 = "2.13.8"
+val scala2_12 = "2.12.17"
+val scala2_13 = "2.13.10"
 
 lazy val commonSettings = Seq(
   organization := "uk.gov.hmrc",
