@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.play.audit.http
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.time.Instant
+
 import org.mockito.captor.ArgCaptor
 import org.scalatest.matchers.should.Matchers
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
@@ -747,16 +749,16 @@ class HttpAuditingSpec
     )(implicit hc: HeaderCarrier): Unit =
       AuditingHook(verb, url"$url", request, responseF)(hc, global)
 
-    var now_call_count = 0
-    override def now(): Instant = {
-      now_call_count = now_call_count + 1
+   private val returnNowForRequest = new AtomicBoolean(true)
 
-      if (now_call_count == 1) requestDateTime
-      else responseDateTime
-    }
+    override def now(): Instant =
+      if (returnNowForRequest.getAndSet(false))
+        requestDateTime
+      else
+        responseDateTime
 
     def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Option[Data[HookData]]): HttpRequest = {
-      now_call_count = 1
+      returnNowForRequest.set(false)
       HttpRequest(verb, url, headers, body, requestDateTime)
     }
   }
