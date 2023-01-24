@@ -18,14 +18,14 @@ package uk.gov.hmrc.play.audit.http
 
 import java.net.URL
 import java.time.Instant
-import com.fasterxml.jackson.core.JsonParseException
 
+import com.fasterxml.jackson.core.JsonParseException
 import javax.xml.parsers.SAXParserFactory
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json._
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.audit.model.{DataCall, MergedDataEvent, RedactionLog, TruncationLog}
 import uk.gov.hmrc.http.hooks.{Data, HookData, HttpHook, RequestData, ResponseData}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
@@ -33,6 +33,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 import scala.collection.immutable.SortedMap
 import scala.xml._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 import scala.util.matching.Regex
 
 trait HttpAuditing {
@@ -84,7 +85,11 @@ trait HttpAuditing {
           request  = request,
           response = responseToAudit
         )
-      )
+      ).onComplete {
+        case Success(AuditResult.Success | AuditResult.Disabled)  =>
+        case Success(AuditResult.Failure(msg, _))                 => // already logged
+        case Failure(ex)                                          => logger.error(s"Failed to audit http event: ${ex.getMessage}", ex)
+      }
 
   private def buildDataEvent(
     request            : HttpRequest,
@@ -195,6 +200,8 @@ trait HttpAuditing {
           }
       } catch {
         case _: SAXParseException => Data.pure(text)
+        case e: Throwable         => logger.error(s"Unexpected error parsing xml: ${e.getMessage}", e)
+                                     Data.pure(text)
       }
     else
       Data.pure(text)
