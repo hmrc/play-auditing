@@ -54,7 +54,7 @@ class HttpHandler(
           logger.debug("Response processed and closed")
 
           if (httpStatusCode >= HTTP_STATUS_CONTINUE) {
-            logger.info(s"Got status code $httpStatusCode from HTTP server.")
+            logger.debug(s"Got status code $httpStatusCode from HTTP server.")
             HttpResult.Response(httpStatusCode)
           } else {
             logger.warn(s"Malformed response (status $httpStatusCode) returned from server")

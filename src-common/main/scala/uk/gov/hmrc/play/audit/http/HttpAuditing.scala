@@ -163,9 +163,7 @@ trait HttpAuditing {
         when(auditConnector.auditSentHeaders)(
           caseInsensitiveHeaders - HeaderNames.surrogate - HeaderNames.authorisation
         )
-
     }
-
   }
 
   private def maskRequestBody(body: HookData): Data[String] =
