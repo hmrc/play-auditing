@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 import scala.language.implicitConversions
+import scala.concurrent.ExecutionContext
 
 sealed trait AuditAsMagnet[A] {
   import uk.gov.hmrc.play.audit.model.Audit.OutputTransformer
@@ -73,48 +74,62 @@ object EventTypes {
 object Audit {
   import EventTypes._
 
-  type OutputTransformer[A] = (A => TransactionResult)
-  type Body[A] = () => A
-  type AsyncBody[A] = () => Future[A]
+  type OutputTransformer[A]      = A => TransactionResult
+  type Body[A]                   = () => A
+  type AsyncBody[A]              = () => Future[A]
   type EventTypeFlowDescriptions = (String, String)
 
   val defaultEventTypes: EventTypeFlowDescriptions = (Succeeded, Failed)
 
-  def apply(applicationName: String, auditConnector: AuditConnector) = new Audit(applicationName, auditConnector)
+  def apply(applicationName: String, auditConnector: AuditConnector) =
+    new Audit(applicationName, auditConnector)
 }
 
 trait AuditTags {
   val xRequestId = "X-Request-ID"
   val TransactionName = "transactionName"
 }
+
 class Audit(applicationName: String, auditConnector: AuditConnector) extends AuditTags {
-
   import Audit._
-  import scala.concurrent.ExecutionContext.Implicits.global
 
+  def sendDataEvent(de: DataEvent)(implicit ec: ExecutionContext): Unit =
+    auditConnector.sendEvent(de)
 
-  def sendDataEvent: (DataEvent) => Unit = auditConnector.sendEvent(_)
+  def sendMergedDataEvent(de: MergedDataEvent)(implicit ec: ExecutionContext): Unit =
+    auditConnector.sendMergedEvent(de)
 
-  def sendMergedDataEvent: (MergedDataEvent) => Unit = auditConnector.sendMergedEvent(_)
-
-  private def sendEvent[A](auditMagnet: AuditAsMagnet[A], eventType: String, outputs: Map[String, String])(implicit hc: HeaderCarrier): Unit = {
+  private def sendEvent[A](
+    auditMagnet: AuditAsMagnet[A],
+    eventType  : String,
+    outputs    : Map[String, String]
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Unit = {
     val requestId = hc.requestId.map(_.value).getOrElse("")
     sendDataEvent(DataEvent(
       auditSource = applicationName,
-      auditType = eventType,
-      tags = Map(xRequestId -> requestId, TransactionName -> auditMagnet.txName),
-      detail = auditMagnet.inputs.map(inputKeys) ++ outputs))
+      auditType   = eventType,
+      tags        = Map(
+                      xRequestId -> requestId,
+                      TransactionName -> auditMagnet.txName
+                    ),
+      detail      = auditMagnet.inputs.map(inputKeys) ++ outputs
+    ))
   }
 
-  private def givenResultSendAuditEvent[A](auditMagnet: AuditAsMagnet[A])(implicit hc: HeaderCarrier): PartialFunction[TransactionResult, Unit] = {
-    case TransactionSuccess(m) => sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
+  private def givenResultSendAuditEvent[A](
+    auditMagnet: AuditAsMagnet[A]
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): PartialFunction[TransactionResult, Unit] = {
+    case TransactionSuccess(m)    => sendEvent(auditMagnet, auditMagnet.eventTypes._1, m.map(outputKeys))
     case TransactionFailure(r, m) => sendEvent(auditMagnet, auditMagnet.eventTypes._2, r.map(reason => Map("transactionFailureReason" -> reason)).getOrElse(Map.empty) ++ m.map(outputKeys))
   }
 
-  def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier): Future[A] = {
-
-//    import MdcLoggingExecutionContext._
-
+  def asyncAs[A](auditMagnet: AuditAsMagnet[A])(body: AsyncBody[A])(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[A] = {
     val invokedBody: Future[A] =
       try { body() }
       catch { case e: Exception => Future.failed[A](e) }
@@ -127,13 +142,13 @@ class Audit(applicationName: String, auditConnector: AuditConnector) extends Aud
     invokedBody
   }
 
-  def as[A](auditMagnet: AuditAsMagnet[A])(body: Body[A])(implicit hc: HeaderCarrier): A = {
+  def as[A](auditMagnet: AuditAsMagnet[A])(body: Body[A])(implicit hc: HeaderCarrier, ec: ExecutionContext): A = {
     val result: Try[A] = Try(body())
 
     result
-      .map ( auditMagnet.outputTransformer )
+      .map(auditMagnet.outputTransformer)
       .recover { case e: Exception => TransactionFailure(s"Exception Generated: ${ e.getMessage }") }
-      .map ( givenResultSendAuditEvent(auditMagnet) )
+      .map(givenResultSendAuditEvent(auditMagnet))
 
     result.get
   }
@@ -151,18 +166,27 @@ sealed trait TransactionResult {
   def outputs: Map[String, String]
 }
 
-case class TransactionFailure(reason: Option[String] = None, outputs: Map[String, String] = Map()) extends TransactionResult
+case class TransactionFailure(
+  reason : Option[String] = None,
+  outputs: Map[String, String] = Map()
+) extends TransactionResult
 
 object TransactionFailure {
-  def apply(reason: String, outputs: (String, String)*): TransactionFailure = TransactionFailure(Some(reason), Map(outputs: _*))
+  def apply(reason: String, outputs: (String, String)*): TransactionFailure =
+    TransactionFailure(Some(reason), Map(outputs: _*))
 
-  def apply(outputs: (String, String)*): TransactionFailure = TransactionFailure(outputs = Map(outputs: _*))
+  def apply(outputs: (String, String)*): TransactionFailure =
+    TransactionFailure(outputs = Map(outputs: _*))
 }
 
-case class TransactionSuccess(outputs: Map[String, String] = Map()) extends TransactionResult
+case class TransactionSuccess(
+  outputs: Map[String, String] = Map()
+) extends TransactionResult
 
 object TransactionSuccess {
-  def apply(output: String): TransactionSuccess = TransactionSuccess(Map("" -> output))
+  def apply(output: String): TransactionSuccess =
+    TransactionSuccess(Map("" -> output))
 
-  def apply(outputs: (String, String)*): TransactionSuccess = TransactionSuccess(Map(outputs: _*))
+  def apply(outputs: (String, String)*): TransactionSuccess =
+    TransactionSuccess(Map(outputs: _*))
 }

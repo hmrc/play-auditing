@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class HttpHandler(
           logger.debug("Response processed and closed")
 
           if (httpStatusCode >= HTTP_STATUS_CONTINUE) {
-            logger.info(s"Got status code $httpStatusCode from HTTP server.")
+            logger.debug(s"Got status code $httpStatusCode from HTTP server.")
             HttpResult.Response(httpStatusCode)
           } else {
             logger.warn(s"Malformed response (status $httpStatusCode) returned from server")

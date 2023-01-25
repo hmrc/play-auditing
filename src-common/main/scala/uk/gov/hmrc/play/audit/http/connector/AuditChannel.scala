@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,20 +28,22 @@ import scala.concurrent.duration.{Duration,DurationInt}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait AuditChannel {
-  def auditingConfig: AuditingConfig
-  def materializer  : Materializer
-  def lifecycle     : ApplicationLifecycle
+  def auditingConfig   : AuditingConfig
+  def materializer     : Materializer
+  def lifecycle        : ApplicationLifecycle
   def datastreamMetrics: DatastreamMetrics
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   val defaultConnectionTimeout: Duration = 5000.millis
-  val defaultRequestTimeout: Duration = 5000.millis
+  val defaultRequestTimeout   : Duration = 5000.millis
+
   val defaultBaseUri = BaseUri("datastream.protected.mdtp", 90, "http")
 
   lazy val consumer: Consumer = auditingConfig.consumer.getOrElse(Consumer(defaultBaseUri))
 
   lazy val baseUri: BaseUri = consumer.baseUri
+
   private lazy val wsClient: WSClient = {
     implicit val m = materializer
     val wsClient = WSClient(
@@ -52,12 +54,12 @@ trait AuditChannel {
     lifecycle.addStopHook { () =>
       logger.info("Closing play-auditing http connections...")
       wsClient.close()
-      Future.successful(())
+      Future.unit
     }
     wsClient
   }
 
-  def datastreamHandler(path: String):AuditHandler =
+  def datastreamHandler(path: String): AuditHandler =
     new DatastreamHandler(
       baseUri.protocol,
       baseUri.host,
@@ -80,5 +82,4 @@ trait AuditChannel {
           logger.error("Error in handler code", e)
           HandlerResult.Failure
       }
-
 }

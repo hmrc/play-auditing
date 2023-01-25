@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.play.audit.http
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.time.Instant
+
 import org.mockito.captor.ArgCaptor
 import org.scalatest.matchers.should.Matchers
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
@@ -27,7 +29,7 @@ import org.scalatest.Inspectors
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.http.connector.AuditResult.Success
+import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.audit.model.{MergedDataEvent, RedactionLog}
 import uk.gov.hmrc.http.HeaderNames._
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
@@ -51,7 +53,7 @@ class HttpAuditingSpec
   private val postVerb                      = "POST"
   private val getVerb                       = "GET"
 
-  "When asked to auditRequestWithResponseF the code" should {
+  "HttpAuditing.auditRequestWithResponseF" should {
     val deviceID = "A_DEVICE_ID"
     val serviceUri = "https://www.google.co.uk"
 
@@ -153,7 +155,7 @@ class HttpAuditingSpec
        }
     }
 
-    "handle the case of an exception being raised inside the future and still send an audit message" in {
+    "still send an audit message if the future fails when evaluating the response" in {
       val hc            = HeaderCarrier(deviceID = Some(deviceID))
       val connector     = mock[AuditConnector]
       when(connector.isEnabled).thenReturn(true)
@@ -202,6 +204,39 @@ class HttpAuditingSpec
       }
     }
 
+    "not do anything if AuditResult is Failure as in this specific case datastream is logging the event" in {
+      val hc            = HeaderCarrier()
+      val connector     = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      val requestBody  = "the infamous request body"
+      val errorMessage = "FOO bar"
+      val responseF    = Future.failed(new Exception(errorMessage))
+
+      val request = RequestData(
+        headers = Seq.empty,
+        body    = Some(Data.pure(HookData.FromString(requestBody)))
+      )
+
+      when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
+        .thenReturn(Future.successful(AuditResult.Failure("any failure")))
+
+      when(connector.isEnabled)
+        .thenReturn(true)
+
+      when(connector.auditSentHeaders)
+        .thenReturn(false)
+
+      httpWithAudit.auditRequestWithResponseF(postVerb, serviceUri, request, responseF)(hc)
+
+      eventually(timeout(Span(1, Seconds))) {
+        verify(connector, times(1)).sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext])
+        verify(connector).isEnabled
+        verify(connector).auditSentHeaders
+        verifyNoMoreInteractions(connector)
+      }
+    }
+
     "not do anything if the datastream service is throwing an error as in this specific case datastream is logging the event" in {
       val hc            = HeaderCarrier()
       val connector     = mock[AuditConnector]
@@ -217,7 +252,7 @@ class HttpAuditingSpec
       )
 
       when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
-        .thenThrow(new IllegalArgumentException("any exception"))
+        .thenReturn(Future.failed(new IllegalArgumentException("any exception")))
 
       when(connector.isEnabled)
         .thenReturn(true)
@@ -747,23 +782,23 @@ class HttpAuditingSpec
     )(implicit hc: HeaderCarrier): Unit =
       AuditingHook(verb, url"$url", request, responseF)(hc, global)
 
-    var now_call_count = 0
-    override def now(): Instant = {
-      now_call_count = now_call_count + 1
+   private val returnNowForRequest = new AtomicBoolean(true)
 
-      if (now_call_count == 1) requestDateTime
-      else responseDateTime
-    }
+    override def now(): Instant =
+      if (returnNowForRequest.getAndSet(false))
+        requestDateTime
+      else
+        responseDateTime
 
     def buildRequest(verb: String, url: String, headers: Seq[(String, String)], body: Option[Data[HookData]]): HttpRequest = {
-      now_call_count = 1
+      returnNowForRequest.set(false)
       HttpRequest(verb, url, headers, body, requestDateTime)
     }
   }
 
   def whenAuditSuccess(connector: AuditConnector): Unit =
     when(connector.sendMergedEvent(any[MergedDataEvent])(any[HeaderCarrier], any[ExecutionContext]))
-      .thenReturn(Future.successful(Success))
+      .thenReturn(Future.successful(AuditResult.Success))
 
   def verifyAndRetrieveEvent(connector: AuditConnector): MergedDataEvent = {
     val captor = ArgCaptor[MergedDataEvent]
