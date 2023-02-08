@@ -183,7 +183,7 @@ trait HttpAuditing {
     }
 
   // a String could either be Json or XML
-  private def maskString(text: String): Data[String] =
+  private[http] def maskString(text: String): Data[String] =
     if (text.startsWith("{"))
       try {
         maskJsonFields(Json.parse(text)).map(Json.stringify)
@@ -192,10 +192,10 @@ trait HttpAuditing {
       }
     else if (text.startsWith("<"))
       try {
-        maskXMLFields(xxeResistantParser.loadString(text))
+        maskXMLFields(xxeResistantParser().loadString(text))
           .map { node =>
             val builder = new StringBuilder
-            PrettyPrinter.format(node, builder)
+            prettyPrinter().format(node, builder)
             builder.toString()
           }
       } catch {
@@ -244,9 +244,10 @@ trait HttpAuditing {
       }
     }
 
-  private val PrettyPrinter = new PrettyPrinter(80, 4)
+  private def prettyPrinter() = // not val since is not thread-safe
+    new PrettyPrinter(80, 4)
 
-  private val xxeResistantParser = {
+  private def xxeResistantParser() = {  // not val since is not thread-safe
     val saxParserFactory = SAXParserFactory.newInstance()
     saxParserFactory.setFeature("http://xml.org/sax/features/external-general-entities", false)
     saxParserFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
