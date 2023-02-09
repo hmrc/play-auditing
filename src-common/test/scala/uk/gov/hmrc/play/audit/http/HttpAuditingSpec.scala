@@ -22,10 +22,10 @@ import java.time.Instant
 import org.mockito.captor.ArgCaptor
 import org.scalatest.matchers.should.Matchers
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
-import org.scalatest.concurrent.Eventually
+import org.scalatest.Inspectors
+import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.Inspectors
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -45,7 +45,9 @@ class HttpAuditingSpec
      with Inspectors
      with Eventually
      with MockitoSugar
-     with ArgumentMatchersSugar {
+     with ArgumentMatchersSugar
+     with ScalaFutures
+     with IntegrationPatience {
 
   private val outboundCallAuditType: String = "OutboundCall"
   private val requestDateTime: Instant      = Instant.now
@@ -766,6 +768,15 @@ class HttpAuditingSpec
       val result = httpWithAudit.caseInsensitiveMap(headers)
 
       result shouldBe Map("X-forwarded-for" -> "a,b,c,d", "b" -> "d")
+    }
+
+    "handle multiple calls to maskString in parallel" in {
+      val connector     = mock[AuditConnector]
+      val httpWithAudit = new HttpWithAuditing(connector)
+
+      Future.traverse((0 to 1000))(_ => Future { httpWithAudit.maskString("<xml>a</xml>") }).futureValue shouldBe {
+        (0 to 1000).map(_ => Data.pure("<xml>a</xml>"))
+      }
     }
   }
 
