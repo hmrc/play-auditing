@@ -471,8 +471,8 @@ class HttpAuditingSpec
 
       val dataEvent = verifyAndRetrieveEvent(connector)
 
-      dataEvent.request.detail(RequestBody)      shouldBe requestBody.replace("hide-me", "########")
-      dataEvent.response.detail(ResponseMessage) shouldBe responseBody.replace("hide-me", "########")
+      scala.xml.XML.loadString(dataEvent.request.detail(RequestBody))      shouldBe scala.xml.XML.loadString(requestBody.replace("hide-me", "########"))
+      scala.xml.XML.loadString(dataEvent.response.detail(ResponseMessage)) shouldBe scala.xml.XML.loadString(responseBody.replace("hide-me", "########"))
 
       dataEvent.redactionLog.redactedFields shouldBe List("request.detail.requestBody", "response.detail.responseMessage")
     }

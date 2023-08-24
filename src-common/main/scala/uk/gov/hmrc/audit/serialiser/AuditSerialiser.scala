@@ -33,7 +33,7 @@ trait AuditSerialiserLike {
 
 class AuditSerialiser extends AuditSerialiserLike {
   // Datastream requires the .000 ms
-  private implicit def instantWrites =
+  private implicit def instantWrites: Writes[Instant] =
     Writes.temporalWrites[Instant, DateTimeFormatter](
       new DateTimeFormatterBuilder().appendInstant(3).toFormatter
     )
