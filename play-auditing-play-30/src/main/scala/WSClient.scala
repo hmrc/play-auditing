@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import _root_.play.api.libs.ws.ahc.{StandaloneAhcWSClient, AhcWSClientConfigFactory}
 import _root_.play.api.libs.ws.{StandaloneWSClient, WSClientConfig}
 
@@ -28,12 +28,12 @@ package object audit {
   // these are for internal use only, but can't be package private since clients are in uk.gov.hmrc.audit and uk.gov.hmrc.play.audit...
   object WSClient {
     def apply(
-               connectTimeout: Duration,
-               requestTimeout: Duration,
-               userAgent     : String
-             )(implicit
-               materializer: Materializer
-             ): WSClient =
+      connectTimeout: Duration,
+      requestTimeout: Duration,
+      userAgent     : String
+    )(implicit
+      materializer: Materializer
+    ): WSClient =
       StandaloneAhcWSClient(
         config = AhcWSClientConfigFactory.forConfig()
           .copy(

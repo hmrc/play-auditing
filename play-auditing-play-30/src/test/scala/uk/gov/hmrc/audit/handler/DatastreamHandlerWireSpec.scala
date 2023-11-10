@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.audit.handler
 
-import akka.actor.ActorSystem
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, equalTo, post, postRequestedFor, urlPathEqualTo}
 import com.github.tomakehurst.wiremock.http.Fault
+import org.apache.pekko.actor.ActorSystem
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers

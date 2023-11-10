@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.play.audit
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import play.api.{Configuration, Environment}
 import play.api.inject.{ApplicationLifecycle, Binding, Module}
 import _root_.uk.gov.hmrc.play.audit.http.config.AuditingConfig
