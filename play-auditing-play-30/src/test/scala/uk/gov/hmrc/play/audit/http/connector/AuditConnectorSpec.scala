@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import java.time.Instant
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.mockito.captor.ArgCaptor
 import org.scalatest._

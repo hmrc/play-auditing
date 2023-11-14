@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.play.audit.http.connector
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.JsValue
