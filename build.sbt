@@ -13,21 +13,22 @@ lazy val library = (project in file("."))
   .settings(publish / skip := true)
   .aggregate(
     playAuditingPlay28,
-    playAuditingPlay29
+    playAuditingPlay29,
+    playAuditingPlay30
   )
 
-val sharedSources = Seq(
-  Compile / unmanagedSourceDirectories   += baseDirectory.value / s"../src-common/main/scala",
-  Compile / unmanagedResourceDirectories += baseDirectory.value / s"../src-common/main/resources",
-  Test    / unmanagedSourceDirectories   += baseDirectory.value / s"../src-common/test/scala",
-  Test    / unmanagedResourceDirectories += baseDirectory.value / s"../src-common/test/resources"
-)
+def copyPlay30Sources(module: Project) =
+  CopySources.copySources(
+    module,
+    transformSource   = _.replace("org.apache.pekko", "akka"),
+    transformResource = _.replace("pekko", "akka")
+  )
 
 lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditing-play-28"))
   .enablePlugins(BuildInfoPlugin)
   .settings(
     crossScalaVersions := Seq(scala2_12, scala2_13),
-    sharedSources,
+    copyPlay30Sources(playAuditingPlay30),
     libraryDependencies ++= LibDependencies.common ++ LibDependencies.play28
   )
   .settings( // https://github.com/sbt/sbt-buildinfo
@@ -39,8 +40,19 @@ lazy val playAuditingPlay29 = Project("play-auditing-play-29", file("play-auditi
   .enablePlugins(BuildInfoPlugin)
   .settings(
     crossScalaVersions := Seq(scala2_13),
-    sharedSources,
+    copyPlay30Sources(playAuditingPlay30),
     libraryDependencies ++= LibDependencies.common ++ LibDependencies.play29
+  )
+  .settings( // https://github.com/sbt/sbt-buildinfo
+    buildInfoKeys    := Seq[BuildInfoKey](version),
+    buildInfoPackage := "uk.gov.hmrc.audit"
+   )
+
+lazy val playAuditingPlay30 = Project("play-auditing-play-30", file("play-auditing-play-30"))
+  .enablePlugins(BuildInfoPlugin)
+  .settings(
+    crossScalaVersions := Seq(scala2_13),
+    libraryDependencies ++= LibDependencies.common ++ LibDependencies.play30
   )
   .settings( // https://github.com/sbt/sbt-buildinfo
     buildInfoKeys    := Seq[BuildInfoKey](version),
