@@ -17,7 +17,7 @@
 package uk.gov.hmrc.audit.handler
 
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsObject, JsValue}
 import uk.gov.hmrc.audit.HandlerResult
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,6 +28,21 @@ class LoggingHandler(logger: Logger) extends AuditHandler {
 
   def makeFailureMessage(event: JsValue): String =
     s"$ErrorKey : audit item : ${event.toString}"
+
+  private val fieldsToRemove = Seq("authorization")
+  private[handler] def removeSensitiveData(event: JsValue): JsValue =
+    event.asOpt[JsObject].fold(event)(e => JsObject(removeSensitiveData(e)))
+
+  private def removeSensitiveData(jsObject: JsObject): Seq[(String, JsValue)] =
+    jsObject.fields.foldLeft(Seq[(String, JsValue)]()){ case (acc, (name, value)) =>
+       if (fieldsToRemove.contains(name.toLowerCase))
+          acc
+        else
+          value match {
+            case o:JsObject => removeSensitiveData(o)
+            case _          => acc :+ (name, value)
+          }
+      }
 
   override def sendEvent(event: JsValue)(implicit ec: ExecutionContext): Future[HandlerResult] = {
     val message = makeFailureMessage(event)
