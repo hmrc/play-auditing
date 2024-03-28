@@ -38,7 +38,7 @@ class AuditSerialiser extends AuditSerialiserLike {
       new DateTimeFormatterBuilder().appendInstant(3).toFormatter
     )
 
-  private implicit val truncationLogWriterEntry: Writes[TruncationLog.Entry] = {
+  private implicit val truncationLogWriterEntry: Writes[TruncationLog.Entry] =
     Writes[TruncationLog.Entry] {
       case TruncationLog.Entry(truncatedFields, timestamp) =>
         Json.obj(
@@ -50,23 +50,22 @@ class AuditSerialiser extends AuditSerialiserLike {
             ))
         )
     }
-  }
 
-  private implicit val redactionLogWriter: Writes[RedactionLog] = {
+  private implicit val redactionLogWriter: Writes[RedactionLog] =
     Writes[RedactionLog] {
       case RedactionLog.Empty =>
         Json.obj("containsRedactions" -> false)
       case RedactionLog.Entry(redactedFields, timestamp) =>
         Json.obj(
           "containsRedactions" -> true,
-          "redactionLog" -> Json.arr(Json.obj(
+          "redactionLog"       -> Json.arr(Json.obj(
             "redactedFields" -> redactedFields,
-            "timestamp" -> timestamp,
-            "code" -> "play-auditing",
-            "version" -> BuildInfo.version))
+            "timestamp"      -> timestamp,
+            "code"           -> "play-auditing",
+            "version"        -> BuildInfo.version
+          ))
       )
     }
-  }
 
   private implicit val dataEventWriter: Writes[DataEvent] =
     ( (__ \ "auditSource"                ).write[String]

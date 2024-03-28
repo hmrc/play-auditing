@@ -18,31 +18,6 @@ libraryDependencies += "uk.gov.hmrc" %% "play-auditing-play-x" % "x.x.x"
 
 Where play-xx is your version of Play (e.g. play-28).
 
-## Changes
-
-### Version 8.0.0
-
-Bumps `http-verbs`, which indicates whether payloads provided for auditing have been truncated or omitted.
-This should not affect most clients, as long as a compatible library versions are used. It is generally expected that clients only depend on `bootstrap-play` which will transitively provide compatible versions.
-
-
-### Version 7.11.0
-
-- Drops support for Play 2.6 and 2.7. Only Play 2.8 is supported.
-- Cross compiles for 2.12 and 2.13
-
-### Version 5.0.0
-
-- play-auditing is no longer build with the `sbt-play-cross-compilation` plugin (where the version of play was embedded in the version of the library). Instead, multiple modules are produced for different versions of play:
-
-| Version | Play Version | Scala Version |
-|---------|--------------|---------------|
-| play-auditing-play-27  | Play 2.7.x | 2.12
-| play-auditing-play-26  | Play 2.6.x | 2.11, 2.12
-| play-auditing-play-25  | Play 2.5.x | 2.11
-
-- joda time has been replaced with java time internally.
-
 ## Usage
 
 #### Implicit auditing of outgoing HTTP calls in conjunction with http-verbs and Play
@@ -67,19 +42,21 @@ protected object WSHttp extends WSGet with WSPut with WSPost with WSDelete with 
 [For more information on http-verbs, please see the docs here](http://github.com/hmrc/http-verbs)
 
 #### Explicit auditing
-If you are using bootstrap-play-25 you should be able to inject AuditConnector.
-If you have an older project there should be an existing scala object which extends AuditConnector.
+You should be able to inject AuditConnector.
+
 AuditConnector has 3 methods for explicit audits. Use whichever you prefer.
+
  ```scala
  auditConnector.sendExplicitAudit("theAuditType", ExampleAuditData("123"))
  auditConnector.sendExplicitAudit("theAuditType", Json.obj("vrn" -> "123", "some" -> Json.obj("nested" -> "value")))
  auditConnector.sendExplicitAudit("theAuditType", Map("vrn" -> "123"))
 ```
-The sendExplicitAudit methods need the implicit parameter HeaderCarrier. You should be able to get this by extending BaseController.
+
+The `sendExplicitAudit` methods need the implicit parameter `HeaderCarrier`.
 
 ## Configuration
 
-You'll also need to supply an [auditing configuration](#configuration).
+You'll also need to supply an auditing configuration.
 
 Request auditing is provided for all HTTP requests that are made using http-core that use the AuditingHook. Each request/response pair results in an audit message being created and sent to an external auditing service for processing.  To use this service, your configuration needs to include:
 
@@ -95,11 +72,35 @@ auditing {
 }
 ```
 
-_NOTE:_ The ```traceRequests``` property is not used, so can be removed. The configuration remains backwards compatible, so will not fail if present.
+`HttpAuditing` provides `def auditDisabledForPattern: Regex` which client applications may chose to override when mixing in `HttpAuditing`.
 
-```HttpAuditing``` provides ```def auditDisabledForPattern: Regex``` which client applications may chose to override when mixing in ```HttpAuditing```.
+## Changes
 
-_NOTE:_ This configuration used to be provided by reading Play configuration property ```<env>.http-client.audit.disabled-for``` which is now obsolete.
+### Version 8.8.0
+
+Builds for Play 3.0, 2.9 and 2.8
+
+### Version 8.0.0
+
+Bumps `http-verbs`, which indicates whether payloads provided for auditing have been truncated or omitted.
+This should not affect most clients, as long as a compatible library versions are used. It is generally expected that clients only depend on `bootstrap-play` which will transitively provide compatible versions.
+
+### Version 7.11.0
+
+- Drops support for Play 2.6 and 2.7. Only Play 2.8 is supported.
+- Cross compiles for 2.12 and 2.13
+
+### Version 5.0.0
+
+- play-auditing is no longer build with the `sbt-play-cross-compilation` plugin (where the version of play was embedded in the version of the library). Instead, multiple modules are produced for different versions of play:
+
+| Version | Play Version | Scala Version |
+|---------|--------------|---------------|
+| play-auditing-play-27  | Play 2.7.x | 2.12
+| play-auditing-play-26  | Play 2.6.x | 2.11, 2.12
+| play-auditing-play-25  | Play 2.5.x | 2.11
+
+- joda time has been replaced with java time internally.
 
 ## License ##
 

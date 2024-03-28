@@ -39,11 +39,11 @@ case class Consumer(
   val singleEventUrl     : String = baseUri.addEndpoint(singleEventUri)
   val mergedEventUrl     : String = baseUri.addEndpoint(mergedEventUri)
   val largeMergedEventUrl: String = baseUri.addEndpoint(largeMergedEventUri)
-
 }
 
 object Consumer {
-  implicit def baseUriToConsumer(b: BaseUri): Consumer = Consumer(b)
+  implicit def baseUriToConsumer(b: BaseUri): Consumer =
+    Consumer(b)
 }
 
 case class AuditingConfig(

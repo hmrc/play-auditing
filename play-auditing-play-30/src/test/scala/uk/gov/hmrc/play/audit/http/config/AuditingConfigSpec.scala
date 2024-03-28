@@ -28,7 +28,6 @@ class AuditingConfigSpec extends AnyWordSpec with Matchers with MockitoSugar {
       val config = Configuration(
         "appName"                        -> "app-name",
         "auditing.enabled"               -> "true",
-        "auditing.traceRequests"         -> "true",
         "auditing.consumer.baseUri.host" -> "localhost",
         "auditing.consumer.baseUri.port" -> "8100",
         "auditing.auditSentHeaders"      -> "false"
