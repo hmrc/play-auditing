@@ -24,7 +24,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
 import org.mockito.MockitoSugar
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.must.Matchers
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.Json
@@ -56,9 +56,9 @@ class AuditChannelSpec
       val testPort = WireMockUtils.availablePort
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
       val config = AuditingConfig(
-        consumer = Some(consumer),
-        enabled = true,
-        auditSource = "the-project-name",
+        consumer         = Some(consumer),
+        enabled          = true,
+        auditSource      = "the-project-name",
         auditSentHeaders = false
       )
       val channel = createAuditChannel(config)

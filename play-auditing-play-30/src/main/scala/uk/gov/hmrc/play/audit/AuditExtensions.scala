@@ -26,14 +26,14 @@ object AuditExtensions {
     private lazy val auditTags = Map[String, String](
       carrier.names.xRequestId -> carrier.requestId.map(_.value).getOrElse("-"),
       carrier.names.xSessionId -> carrier.sessionId.map(_.value).getOrElse("-"),
-      "clientIP" -> carrier.trueClientIp.getOrElse("-"),
-      "clientPort" -> carrier.trueClientPort.getOrElse("-"),
-      "Akamai-Reputation" -> carrier.akamaiReputation.getOrElse(AkamaiReputation("-")).value,
-      carrier.names.deviceID -> carrier.deviceID.getOrElse("-"),
+      "clientIP"               -> carrier.trueClientIp.getOrElse("-"),
+      "clientPort"             -> carrier.trueClientPort.getOrElse("-"),
+      "Akamai-Reputation"      -> carrier.akamaiReputation.getOrElse(AkamaiReputation("-")).value,
+      carrier.names.deviceID   -> carrier.deviceID.getOrElse("-"),
       //path is not a header but http-verbs-play-25 puts it in HeaderCarrier.otherHeaders so that play-auditing can
       //get the request path without depending on play and without modifying http-core
       //Modifying http-core is hard right now because it depends on play 2.6
-      "path" -> carrier.otherHeaders.collect { case ("path",value) => value }.headOption.getOrElse("-")
+      "path"                   -> carrier.otherHeaders.collect { case ("path", value) => value }.headOption.getOrElse("-")
     )
 
     def toAuditTags(transactionName: String, path: String): Map[String, String] = {
@@ -43,14 +43,19 @@ object AuditExtensions {
       )
     }
 
-    def toAuditTags(path: String): Map[String, String] = auditTags + (Path -> path)
+    def toAuditTags(path: String): Map[String, String] =
+      auditTags + (Path -> path)
 
-    def toAuditTags(): Map[String, String] = auditTags
+    def toAuditTags(): Map[String, String] =
+      auditTags
 
-    def toAuditDetails(details: (String, String)*): Map[String, String] = details.toMap
+    def toAuditDetails(details: (String, String)*): Map[String, String] =
+      details.toMap
 
-    def appendToDefaultTags(existing: Map[String, String]) = auditTags ++ existing
+    def appendToDefaultTags(existing: Map[String, String]) =
+      auditTags ++ existing
   }
 
-  implicit def auditHeaderCarrier(carrier: HeaderCarrier): AuditHeaderCarrier = new AuditHeaderCarrier(carrier)
+  implicit def auditHeaderCarrier(carrier: HeaderCarrier): AuditHeaderCarrier =
+    new AuditHeaderCarrier(carrier)
 }
