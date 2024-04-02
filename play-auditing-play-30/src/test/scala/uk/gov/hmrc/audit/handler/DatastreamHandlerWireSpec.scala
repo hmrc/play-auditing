@@ -43,7 +43,7 @@ class DatastreamHandlerWireSpec
      with IntegrationPatience
      with DatastreamMetricsMock {
 
-  val datastreamTestPort: Int = WireMockUtils.availablePort
+  val datastreamTestPort: Int = WireMockUtils.availablePort()
   val datastreamPath = "/write/audit"
 
   implicit val system   : ActorSystem          = ActorSystem()
@@ -78,7 +78,7 @@ class DatastreamHandlerWireSpec
   }
 
   "Successful call to Datastream" should {
-    "Return a Success result" in {
+    "return a Success result" in {
       verifySingleCall(JsString("SUCCESS"), 204, HandlerResult.Success)
     }
   }
@@ -93,15 +93,15 @@ class DatastreamHandlerWireSpec
   }
 
   "Failed call to Datastream" should {
-    "Return a Rejected if Datastream rejected the event as malformed" in new Test {
+    "return a Rejected if Datastream rejected the event as malformed" in new Test {
       verifySingleCall(JsString("REJECTED"), 400, HandlerResult.Rejected)
     }
 
-    "Return a Failure if the POST could not be completed" in new Test {
+    "return a Failure if the POST could not be completed" in new Test {
       verifySingleCall(JsString("UNAVAILABLE"), 503, HandlerResult.Failure)
     }
 
-    "Return a transient Failure if the POST timed out waiting for a response" in new Test {
+    "return a transient Failure if the POST timed out waiting for a response" in new Test {
       val event = JsString("TIMEOUT")
       WireMock.stubFor(
         post(urlPathEqualTo(datastreamPath))
@@ -114,60 +114,54 @@ class DatastreamHandlerWireSpec
       }
     }
 
-    "Return a failure if the WSClient is in IllegalStateException: Closed state " in new Test {
+    "return a failure if the WSClient is in IllegalStateException: Closed state " in new Test {
       wsClient.close()
       datastreamHandler.sendEvent(JsString("CLOSED")).futureValue shouldBe HandlerResult.Failure
     }
   }
 
   "Calls to Datastream that return an empty response" should {
-    "Not retry the POST (beyond default lib retries) and return a failure" in {
+    "not retry the POST (beyond default lib retries) and return a failure" in {
       verifyOnlyDefaultLibraryRetries(JsString("EMPTY_RESPONSE"), Fault.EMPTY_RESPONSE)
     }
   }
 
   "Calls to Datastream that return a bad response" should {
-    "Not retry the POST (beyond default lib retries) and return a failure" in {
+    "not retry the POST (beyond default lib retries) and return a failure" in {
       verifyOnlyDefaultLibraryRetries(JsString("RANDOM_DATA_THEN_CLOSE"), Fault.RANDOM_DATA_THEN_CLOSE)
     }
   }
 
-  def stub(event: JsValue, status: Integer): Unit =
+  private def stub(event: JsValue, status: Integer): Unit =
     WireMock.stubFor(
       post(urlPathEqualTo(datastreamPath))
-        .withRequestBody(WireMock.equalTo(event.toString))
-        .willReturn(aResponse().withStatus(status)))
-
-  def stub(event: JsValue, status: Integer, withScenario: String, toScenario: String): Unit =
-    WireMock.stubFor(
-      post(urlPathEqualTo(datastreamPath))
-        .inScenario("Scenario")
-        .whenScenarioStateIs(withScenario)
         .withRequestBody(WireMock.equalTo(event.toString))
         .willReturn(aResponse().withStatus(status))
-        .willSetStateTo(toScenario))
+    )
 
-  def stub(event: JsValue, fault: Fault): Unit =
+  private def stub(event: JsValue, fault: Fault): Unit =
     WireMock.stubFor(
       post(urlPathEqualTo(datastreamPath))
         .withRequestBody(WireMock.equalTo(event.toString))
-        .willReturn(aResponse().withFault(fault)))
+        .willReturn(aResponse().withFault(fault))
+    )
 
-  def verifyOnlyDefaultLibraryRetries(event: JsValue, fault: Fault): Unit = new Test {
+  private def verifyOnlyDefaultLibraryRetries(event: JsValue, fault: Fault): Unit = new Test {
     stub(event, fault)
     val result = datastreamHandler.sendEvent(event).futureValue
 
-    // These 6 attempts represent the default retries coming from the StandaloneAhcWSClient + our original request
-    WireMock.verify(6, postRequestedFor(urlPathEqualTo(datastreamPath)))
     result shouldBe HandlerResult.Failure
+
+    // These 6 attempts represent the default retries coming from the StandaloneAhcWSClient (play.ws.ahc.maxRequestRetry) + our original request
+    WireMock.verify(6, postRequestedFor(urlPathEqualTo(datastreamPath)))
   }
 
-  def verifySingleCall(event: JsValue, responseStatus: Integer, expectedResult: HandlerResult): Unit = new Test {
+  private def verifySingleCall(event: JsValue, responseStatus: Integer, expectedResult: HandlerResult): Unit = new Test {
     stub(event, responseStatus)
 
     val result = datastreamHandler.sendEvent(event).futureValue
+    result shouldBe expectedResult
 
     WireMock.verify(1, postRequestedFor(urlPathEqualTo(datastreamPath)))
-    result shouldBe expectedResult
   }
 }

@@ -53,7 +53,7 @@ class AuditChannelSpec
 
   "AuditConnector" should {
     "post data to datastream" in {
-      val testPort = WireMockUtils.availablePort
+      val testPort = WireMockUtils.availablePort()
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
       val config = AuditingConfig(
         consumer         = Some(consumer),
