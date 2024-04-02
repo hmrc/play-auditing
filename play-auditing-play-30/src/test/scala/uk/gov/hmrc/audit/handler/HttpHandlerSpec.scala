@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.audit.handler
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.when
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.JsString
-import play.api.libs.ws.StandaloneWSRequest
+import play.api.libs.ws.{BodyWritable, StandaloneWSRequest}
 import uk.gov.hmrc.audit.WSClient
 
 import java.io.IOException
@@ -36,8 +38,7 @@ class HttpHandlerSpec
      with Inspectors
      with Matchers
      with ScalaFutures
-     with MockitoSugar
-     with ArgumentMatchersSugar {
+     with MockitoSugar {
 
   trait Test {
     val wsClient = mock[WSClient]
@@ -62,7 +63,7 @@ class HttpHandlerSpec
 
     "return failure whenever WSClient url throws" in new Test {
       val e = new IllegalArgumentException("illegal argument") // only permitted error via checked exception
-      when(wsClient.url(any)).thenThrow(e)
+      when(wsClient.url(any[String])).thenThrow(e)
 
       httpHandler.sendHttpRequest(JsString("any old thing")).futureValue shouldBe HttpResult.Failure("Error opening connection or sending request (sync)", Some(e))
     }
@@ -70,8 +71,8 @@ class HttpHandlerSpec
     "return failure whenever WSClient POST throws" in forAll(checkedPostExceptions) { e =>
       new Test {
         val requestMock = mock[StandaloneWSRequest]
-        when(wsClient.url(any)).thenReturn(requestMock)
-        when(requestMock.post(any)(any)).thenThrow(e)
+        when(wsClient.url(any[String])).thenReturn(requestMock)
+        when(requestMock.post(any)(any[BodyWritable[_]])).thenThrow(e)
 
         httpHandler.sendHttpRequest(JsString("any old thing")).futureValue shouldBe HttpResult.Failure("Error opening connection or sending request (sync)", Some(e))
       }
@@ -80,8 +81,8 @@ class HttpHandlerSpec
     "return failure whenever WSClient POST returns failed future" in forAll(checkedPostExceptions ++ uncheckedPostExceptions) { e =>
       new Test {
         val requestMock = mock[StandaloneWSRequest]
-        when(wsClient.url(any)).thenReturn(requestMock)
-        when(requestMock.post(any)(any)).thenReturn(Future.failed(e))
+        when(wsClient.url(any[String])).thenReturn(requestMock)
+        when(requestMock.post(any)(any[BodyWritable[_]])).thenReturn(Future.failed(e))
 
         httpHandler.sendHttpRequest(JsString("any old thing")).futureValue shouldBe HttpResult.Failure("Error opening connection or sending request (async)", Some(e))
       }

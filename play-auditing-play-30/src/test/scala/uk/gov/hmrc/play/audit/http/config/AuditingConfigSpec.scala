@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.play.audit.http.config
 
-import org.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 
 class AuditingConfigSpec extends AnyWordSpec with Matchers with MockitoSugar {

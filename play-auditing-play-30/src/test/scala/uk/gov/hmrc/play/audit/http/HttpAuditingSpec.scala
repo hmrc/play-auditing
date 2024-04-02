@@ -19,13 +19,15 @@ package uk.gov.hmrc.play.audit.http
 import java.util.concurrent.atomic.AtomicBoolean
 import java.time.Instant
 
-import org.mockito.captor.ArgCaptor
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions, when}
 import org.scalatest.matchers.should.Matchers
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -45,7 +47,6 @@ class HttpAuditingSpec
      with Inspectors
      with Eventually
      with MockitoSugar
-     with ArgumentMatchersSugar
      with ScalaFutures
      with IntegrationPatience {
 
@@ -793,7 +794,7 @@ class HttpAuditingSpec
     )(implicit hc: HeaderCarrier): Unit =
       AuditingHook(verb, url"$url", request, responseF)(hc, global)
 
-   private val returnNowForRequest = new AtomicBoolean(true)
+    private val returnNowForRequest = new AtomicBoolean(true)
 
     override def now(): Instant =
       if (returnNowForRequest.getAndSet(false))
@@ -812,8 +813,8 @@ class HttpAuditingSpec
       .thenReturn(Future.successful(AuditResult.Success))
 
   def verifyAndRetrieveEvent(connector: AuditConnector): MergedDataEvent = {
-    val captor = ArgCaptor[MergedDataEvent]
-    verify(connector).sendMergedEvent(captor)(any[HeaderCarrier], any[ExecutionContext])
-    captor.value
+    val captor = ArgumentCaptor.forClass(classOf[MergedDataEvent])
+    verify(connector).sendMergedEvent(captor.capture())(any[HeaderCarrier], any[ExecutionContext])
+    captor.getValue
   }
 }

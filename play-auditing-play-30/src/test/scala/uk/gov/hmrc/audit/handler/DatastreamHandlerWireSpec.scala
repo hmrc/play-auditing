@@ -25,7 +25,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.inject.DefaultApplicationLifecycle
+import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.{JsString, JsValue}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient, WireMockUtils}
 
@@ -46,8 +46,8 @@ class DatastreamHandlerWireSpec
   val datastreamTestPort: Int = WireMockUtils.availablePort
   val datastreamPath = "/write/audit"
 
-  implicit val system    = ActorSystem()
-  implicit val lifecycle = new DefaultApplicationLifecycle()
+  implicit val system   : ActorSystem          = ActorSystem()
+  implicit val lifecycle: ApplicationLifecycle = new DefaultApplicationLifecycle()
 
   trait Test {
     val wsClient = WSClient(

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.audit
 
-import org.mockito.MockitoSugar.mock
+import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.play.audit.http.connector.{DatastreamMetrics, Counter}
 
 trait DatastreamMetricsMock {

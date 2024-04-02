@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.audit.handler
 
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions}
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import play.api.libs.json.{JsString, JsValue}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient}
@@ -30,64 +31,71 @@ import ExecutionContext.Implicits.global
 
 class DatastreamHandlerUnitSpec
   extends AnyWordSpecLike
-    with Inspectors
-    with Matchers
-    with ScalaFutures
-    with MockitoSugar
-    with ArgumentMatchersSugar
-    with DatastreamMetricsMock {
+     with Inspectors
+     with Matchers
+     with ScalaFutures
+     with MockitoSugar
+     with DatastreamMetricsMock {
 
   trait Test {
     val mockLogger = mock[Logger]
-    val metrics = mockDatastreamMetrics(Some("play.some-application"))
+    val metrics    = mockDatastreamMetrics(Some("play.some-application"))
+
     val httpResult: HttpResult
 
     val datastreamHandler = new DatastreamHandler(
-      scheme = "http",
-      host = "localhost",
-      port = 1234,
-      path = "/some/path",
+      scheme   = "http",
+      host     = "localhost",
+      port     = 1234,
+      path     = "/some/path",
       wsClient = mock[WSClient],
-      metrics = metrics
+      metrics  = metrics
     ) {
-      override val logger = mockLogger
+      override val logger =
+        mockLogger
+
       override def sendHttpRequest(event: JsValue)(implicit ec: ExecutionContext): Future[HttpResult] =
         Future.successful(httpResult)
     }
   }
 
   "Any Datastream response" should {
-    "Return Success for any response code of 2xx + increment counter" in forAll(200 to 299) { code =>
-      new Test {
-        val httpResult = HttpResult.Response(code)
-        val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
+    "Return Success for any response code of 2xx + increment counter" in
+      forEvery((200 to 299).toList) { code =>
+        new Test {
+          override val httpResult = HttpResult.Response(code)
 
-        result shouldBe HandlerResult.Success
-        verify(metrics.successCounter, times(1)).inc()
+          val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
-        verifyNoMoreInteractions(metrics.rejectCounter)
-        verifyNoMoreInteractions(metrics.failureCounter)
+          result shouldBe HandlerResult.Success
+          verify(metrics.successCounter, times(1)).inc()
+
+          verifyNoMoreInteractions(metrics.rejectCounter)
+          verifyNoMoreInteractions(metrics.failureCounter)
+        }
       }
-    }
 
-    "Return Rejected + increment counter for any response code of 400 or 413" in forAll(Seq(400, 413)) { code =>
-      new Test {
-        val httpResult = HttpResult.Response(code)
-        val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
+    "Return Rejected + increment counter for any response code of 400 or 413" in
+      forAll(Seq(400, 413)) { code =>
+        new Test {
+          override val httpResult = HttpResult.Response(code)
 
-        result shouldBe HandlerResult.Rejected
-        verify(mockLogger).warn(s"AUDIT_REJECTED: received response with $code status code")
-        verify(metrics.rejectCounter, times(1)).inc()
+          val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
-        verifyNoMoreInteractions(metrics.successCounter)
-        verifyNoMoreInteractions(metrics.failureCounter)
+          result shouldBe HandlerResult.Rejected
+          verify(mockLogger).warn(s"AUDIT_REJECTED: received response with $code status code")
+          verify(metrics.rejectCounter, times(1)).inc()
+
+          verifyNoMoreInteractions(metrics.successCounter)
+          verifyNoMoreInteractions(metrics.failureCounter)
+        }
       }
-    }
 
     "Return Failure + log error + increment counter for any response code of 3XX or 401-412 or 414-499 or 5XX" in
-      forAll((300 to 399) ++ (401 to 412) ++ (414 to 499) ++ (500 to 599)) { code =>
+      forAll(((300 to 399) ++ (401 to 412) ++ (414 to 499) ++ (500 to 599)).toList) { code =>
         new Test {
-          val httpResult = HttpResult.Response(code)
+          override val httpResult = HttpResult.Response(code)
+
           val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
           result shouldBe HandlerResult.Failure
@@ -100,7 +108,8 @@ class DatastreamHandlerUnitSpec
       }
 
     "Return Failure + log error + increment counter for any malformed response" in new Test {
-      val httpResult = HttpResult.Malformed
+      override val httpResult = HttpResult.Malformed
+
       val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
       result shouldBe HandlerResult.Failure
@@ -113,7 +122,8 @@ class DatastreamHandlerUnitSpec
 
     "Return Failure + log error + increment counter for any failure response (if error is available)" in new Test {
       val error = new Throwable("my error")
-      val httpResult = HttpResult.Failure("my error message", Some(error))
+      override val httpResult = HttpResult.Failure("my error message", Some(error))
+
       val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
       result shouldBe HandlerResult.Failure
@@ -125,7 +135,8 @@ class DatastreamHandlerUnitSpec
     }
 
     "Return Failure + log error + increment counter for any failure response (if error is unavailable)" in new Test {
-      val httpResult = HttpResult.Failure("my error message")
+      override val httpResult = HttpResult.Failure("my error message")
+
       val result = datastreamHandler.sendEvent(JsString("some event")).futureValue
 
       result shouldBe HandlerResult.Failure
