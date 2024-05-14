@@ -76,6 +76,10 @@ auditing {
 
 ## Changes
 
+### Version 9.0.0
+
+Built for Scala 3 and drops Scala 2.12.
+
 ### Version 8.8.0
 
 Builds for Play 3.0, 2.9 and 2.8

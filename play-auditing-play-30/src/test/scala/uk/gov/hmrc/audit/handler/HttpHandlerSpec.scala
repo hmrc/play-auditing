@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.audit.handler
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures

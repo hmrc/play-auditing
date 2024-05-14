@@ -1,18 +1,13 @@
 import sbt.Keys._
 import sbt._
 
-val scala2_12 = "2.12.18"
 val scala2_13 = "2.13.12"
 val scala3    = "3.3.3"
 
-ThisBuild / majorVersion     := 8
+ThisBuild / majorVersion     := 9
 ThisBuild / scalaVersion     := scala2_13
 ThisBuild / isPublicArtefact := true
-ThisBuild / scalacOptions    ++= Seq("-feature") ++
-                                   (CrossVersion.partialVersion(scalaVersion.value) match {
-                                     case Some((3, _ )) => Seq("-explain")
-                                     case _             => Seq.empty
-                                   })
+ThisBuild / scalacOptions    ++= Seq("-feature")
 
 lazy val library = (project in file("."))
   .settings(publish / skip := true)
@@ -32,7 +27,7 @@ def copyPlay30Sources(module: Project) =
 lazy val playAuditingPlay28 = Project("play-auditing-play-28", file("play-auditing-play-28"))
   .enablePlugins(BuildInfoPlugin)
   .settings(
-    crossScalaVersions := Seq(scala2_12, scala2_13),
+    crossScalaVersions := Seq(scala2_13),
     copyPlay30Sources(playAuditingPlay30),
     libraryDependencies ++= LibDependencies.common ++ LibDependencies.play28
   )

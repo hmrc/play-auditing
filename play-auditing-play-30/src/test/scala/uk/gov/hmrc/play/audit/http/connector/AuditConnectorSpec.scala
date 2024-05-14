@@ -20,7 +20,7 @@ import java.time.Instant
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.Mockito.{verify, verifyNoMoreInteractions, when}
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.any
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers

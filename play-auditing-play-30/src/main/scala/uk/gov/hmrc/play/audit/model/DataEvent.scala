@@ -75,11 +75,14 @@ sealed trait TruncationLog {
 
 object TruncationLog {
 
-  final case object Empty extends TruncationLog {
+  case object Empty extends TruncationLog {
     override val truncatedFields: List[String] = List.empty
   }
 
-  final case class Entry(truncatedFields: List[String], timestamp: Instant = Instant.now()) extends TruncationLog
+  case class Entry(
+    truncatedFields: List[String],
+    timestamp      : Instant      = Instant.now()
+  ) extends TruncationLog
 
   def of(truncatedFields: List[String]): TruncationLog =
     if (truncatedFields.nonEmpty)
@@ -94,11 +97,14 @@ sealed trait RedactionLog {
 
 object RedactionLog {
 
-  final case object Empty extends RedactionLog {
+  case object Empty extends RedactionLog {
     override val redactedFields: List[String] = List.empty
   }
 
-  final case class Entry(redactedFields: List[String], timestamp: Instant = Instant.now()) extends RedactionLog
+  case class Entry(
+    redactedFields: List[String],
+    timestamp     : Instant      = Instant.now()
+  ) extends RedactionLog
 
   def of(redactedFields: List[String]): RedactionLog =
     if (redactedFields.nonEmpty)
