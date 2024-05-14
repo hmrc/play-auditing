@@ -20,6 +20,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.audit.WSClient
 import uk.gov.hmrc.play.http.logging.Mdc
+import play.api.libs.ws.writeableOf_JsValue
 
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}

@@ -21,7 +21,7 @@ import java.net.ServerSocket
 
 
 object WireMockUtils {
-  def availablePort: Int = {
+  def availablePort(): Int = {
     var port = 9876
     var socket: ServerSocket = null
 

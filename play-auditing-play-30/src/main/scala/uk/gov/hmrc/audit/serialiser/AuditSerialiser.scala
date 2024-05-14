@@ -76,7 +76,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "generatedAt"                ).write[Instant]
     ~ (__ \ "dataPipeline" \ "truncation").writeNullable[TruncationLog.Entry].contramap[TruncationLog](_.asEntry)
     ~ (__ \ "dataPipeline" \ "redaction" ).write[RedactionLog]
-    )(unlift(DataEvent.unapply))
+    )(de => (de.auditSource, de.auditType, de.eventId, de.tags, de.detail, de.generatedAt, de.truncationLog, de.redactionLog))
 
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] =
     ( (__ \ "auditSource"                ).write[String]
@@ -87,13 +87,13 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "generatedAt"                ).write[Instant]
     ~ (__ \ "dataPipeline" \ "truncation").writeNullable[TruncationLog.Entry].contramap[TruncationLog](_.asEntry)
     ~ (__ \ "dataPipeline" \ "redaction" ).write[RedactionLog]
-    )(unlift(ExtendedDataEvent.unapply))
+    )(de => (de.auditSource, de.auditType, de.eventId, de.tags, de.detail, de.generatedAt, de.truncationLog, de.redactionLog))
 
   private implicit val dataCallWriter: Writes[DataCall] =
     ( (__ \ "tags"       ).write[Map[String, String]]
     ~ (__ \ "detail"     ).write[Map[String, String]]
     ~ (__ \ "generatedAt").write[Instant]
-    )(unlift(DataCall.unapply))
+    )(dc => (dc.tags, dc.detail, dc.generatedAt))
 
   private implicit val mergedDataEventWriter  : Writes[MergedDataEvent]   =
     ( (__ \ "auditSource"                ).write[String]
@@ -103,7 +103,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "response"                   ).write[DataCall]
     ~ (__ \ "dataPipeline" \ "truncation").writeNullable[TruncationLog.Entry].contramap[TruncationLog](_.asEntry)
     ~ (__ \ "dataPipeline" \ "redaction" ).write[RedactionLog]
-    )(unlift(MergedDataEvent.unapply))
+    )(de => (de.auditSource, de.auditType, de.eventId, de.request, de.response, de.truncationLog, de.redactionLog))
 
 
   override def serialise(event: DataEvent): JsObject =

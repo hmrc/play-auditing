@@ -21,7 +21,7 @@ import org.apache.pekko.stream.Materializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.{verify => _, _}
-import org.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -53,7 +53,7 @@ class AuditChannelSpec
 
   "AuditConnector" should {
     "post data to datastream" in {
-      val testPort = WireMockUtils.availablePort
+      val testPort = WireMockUtils.availablePort()
       val consumer = Consumer(BaseUri("localhost", testPort, "http"))
       val config = AuditingConfig(
         consumer         = Some(consumer),
