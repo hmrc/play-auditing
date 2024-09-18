@@ -3,13 +3,13 @@ import sbt._
 object LibDependencies {
   // we depend on http-verbs just to integrate via the AuditHooks
   // http calls are made with the underlying play-ws
-  val httpVerbsVersion = "15.0.0"
+  val httpVerbsVersion = "15.1.0"
 
   val common = Seq(
     "org.scalatest"          %% "scalatest"               % "3.2.17"       % Test,
     "com.vladsch.flexmark"   %  "flexmark-all"            % "0.64.8"       % Test,
     "org.scalatestplus"      %% "scalacheck-1-17"         % "3.2.17.0"     % Test,
-    "org.scalatestplus"      %% "mockito-3-4"             % "3.2.10.0"     % Test
+    "org.scalatestplus"      %% "mockito-4-11"            % "3.2.17.0"     % Test
   )
 
   val play28 = Seq(

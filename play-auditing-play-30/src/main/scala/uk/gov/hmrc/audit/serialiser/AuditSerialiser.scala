@@ -22,8 +22,7 @@ import uk.gov.hmrc.audit.BuildInfo
 import uk.gov.hmrc.play.audit.model._
 
 import java.time.Instant
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeFormatterBuilder
+import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
 
 trait AuditSerialiserLike {
   def serialise(event: DataEvent): JsObject
@@ -44,9 +43,9 @@ class AuditSerialiser extends AuditSerialiserLike {
         Json.obj(
           "truncationLog" -> Json.arr(Json.obj(
               "truncatedFields" -> truncatedFields,
-              "timestamp" -> timestamp,
-              "code" -> "play-auditing",
-              "version" -> BuildInfo.version
+              "timestamp"       -> timestamp,
+              "code"            -> "play-auditing",
+              "version"         -> BuildInfo.version
             ))
         )
     }

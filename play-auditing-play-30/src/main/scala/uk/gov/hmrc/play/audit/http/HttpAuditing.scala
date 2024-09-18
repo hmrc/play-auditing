@@ -53,10 +53,12 @@ trait HttpAuditing {
   def auditDisabledForPattern: Regex =
     """http(s)?:\/\/.*\.(service|mdtp)($|[:\/])""".r
 
-  def shouldMaskField(field: String): Boolean = {
-    val lower = field.toLowerCase
-    lower.contains("password") || lower.contains("passwd")
-  }
+  /** clients may want to override */
+  def fieldMaskPattern: Regex =
+    "(?i).*(password|passwd).*".r
+
+  def shouldMaskField(field: String): Boolean =
+    fieldMaskPattern.matches(field)
 
   object AuditingHook extends HttpHook {
     override def apply(
