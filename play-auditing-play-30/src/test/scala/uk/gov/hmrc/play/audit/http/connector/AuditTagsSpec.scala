@@ -42,12 +42,13 @@ class AuditTagsSpec extends AnyWordSpecLike with Matchers {
         sessionId        = Some(sessionId),
         requestId        = Some(requestId),
         deviceID         = Some(deviceId),
-        akamaiReputation = Some(akamaiReputation)
+        akamaiReputation = Some(akamaiReputation),
+        otherHeaders = Seq("X-Forwarded-Server" -> "mdtp-admin-frontend")
       )
 
       val tags = hc.toAuditTags("theTransactionName", "/the/request/path")
 
-      tags.size shouldBe 8
+      tags.size shouldBe 9
 
       tags(xSessionId) shouldBe sessionId.value
       tags(xRequestId) shouldBe requestId.value
@@ -57,6 +58,7 @@ class AuditTagsSpec extends AnyWordSpecLike with Matchers {
       tags("clientPort") shouldBe "-"
       tags("Akamai-Reputation") shouldBe akamaiReputation.value
       tags("deviceID") shouldBe deviceId
+      tags("X-Forwarded-Server") shouldBe "mdtp-admin-frontend"
     }
 
     "be defaulted" in {

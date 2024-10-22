@@ -33,8 +33,8 @@ object AuditExtensions {
       //path is not a header but http-verbs-play-25 puts it in HeaderCarrier.otherHeaders so that play-auditing can
       //get the request path without depending on play and without modifying http-core
       //Modifying http-core is hard right now because it depends on play 2.6
-      "path"                   -> carrier.otherHeaders.collect { case ("path", value) => value }.headOption.getOrElse("-")
-    )
+      "path"                   -> carrier.otherHeaders.collectFirst { case ("path", value) => value }.getOrElse("-")
+    ) ++ carrier.otherHeaders.find { case (header, _) => header == "X-Forwarded-Server" }.toMap
 
     def toAuditTags(transactionName: String, path: String): Map[String, String] = {
       auditTags ++ Map[String, String](
