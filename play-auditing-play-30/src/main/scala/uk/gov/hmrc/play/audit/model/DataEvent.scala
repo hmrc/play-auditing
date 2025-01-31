@@ -29,7 +29,8 @@ case class DataEvent(
   detail       : Map[String, String] = Map.empty,
   generatedAt  : Instant             = Instant.now(),
   truncationLog: TruncationLog       = TruncationLog.Empty,
-  redactionLog : RedactionLog        = RedactionLog.Empty
+  redactionLog : RedactionLog        = RedactionLog.Empty,
+  auditProvider: Option[String]      = None
 )
 
 case class ExtendedDataEvent(
@@ -40,7 +41,8 @@ case class ExtendedDataEvent(
   detail       : JsValue             = JsString(""),
   generatedAt  : Instant             = Instant.now(),
   truncationLog: TruncationLog       = TruncationLog.Empty,
-  redactionLog : RedactionLog        = RedactionLog.Empty
+  redactionLog : RedactionLog        = RedactionLog.Empty,
+  auditProvider: Option[String]      = None
 )
 
 case class DataCall(
@@ -52,11 +54,12 @@ case class DataCall(
 case class MergedDataEvent(
   auditSource  : String,
   auditType    : String,
-  eventId      : String        = UUID.randomUUID().toString,
+  eventId      : String         = UUID.randomUUID().toString,
   request      : DataCall,
   response     : DataCall,
-  truncationLog: TruncationLog = TruncationLog.Empty,
-  redactionLog : RedactionLog  = RedactionLog.Empty
+  truncationLog: TruncationLog  = TruncationLog.Empty,
+  redactionLog : RedactionLog   = RedactionLog.Empty,
+  auditProvider: Option[String] = None
 )
 
 sealed trait TruncationLog {

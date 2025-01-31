@@ -50,7 +50,8 @@ case class AuditingConfig(
   consumer        : Option[Consumer],
   enabled         : Boolean,
   auditSource     : String,
-  auditSentHeaders: Boolean
+  auditSentHeaders: Boolean,
+  auditProvider   : Option[String] = None
 )
 
 object AuditingConfig {
@@ -68,7 +69,8 @@ object AuditingConfig {
                               )
                             ),
         auditSource       = configuration.get[String]("appName"),
-        auditSentHeaders  = configuration.get[Boolean]("auditing.auditSentHeaders")
+        auditSentHeaders  = configuration.get[Boolean]("auditing.auditSentHeaders"),
+        auditProvider     = configuration.getOptional[String]("auditing.auditProvider")
       )
     else
       AuditingConfig(

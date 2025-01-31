@@ -26,7 +26,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.libs.json.{JsNull, JsObject, JsString, JsValue, Json}
+import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
@@ -71,25 +71,69 @@ class AuditConnectorSpec
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
 
-      val mergedEvent = MergedDataEvent("Test", "Test", "TestEventId",
-          DataCall(Map.empty, Map.empty, Instant.now()),
-          DataCall(Map.empty, Map.empty, Instant.now()))
+      val mergedEvent = MergedDataEvent(
+        auditSource = "Test",
+        auditType = "Test",
+        eventId = "TestEventId",
+        request = DataCall(Map.empty, Map.empty, Instant.now()),
+        response = DataCall(Map.empty, Map.empty, Instant.now())
+      )
 
       createConnector(enabledConfig).sendMergedEvent(mergedEvent).futureValue shouldBe Success
 
       verify(mockAuditChannel).send(any[String], any[JsValue])(any[ExecutionContext])
     }
+
+    "add auditProvider if specified" in {
+      when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
+        .thenReturn(Future.successful(HandlerResult.Success))
+
+      val mergedEventWithProvider = MergedDataEvent(
+        auditProvider = Some("provider"),
+        auditSource = "source",
+        auditType = "type",
+        eventId = "TestEventId",
+        request = DataCall(Map.empty, Map.empty, Instant.now()),
+        response = DataCall(Map.empty, Map.empty, Instant.now()))
+
+      createConnector(enabledConfig).sendMergedEvent(mergedEventWithProvider).futureValue shouldBe AuditResult.Success
+
+      val captor = ArgumentCaptor.forClass(classOf[JsValue])
+      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+      (captor.getValue \ "auditProvider").as[String] shouldBe "provider"
+      (captor.getValue \ "auditSource"  ).as[String] shouldBe "source"
+      (captor.getValue \ "auditType"    ).as[String] shouldBe "type"
+    }
   }
 
   "sendEvent" should {
-    val event = DataEvent("source", "type")
+    val event             = DataEvent(auditSource = "source", auditType = "type")
+    val eventWithProvider = DataEvent(auditProvider = Some("provider"), auditSource = "source", auditType = "type")
 
     "call AuditChannel.send with the event converted to json" in {
       when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
         .thenReturn(Future.successful(HandlerResult.Success))
+
       createConnector(enabledConfig).sendEvent(event).futureValue shouldBe AuditResult.Success
 
-      verify(mockAuditChannel).send(any[String], any[JsValue])(any[ExecutionContext])
+      val captor = ArgumentCaptor.forClass(classOf[JsValue])
+      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+      (captor.getValue \ "auditProvider").isDefined  shouldBe false
+      (captor.getValue \ "auditSource"  ).as[String] shouldBe "source"
+      (captor.getValue \ "auditType"    ).as[String] shouldBe "type"
+    }
+
+    "add auditProvider if specified" in {
+      when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
+        .thenReturn(Future.successful(HandlerResult.Success))
+
+      createConnector(enabledConfig).sendEvent(eventWithProvider).futureValue shouldBe AuditResult.Success
+
+      val captor = ArgumentCaptor.forClass(classOf[JsValue])
+      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+      (captor.getValue \ "auditProvider").as[String] shouldBe "provider"
+      (captor.getValue \ "auditSource"  ).as[String] shouldBe "source"
+      (captor.getValue \ "auditType"    ).as[String] shouldBe "type"
     }
 
     "add tags if not specified" in {
@@ -130,7 +174,27 @@ class AuditConnectorSpec
 
       val captor = ArgumentCaptor.forClass(classOf[JsValue])
       verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value shouldBe "play.the-project-name"
+      (captor.getValue \ "auditProvider"          ).isDefined  shouldBe false
+      (captor.getValue \ "auditSource"            ).as[String] shouldBe "source"
+      (captor.getValue \ "auditType"              ).as[String] shouldBe "type"
+      (captor.getValue \ "metadata" \ "metricsKey").as[String] shouldBe "play.the-project-name"
+    }
+
+    "add auditProvider if specified" in {
+      when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
+        .thenReturn(Future.successful(HandlerResult.Success))
+
+      val detail = Json.parse( """{"some-event": "value", "some-other-event": "other-value"}""")
+      val event: ExtendedDataEvent = ExtendedDataEvent(auditSource = "source", auditType = "type", auditProvider = Some("provider"), detail = detail)
+
+      createConnector(enabledConfig).sendExtendedEvent(event).futureValue shouldBe AuditResult.Success
+
+      val captor = ArgumentCaptor.forClass(classOf[JsValue])
+      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+      (captor.getValue \ "auditProvider"          ).as[String] shouldBe "provider"
+      (captor.getValue \ "auditSource"            ).as[String] shouldBe "source"
+      (captor.getValue \ "auditType"              ).as[String] shouldBe "type"
+      (captor.getValue \ "metadata" \ "metricsKey").as[String] shouldBe "play.the-project-name"
     }
 
     "sendExplicitEvent Map[String,String]" should {
@@ -147,7 +211,7 @@ class AuditConnectorSpec
         (captor.getValue \ "tags" \ "X-Session-ID"  ).as[String]             shouldBe "session-123"
         (captor.getValue \ "tags" \ "path"          ).as[String]             shouldBe "/a/b/c"
         (captor.getValue \ "detail"                 ).as[Map[String,String]] shouldBe Map("a" -> "1")
-        (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value     shouldBe "play.the-project-name"
+        (captor.getValue \ "metadata" \ "metricsKey").as[String]             shouldBe "play.the-project-name"
       }
     }
 
@@ -190,6 +254,19 @@ class AuditConnectorSpec
       (captor.getValue \ "detail"                 ).as[JsObject] shouldBe expectedDetail
       (captor.getValue \ "metadata" \ "metricsKey").as[String]   shouldBe "play.the-project-name"
     }
+
+    "add auditProvider if specified" in {
+      when(mockAuditChannel.send(any[String], any[JsValue])(any[ExecutionContext]))
+        .thenReturn(Future.successful(HandlerResult.Success))
+
+      createConnector(enabledConfig.copy(auditProvider=Some("theAuditProvider"))).sendExplicitAudit("theAuditType", expectedDetail)(headerCarrier, ec)
+
+      val captor = ArgumentCaptor.forClass(classOf[JsValue])
+      verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
+      (captor.getValue \ "auditProvider").as[String] shouldBe "theAuditProvider"
+      (captor.getValue \ "auditSource"  ).as[String] shouldBe "the-project-name"
+      (captor.getValue \ "auditType"    ).as[String] shouldBe "theAuditType"
+    }
   }
 
   "send" should {
@@ -203,7 +280,7 @@ class AuditConnectorSpec
 
       val captor = ArgumentCaptor.forClass(classOf[JsValue])
       verify(mockAuditChannel).send(any[String], captor.capture())(any[ExecutionContext])
-      (captor.getValue \ "metadata" \ "metricsKey").as[JsString].value shouldBe "play.the-project-name"
+      (captor.getValue \ "metadata" \ "metricsKey").as[String] shouldBe "play.the-project-name"
     }
 
     "provide null in metadata if metricsKey is not available" in {
