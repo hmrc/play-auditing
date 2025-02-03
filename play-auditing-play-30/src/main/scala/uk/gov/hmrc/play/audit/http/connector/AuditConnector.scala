@@ -63,11 +63,12 @@ trait AuditConnector {
   def sendExplicitAudit(auditType: String, detail: JsObject)(implicit hc: HeaderCarrier, ec: ExecutionContext): Unit =
     sendExtendedEvent(
       ExtendedDataEvent(
-        auditSource = auditingConfig.auditSource,
-        auditType   = auditType,
-        eventId     = UUID.randomUUID().toString,
-        tags        = hc.toAuditTags(),
-        detail      = detail
+        auditProvider = auditingConfig.auditProvider,
+        auditSource   = auditingConfig.auditSource,
+        auditType     = auditType,
+        eventId       = UUID.randomUUID().toString,
+        tags          = hc.toAuditTags(),
+        detail        = detail
       )
     )
 

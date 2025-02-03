@@ -67,7 +67,8 @@ class AuditSerialiser extends AuditSerialiserLike {
     }
 
   private implicit val dataEventWriter: Writes[DataEvent] =
-    ( (__ \ "auditSource"                ).write[String]
+    ( (__ \ "auditProvider"              ).writeNullable[String]
+    ~ (__ \ "auditSource"                ).write[String]
     ~ (__ \ "auditType"                  ).write[String]
     ~ (__ \ "eventId"                    ).write[String]
     ~ (__ \ "tags"                       ).write[Map[String, String]]
@@ -75,10 +76,11 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "generatedAt"                ).write[Instant]
     ~ (__ \ "dataPipeline" \ "truncation").writeNullable[TruncationLog.Entry].contramap[TruncationLog](_.asEntry)
     ~ (__ \ "dataPipeline" \ "redaction" ).write[RedactionLog]
-    )(de => (de.auditSource, de.auditType, de.eventId, de.tags, de.detail, de.generatedAt, de.truncationLog, de.redactionLog))
+    )(de => (de.auditProvider, de.auditSource, de.auditType, de.eventId, de.tags, de.detail, de.generatedAt, de.truncationLog, de.redactionLog))
 
   private implicit val extendedDataEventWriter: Writes[ExtendedDataEvent] =
-    ( (__ \ "auditSource"                ).write[String]
+    ( (__ \ "auditProvider"              ).writeNullable[String]
+    ~ (__ \ "auditSource"                ).write[String]
     ~ (__ \ "auditType"                  ).write[String]
     ~ (__ \ "eventId"                    ).write[String]
     ~ (__ \ "tags"                       ).write[Map[String, String]]
@@ -86,7 +88,7 @@ class AuditSerialiser extends AuditSerialiserLike {
     ~ (__ \ "generatedAt"                ).write[Instant]
     ~ (__ \ "dataPipeline" \ "truncation").writeNullable[TruncationLog.Entry].contramap[TruncationLog](_.asEntry)
     ~ (__ \ "dataPipeline" \ "redaction" ).write[RedactionLog]
-    )(de => (de.auditSource, de.auditType, de.eventId, de.tags, de.detail, de.generatedAt, de.truncationLog, de.redactionLog))
+    )(de => (de.auditProvider, de.auditSource, de.auditType, de.eventId, de.tags, de.detail, de.generatedAt, de.truncationLog, de.redactionLog))
 
   private implicit val dataCallWriter: Writes[DataCall] =
     ( (__ \ "tags"       ).write[Map[String, String]]
@@ -95,14 +97,15 @@ class AuditSerialiser extends AuditSerialiserLike {
     )(dc => (dc.tags, dc.detail, dc.generatedAt))
 
   private implicit val mergedDataEventWriter  : Writes[MergedDataEvent]   =
-    ( (__ \ "auditSource"                ).write[String]
+    ( (__ \ "auditProvider"              ).writeNullable[String]
+    ~ (__ \ "auditSource"                ).write[String]
     ~ (__ \ "auditType"                  ).write[String]
     ~ (__ \ "eventId"                    ).write[String]
     ~ (__ \ "request"                    ).write[DataCall]
     ~ (__ \ "response"                   ).write[DataCall]
     ~ (__ \ "dataPipeline" \ "truncation").writeNullable[TruncationLog.Entry].contramap[TruncationLog](_.asEntry)
     ~ (__ \ "dataPipeline" \ "redaction" ).write[RedactionLog]
-    )(de => (de.auditSource, de.auditType, de.eventId, de.request, de.response, de.truncationLog, de.redactionLog))
+    )(de => (de.auditProvider, de.auditSource, de.auditType, de.eventId, de.request, de.response, de.truncationLog, de.redactionLog))
 
 
   override def serialise(event: DataEvent): JsObject =
