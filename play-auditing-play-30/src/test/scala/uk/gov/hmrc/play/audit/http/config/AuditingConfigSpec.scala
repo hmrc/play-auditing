@@ -30,14 +30,16 @@ class AuditingConfigSpec extends AnyWordSpec with Matchers with MockitoSugar {
         "auditing.enabled"               -> "true",
         "auditing.consumer.baseUri.host" -> "localhost",
         "auditing.consumer.baseUri.port" -> "8100",
-        "auditing.auditSentHeaders"      -> "false"
+        "auditing.auditSentHeaders"      -> "false",
+        "auditing.auditProvider"         -> "audit-provider"
       )
 
       AuditingConfig.fromConfig(config) shouldBe AuditingConfig(
         consumer         = Some(Consumer(BaseUri("localhost", 8100, "http"))),
         enabled          = true,
         auditSource      = "app-name",
-        auditSentHeaders = false
+        auditSentHeaders = false,
+        auditProvider    = Some("audit-provider")
       )
     }
 

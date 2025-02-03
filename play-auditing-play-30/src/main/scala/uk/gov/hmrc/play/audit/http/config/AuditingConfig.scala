@@ -70,7 +70,7 @@ object AuditingConfig {
                             ),
         auditSource       = configuration.get[String]("appName"),
         auditSentHeaders  = configuration.get[Boolean]("auditing.auditSentHeaders"),
-        auditProvider     = configuration.getOptional[String]("auditing.auditProvider")
+        auditProvider     = configuration.get[Option[String]]("auditing.auditProvider")
       )
     else
       AuditingConfig(
