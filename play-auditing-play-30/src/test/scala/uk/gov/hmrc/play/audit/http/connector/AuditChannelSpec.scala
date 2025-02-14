@@ -25,7 +25,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.Json
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, WireMockUtils}
@@ -34,7 +34,7 @@ import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import scala.concurrent.ExecutionContext
 
 class AuditChannelSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with ScalaFutures
      with IntegrationPatience

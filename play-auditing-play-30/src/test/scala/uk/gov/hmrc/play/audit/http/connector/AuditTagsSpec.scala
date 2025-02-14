@@ -17,12 +17,12 @@
 package uk.gov.hmrc.play.audit.http.connector
 
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.play.audit.AuditExtensions
 import uk.gov.hmrc.play.audit.EventKeys._
 import uk.gov.hmrc.http.{AkamaiReputation, Authorization, ForwardedFor, HeaderCarrier, RequestId, SessionId}
 
-class AuditTagsSpec extends AnyWordSpecLike with Matchers {
+class AuditTagsSpec extends AnyWordSpec with Matchers {
 
   import uk.gov.hmrc.http.HeaderNames._
   import AuditExtensions._
