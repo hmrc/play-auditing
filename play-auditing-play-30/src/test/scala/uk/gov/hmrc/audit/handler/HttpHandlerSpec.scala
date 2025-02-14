@@ -21,7 +21,7 @@ import org.mockito.Mockito.when
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.JsString
 import play.api.libs.ws.{BodyWritable, StandaloneWSRequest}
@@ -34,7 +34,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class HttpHandlerSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Inspectors
      with Matchers
      with ScalaFutures

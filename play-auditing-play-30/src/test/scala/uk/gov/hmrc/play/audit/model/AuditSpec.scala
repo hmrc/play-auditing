@@ -20,7 +20,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import uk.gov.hmrc.audit.DatastreamMetricsMock
 import uk.gov.hmrc.http.HeaderNames._
@@ -34,7 +34,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import java.util.concurrent.atomic.AtomicReference
 
-class AuditSpec extends AnyWordSpecLike with Matchers with Eventually with DatastreamMetricsMock {
+class AuditSpec extends AnyWordSpec with Matchers with Eventually with DatastreamMetricsMock {
 
   class MockAudit(appName: String, connector: AuditConnector) extends Audit(appName, connector) {
     private val capturedDataEvent = new AtomicReference[DataEvent]()

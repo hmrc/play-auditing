@@ -17,10 +17,10 @@
 package uk.gov.hmrc.play.audit.http
 
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 
 class HeaderFieldsExtractorTestSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
   with Matchers {
 
   "The optional audit fields code" should {

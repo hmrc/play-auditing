@@ -24,7 +24,7 @@ import org.mockito.ArgumentMatchers.any
 import org.scalatest._
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult}
@@ -38,7 +38,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class MyExampleAudit(userType: String, vrn: String)
 
 class AuditConnectorSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with ScalaFutures
      with IntegrationPatience
@@ -73,10 +73,10 @@ class AuditConnectorSpec
 
       val mergedEvent = MergedDataEvent(
         auditSource = "Test",
-        auditType = "Test",
-        eventId = "TestEventId",
-        request = DataCall(Map.empty, Map.empty, Instant.now()),
-        response = DataCall(Map.empty, Map.empty, Instant.now())
+        auditType   = "Test",
+        eventId     = "TestEventId",
+        request     = DataCall(Map.empty, Map.empty, Instant.now()),
+        response    = DataCall(Map.empty, Map.empty, Instant.now())
       )
 
       createConnector(enabledConfig).sendMergedEvent(mergedEvent).futureValue shouldBe Success
@@ -90,11 +90,12 @@ class AuditConnectorSpec
 
       val mergedEventWithProvider = MergedDataEvent(
         auditProvider = Some("provider"),
-        auditSource = "source",
-        auditType = "type",
-        eventId = "TestEventId",
-        request = DataCall(Map.empty, Map.empty, Instant.now()),
-        response = DataCall(Map.empty, Map.empty, Instant.now()))
+        auditSource   = "source",
+        auditType     = "type",
+        eventId       = "TestEventId",
+        request       = DataCall(Map.empty, Map.empty, Instant.now()),
+        response      = DataCall(Map.empty, Map.empty, Instant.now())
+      )
 
       createConnector(enabledConfig).sendMergedEvent(mergedEventWithProvider).futureValue shouldBe AuditResult.Success
 

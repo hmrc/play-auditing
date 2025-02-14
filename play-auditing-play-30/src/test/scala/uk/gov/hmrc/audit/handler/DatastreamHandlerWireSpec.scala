@@ -24,7 +24,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Inspectors}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.{ApplicationLifecycle, DefaultApplicationLifecycle}
 import play.api.libs.json.{JsString, JsValue}
 import uk.gov.hmrc.audit.{DatastreamMetricsMock, HandlerResult, WSClient, WireMockUtils}
@@ -34,7 +34,7 @@ import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 
 class DatastreamHandlerWireSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Inspectors
      with Matchers
      with BeforeAndAfterEach

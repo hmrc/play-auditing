@@ -26,7 +26,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.play.audit.EventKeys._
@@ -42,7 +42,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class HttpAuditingSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with Inspectors
      with Eventually
@@ -275,7 +275,7 @@ class HttpAuditingSpec
   }
 
   "Calling audit" should {
-    val serviceUri = "/service/path"
+    val serviceUri = "http://localhost/service/path"
     val deviceID = "A_DEVICE_ID"
 
     implicit val hc: HeaderCarrier = HeaderCarrier(deviceID = Some(deviceID))

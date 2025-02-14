@@ -17,14 +17,14 @@
 package uk.gov.hmrc.audit.handler
 
 import org.mockito.Mockito.verify
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import play.api.libs.json.JsString
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class LoggingHandlerSpec extends AnyWordSpecLike with MockitoSugar {
+class LoggingHandlerSpec extends AnyWordSpec with MockitoSugar {
 
   val mockLog: Logger = mock[Logger]
   val loggingHandler = new LoggingHandler(mockLog)

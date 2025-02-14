@@ -20,7 +20,7 @@ import org.mockito.Mockito.{times, verify, verifyNoMoreInteractions}
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import org.slf4j.Logger
 import play.api.libs.json.{JsString, JsValue}
@@ -30,7 +30,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import ExecutionContext.Implicits.global
 
 class DatastreamHandlerUnitSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Inspectors
      with Matchers
      with ScalaFutures
