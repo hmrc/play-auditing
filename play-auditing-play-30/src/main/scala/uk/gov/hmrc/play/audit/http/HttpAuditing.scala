@@ -162,7 +162,6 @@ trait HttpAuditing {
       val caseInsensitiveHeaders = caseInsensitiveMap(httpRequest.headers)
       Map(
         "ipAddress"               -> hc.forwarded.map(_.value).getOrElse("-"),
-        HeaderNames.authorisation -> caseInsensitiveHeaders.getOrElse(HeaderNames.authorisation, "-"),
         EventKeys.Path            -> httpRequest.url,
         EventKeys.Method          -> httpRequest.verb
       ) ++
