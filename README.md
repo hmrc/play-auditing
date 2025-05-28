@@ -76,6 +76,10 @@ auditing {
 
 ## Changes
 
+### Version 9.4.0
+
+Removes unnecessary "authorization" field from implicit OutboundCall audits.
+
 ### Version 9.3.0
 
 Drops Play 2.8.

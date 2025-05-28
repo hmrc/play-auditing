@@ -105,7 +105,6 @@ class HttpAuditingSpec
         )
         dataEvent.request.detail shouldBe Map(
           "ipAddress"          -> "-",
-          authorisation        -> "token",
           Path                 -> serviceUri,
           Method               -> getVerb,
           "surrogate"          -> "true",
@@ -194,7 +193,6 @@ class HttpAuditingSpec
         )
         dataEvent.request.detail shouldBe Map(
           "ipAddress"        -> "-",
-          authorisation      -> "-",
           Path               -> serviceUri,
           Method             -> postVerb,
           RequestBody        -> requestBody
@@ -319,7 +317,6 @@ class HttpAuditingSpec
       )
       dataEvent.request.detail shouldBe Map(
         "ipAddress"   -> "-",
-        authorisation -> "-",
         Path          -> serviceUri,
         Method        -> getVerb,
         "surrogate"   -> "true"
@@ -367,7 +364,6 @@ class HttpAuditingSpec
       )
       dataEvent.request.detail shouldBe Map(
         "ipAddress"        -> "-",
-        authorisation      -> "-",
         Path               -> serviceUri,
         Method             -> postVerb,
         RequestBody        -> requestBody
