@@ -76,6 +76,10 @@ auditing {
 
 ## Changes
 
+### Version 9.5.0
+
+Populate the auditProvider attribute for all audits.
+
 ### Version 9.4.0
 
 Removes unnecessary "authorization" field from implicit OutboundCall audits.

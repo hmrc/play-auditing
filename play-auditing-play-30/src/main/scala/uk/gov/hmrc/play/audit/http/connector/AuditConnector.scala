@@ -76,7 +76,9 @@ trait AuditConnector {
     ifEnabled {
       send(
         "/write/audit",
-        auditSerialiser.serialise(event.copy(tags = hc.appendToDefaultTags(event.tags)))
+        auditSerialiser.serialise(event.copy(
+          auditProvider = event.auditProvider.orElse(auditingConfig.auditProvider),
+          tags = hc.appendToDefaultTags(event.tags)))
         )
     }
 
@@ -84,7 +86,9 @@ trait AuditConnector {
     ifEnabled {
       send(
          "/write/audit",
-        auditSerialiser.serialise(event.copy(tags = hc.appendToDefaultTags(event.tags)))
+        auditSerialiser.serialise(event.copy(
+          auditProvider = event.auditProvider.orElse(auditingConfig.auditProvider),
+          tags = hc.appendToDefaultTags(event.tags)))
       )
     }
 
@@ -92,7 +96,9 @@ trait AuditConnector {
     ifEnabled {
       send(
         "/write/audit/merged",
-        auditSerialiser.serialise(event)
+        auditSerialiser.serialise(event.copy(
+          auditProvider = event.auditProvider.orElse(auditingConfig.auditProvider)
+        ))
       )
     }
 
