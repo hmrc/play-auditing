@@ -76,6 +76,10 @@ auditing {
 
 ## Changes
 
+### Version 9.6.0
+
+Removes support for Play 2.9
+
 ### Version 9.5.0
 
 Populate the auditProvider attribute for all audits.
